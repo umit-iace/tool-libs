@@ -1,0 +1,17 @@
+project(ToolLibsTests)
+
+use_host_compiler()
+set(CMAKE_SIZEOF_VOID_P 8)
+set(BOOST_INCLUDEDIR /usr/include)
+find_package(Boost COMPONENTS unit_test_framework)
+if (Boost_FOUND)
+    set(CMAKE_NO_SYSTEM_FROM_IMPORTED TRUE)
+    enable_testing()
+    add_executable(QueueTest RequestQueueTest.cpp)
+    message("enabled testing")
+    target_compile_definitions(QueueTest PUBLIC BOOST_TEST_DYN_LINK)
+    target_include_directories(QueueTest PUBLIC ${Boost_INCLUDE_DIRS})
+    target_link_libraries(QueueTest ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+    add_test(NAME singleRequestTest COMMAND QueueTest)
+endif()
+
