@@ -8,7 +8,7 @@
 #include <boost/test/unit_test.hpp>
 #include <cstdlib>
 #include <cstdio>
-#include "Utils.h"
+#include "RequestQueue.h"
 class TestRequest {
 public:
     double dMem = 3.6;
