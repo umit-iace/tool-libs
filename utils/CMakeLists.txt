@@ -14,4 +14,3 @@ if (Boost_FOUND)
     target_link_libraries(QueueTest ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
     add_test(NAME singleRequestTest COMMAND QueueTest)
 endif()
-
