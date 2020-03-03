@@ -2,6 +2,8 @@
  *
  * Copyright (c) 2020 IACE
  */
+#ifndef REQUESTQUEUE_H
+#define REQUESTQUEUE_H
 
 /**
  * Abstract class implementing a request queue
@@ -101,3 +103,5 @@ protected:
      */
     virtual unsigned long getTime() = 0;
 };
+
+#endif //REQUESTQUEUE_H
