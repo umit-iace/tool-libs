@@ -3,13 +3,14 @@ Tool Libraries Documentation
 
 .. todolist::
 
+This is a collection of libraries. The library is structured in different parts.
+
 .. toctree::
    :maxdepth: 2
-   :caption: Inhalt:
+   :caption: Content:
 
-   overview
-   konstruktion-doc/konstruktion-doc
-   software-doc/software-doc
+   stm-doc/stm-doc
+   utils-doc/utils-doc
 
 Indizes and Tabellen
 ====================

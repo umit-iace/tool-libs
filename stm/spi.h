@@ -2,8 +2,8 @@
  *
  * Copyright (c) 2019 IACE
  */
-#ifndef STMSPI_H
-#define STMSPI_H
+#ifndef STM_SPI_H
+#define STM_SPI_H
 
 #include "stm32f7xx_hal.h"
 #include "utils/RequestQueue.h"
@@ -259,5 +259,5 @@ static void bitwisecopy(uint8_t *dest, size_t numbits, size_t szof, uint8_t *src
     }
 }
 
-#endif //STMSPI_H
+#endif //STM_SPI_H
 

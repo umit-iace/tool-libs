@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include "RequestQueue.h"
+
 class TestRequest {
 public:
     double dMem = 3.6;

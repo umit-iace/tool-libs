@@ -2,8 +2,8 @@
  *
  * Copyright (c) 2020 IACE
  */
-#ifndef SERVO_H
-#define SERVO_H
+#ifndef STM_SERVO_H
+#define STM_SERVO_H
 
 #include "stm32f7xx_hal.h"
 
@@ -104,5 +104,5 @@ private:
     //\endcond
 };
 
-#endif //SERVO_H
+#endif //STM_SERVO_H
 

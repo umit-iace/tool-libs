@@ -129,17 +129,20 @@ tikz_tikzlibraries = 'plotmarks,math,positioning,shapes,arrows,backgrounds,circu
 
 # -- Options for Breathe ----------------------------------------------
 doc_projects = {
-    "utils": ["utils"],
-    "stm": ["stm"],
+    "Utils": [""],
+    "Stm": [""]
 }
+
+code_dir = "../"
 
 breathe_projects = {}
 breathe_projects_source = {}
 
 for key, value in doc_projects.items():
     breathe_projects.update({key: "_build/breathe/doxygen/" + key + "/xml"})
-    breathe_projects_source.update({key: (key.lower(), value)})
+    breathe_projects_source.update({key: (code_dir + key.lower(), value)})
 
+print(breathe_projects_source)
 breathe_default_members = ('members', 'undoc-members')
 breathe_show_define_initializer = True
 breathe_implementation_filename_extensions = ['.cpp']
@@ -259,8 +262,3 @@ texinfo_documents = [
      author, 'toolLibsDoc', 'tool libraries documentation',
      'Miscellaneous'),
 ]
-
-# Configuration for intersphinx
-# extensions.append('sphinx.ext.intersphinx')
-# intersphinx_mapping = {'https://docs.python.org/': None}
-# intersphinx_mapping = {'matlab': ("../../matproject-autodoc/_build/html", "./matproject-autodoc/_build/html/objects.inv")}
