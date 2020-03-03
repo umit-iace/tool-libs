@@ -252,11 +252,10 @@ static void bitwisecopy(uint8_t *dest, size_t numbits, size_t szof, uint8_t *src
             --destI;
 
             *(dest + destI / 8) &= ~(1U << destI % 8);
-            *(dest + destI / 8) |= ((*src >> srcI) & 0x1U) << destI % 8;
+            *(dest + destI / 8) |= ((*(src + srcI / 8) >> srcI % 8) & 0x1U) << destI % 8;
 
             ++srcI;
-            src += (srcI %= 8) ? 0 : 1;
-        } while (destI > 0);
+        } while (srcI < numbits);
     }
 }
 
