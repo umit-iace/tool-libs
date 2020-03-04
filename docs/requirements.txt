@@ -79,6 +79,3 @@ urllib3<1.25
 wcwidth>=0.1.7
 webencodings>=0.5.1
 widgetsnbextension>=3.2.1
-rise>=5.6.0
-ipython-tikzmagic>=0.1.1
-hide-code>=0.5.5
