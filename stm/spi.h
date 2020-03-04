@@ -5,7 +5,7 @@
 #ifndef STM_SPI_H
 #define STM_SPI_H
 
-#include "stm32f7xx_hal.h"
+#include "stm/hal.h"
 #include "utils/RequestQueue.h"
 /* *********************************************
  * When using this, use the following line in your interrupt header file (e.g. stm32f7xx_it.h)

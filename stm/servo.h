@@ -5,7 +5,7 @@
 #ifndef STM_SERVO_H
 #define STM_SERVO_H
 
-#include "stm32f7xx_hal.h"
+#include "stm/hal.h"
 
 /**
  * @brief Template class for hardware based PWM derivations
