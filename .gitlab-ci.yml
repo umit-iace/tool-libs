@@ -10,7 +10,7 @@ docu:
   script:
      - virtualenv _venv
      - source _venv/bin/activate
-     - pip install -r requirements.txt
+     - pip install -r docs/requirements.txt
      - cd docs
      - make html
      - rm -rf /srv/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME

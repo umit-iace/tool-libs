@@ -33,7 +33,7 @@ must be installed. To install the needed Python packages run
 
     $ pip install -r requirements.txt
 
-, and to generate the documentation run
+and to generate the documentation run
 
 .. code-block:: bash
 
