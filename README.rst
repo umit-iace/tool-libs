@@ -4,11 +4,29 @@ tool-libs
 
 This is a collection of libraries. The library is structured as follows:
 
+* Sensors - Classes implementing specific sensors used in our test rigs
+
+  - ``IMU3000`` - inertial measurement unit 3 ax Gyro + 3 ax Accelerometer
+
+  - ``thermocouple`` - temperature measurement using the MAX31855
+
 * STM - Hardware specific classes for the STM controller familiy (Support for f4 and f7)
+
+  - ``encoder`` - Class for hardware based quadratic encoder support
+
+  - ``hal`` - points to the correct HAL include for the used family
+
+  - ``i2c`` - Classes to use hardware based I2C functionality using ``RequestQueue``
+
+    - ``I2CRequest``
+
+    - ``HardwareI2C``
+
+  - ``pwm`` - Class for hardware based pwm outputs
 
   - ``servo`` - Class for hardware based RC servo control
 
-  - ``spi`` - Classes to use Hardware based SPI functionality
+  - ``spi`` - Classes to use Hardware based SPI functionality using ``RequestQueue``
 
     - ``ChipSelect``
 
