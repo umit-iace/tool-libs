@@ -14,10 +14,10 @@ class HardwarePWM {
 public:
     /**
      * set pwm in percent
-     * @param set [0..100]
+     * @param set [0..1]
      */
     void pwm(double perc, uint32_t chan) {
-        __HAL_TIM_SET_COMPARE(&hPWMTim, chan, perc * period / 100.);
+        __HAL_TIM_SET_COMPARE(&hPWMTim, chan, perc * period);
     }
 
     /**
