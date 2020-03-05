@@ -32,28 +32,12 @@ public:
      * @param chanRight
      * @param dTim
      */
-    HardwarePWM(uint32_t iPinL, GPIO_TypeDef *gpioPortL, uint8_t iAlternateL, uint32_t chanLeft,
-             uint32_t iPinR, GPIO_TypeDef *gpioPortR, uint8_t iAlternateR, uint32_t chanRight,
-             TIM_TypeDef *dTim) {
-        // init pins
-        GPIO_InitTypeDef GPIO_InitStruct = {};
-        GPIO_InitStruct.Pin = iPinL;
-        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-        GPIO_InitStruct.Alternate = iAlternateL;
-        HAL_GPIO_Init(gpioPortL, &GPIO_InitStruct);
-
-        GPIO_InitStruct.Pin = iPinR;
-        GPIO_InitStruct.Alternate = iAlternateR;
-        HAL_GPIO_Init(gpioPortR, &GPIO_InitStruct);
-
+    HardwarePWM(TIM_TypeDef *dTim, uint32_t prescaler, uint32_t period) : period(period) {
         // clock config
         TIM_MasterConfigTypeDef sMasterConfig = {};
-        TIM_OC_InitTypeDef sConfigOC = {};
 
         hPWMTim.Instance = dTim;
-        hPWMTim.Init.Prescaler =  0;
+        hPWMTim.Init.Prescaler = prescaler;
         hPWMTim.Init.CounterMode = TIM_COUNTERMODE_UP;
         hPWMTim.Init.Period = period;
         hPWMTim.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -63,22 +47,33 @@ public:
         sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
         sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
         while (HAL_TIMEx_MasterConfigSynchronization(&hPWMTim, &sMasterConfig) != HAL_OK);
+    }
 
+    void startChannel(uint32_t iPin, GPIO_TypeDef *gpioPort, uint8_t iAlternate, uint32_t chan)
+    {
+        // init pins
+        GPIO_InitTypeDef GPIO_InitStruct = {};
+        GPIO_InitStruct.Pin = iPin;
+        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+        GPIO_InitStruct.Pull = GPIO_NOPULL;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+        GPIO_InitStruct.Alternate = iAlternate;
+        HAL_GPIO_Init(gpioPort, &GPIO_InitStruct);
+
+        TIM_OC_InitTypeDef sConfigOC = {};
         sConfigOC.OCMode = TIM_OCMODE_PWM1;
         sConfigOC.Pulse = 0;
         sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
         sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-        while (HAL_TIM_PWM_ConfigChannel(&hPWMTim, &sConfigOC, chanLeft) != HAL_OK);
-        while (HAL_TIM_PWM_ConfigChannel(&hPWMTim, &sConfigOC, chanRight) != HAL_OK);
+        while (HAL_TIM_PWM_ConfigChannel(&hPWMTim, &sConfigOC, chan) != HAL_OK);
 
-        while (HAL_TIM_PWM_Start(&hPWMTim, chanLeft) != HAL_OK);
-        while (HAL_TIM_PWM_Start(&hPWMTim, chanRight) != HAL_OK);
+        while (HAL_TIM_PWM_Start(&hPWMTim, chan) != HAL_OK);
     }
 
 private:
     //\cond false
     TIM_HandleTypeDef hPWMTim = {};
-    uint32_t period = 4500 - 1;     // ~ pwm freq of 18600 Hz at 84MHz periph clock
+    uint32_t period = 0;
     //\endcond
 };
 
