@@ -58,6 +58,20 @@ public:
     double* getState() { return states; }
 
     /**
+     * preprocess.
+     * called cyclically in the Experiment PRE state,
+     * until all Modules signal no need for preprocessing
+     * @return
+     */
+    bool pre() {return false;}
+
+    /**
+     * reset ExperimentModule.
+     * called upon Experiment STOP
+     */
+    void reset() {}
+
+    /**
      * Constructor for allocating state and output lists
      * @param outputs number of outputs for this ExperimentModule
      * @param states number of states for this ExperimentModule
