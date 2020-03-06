@@ -1,4 +1,4 @@
-/** @file Thermocouple.h
+/** @file thermocouple.h
  *
  * Copyright (c) 2019 IACE
  */
