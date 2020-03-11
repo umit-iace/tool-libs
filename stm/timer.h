@@ -19,7 +19,6 @@ public:
      * @param callback
      */
     HardwareTimer(TIM_HandleTypeDef *hTim, TIM_TypeDef *dTim) : hTim(hTim) {
-        *this->hTim = {};
         this->hTim->Instance = dTim;
     }
 
