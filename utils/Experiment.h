@@ -9,6 +9,9 @@
 #include "utils/Transport.h"
 #include <cstdarg>
 
+/**
+ * General class of an experiment used to control the experiment flow at a test rig.
+ */
 class Experiment {
 public:
     Experiment(unsigned int numberofModules) {

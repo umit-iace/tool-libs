@@ -34,11 +34,23 @@ This is a collection of libraries. The library is structured as follows:
 
     - ``HardwareSPI``
 
+  - ``timer`` - Template class for hardware based Timers
+
 * Utils - General classes
+
+  - ``Experiment`` - General class of an experiment used to control the experiment flow at a test rig.
 
   - ``ExperimentModule`` - General class of an experiment module used to describe different functionality of a test rig.
 
   - ``RequestQueue`` - Template based class for a request queue
+
+  - ``Tick`` - Classes to realise a general time server at that clients can connect.
+
+    - ``TickClient`` - Class describing a client to the TickServer.
+
+    - ``TickServer`` - Class describing a tick server to a TickClient.
+
+  - ``Transport`` - Layer class for the min protocol communication between the host and the microcontroller
 
 
 Documentation
