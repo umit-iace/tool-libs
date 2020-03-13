@@ -234,6 +234,7 @@ private:
 
         HAL_SPI_RegisterCallback(&hSPI, HAL_SPI_TX_COMPLETE_CB_ID, transferComplete);
         HAL_SPI_RegisterCallback(&hSPI, HAL_SPI_RX_COMPLETE_CB_ID, transferComplete);
+        HAL_SPI_RegisterCallback(&hSPI, HAL_SPI_TX_RX_COMPLETE_CB_ID, transferComplete);
 
         HAL_NVIC_SetPriority(SPI_IT_IRQn, SPI_IT_PRIO);
         HAL_NVIC_EnableIRQ(SPI_IT_IRQn);
