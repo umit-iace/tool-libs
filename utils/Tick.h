@@ -13,7 +13,7 @@
 class TickClient {
 public:
     /**
-     * Method must is called cyclically by tick server.
+     * Method is called cyclically by tick server.
      */
     virtual void tick() = 0;
 };
