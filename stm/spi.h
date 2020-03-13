@@ -226,7 +226,7 @@ private:
         hSPI.Init.CLKPhase = SPI_PHASE_1EDGE;
         hSPI.Init.NSS = SPI_NSS_SOFT;
         hSPI.Init.BaudRatePrescaler = iBaudPresc;
-        hSPI.Init.FirstBit = SPI_FIRSTBIT_LSB;
+        hSPI.Init.FirstBit = SPI_FIRSTBIT_MSB;
         hSPI.Init.TIMode = SPI_TIMODE_DISABLE;
         hSPI.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
         hSPI.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
@@ -258,7 +258,7 @@ static void bitwisecopy(uint8_t *dest, size_t numbits, size_t szof, uint8_t *src
             --destI;
 
             *(dest + destI / 8) &= ~(1U << destI % 8);
-            *(dest + destI / 8) |= ((*(src + srcI / 8) >> srcI % 8) & 0x1U) << destI % 8;
+            *(dest + destI / 8) |= ((*(src + srcI / 8) >> 7 - srcI % 8) & 0x1U) << destI % 8;
 
             ++srcI;
         } while (srcI < numbits);
