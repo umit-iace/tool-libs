@@ -89,6 +89,12 @@ public:
         if (tData) {
             delete[] tData;
         }
+        cs = nullptr;
+        dir = MOSI;
+        tData = nullptr;
+        rData = nullptr;
+        dataLen = 0;
+        end = false;
     }
 
     SPIRequest &operator=(const SPIRequest &other) {
