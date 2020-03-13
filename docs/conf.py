@@ -130,7 +130,7 @@ tikz_tikzlibraries = 'plotmarks,math,positioning,shapes,arrows,backgrounds,circu
 # -- Options for Breathe ----------------------------------------------
 doc_projects = {
     "Utils": [""],
-    "Stm": [""],
+    "STM": [""],
     "Sensors": [""],
 }
 

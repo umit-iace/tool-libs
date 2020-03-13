@@ -1,5 +1,5 @@
-PWM.h
-~~~~~
+PWM
+~~~
 
 .. doxygenfile:: pwm.h
-   :project: Stm
+   :project: STM

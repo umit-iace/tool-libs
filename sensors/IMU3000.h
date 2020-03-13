@@ -96,7 +96,7 @@ private:
 
     /**
      * set the range and correct factor for accelerometer
-     * @param range value of @ref acc_range
+     * @param range value of acc_range
      * @param fullres boolean to enable full range
      */
     void setAccRange(enum acc_range range, bool fullres) {

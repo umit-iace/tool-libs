@@ -1,5 +1,5 @@
-Timer.h
-~~~~~~~
+Timer
+~~~~~
 
 .. doxygenfile:: timer.h
-   :project: Stm
+   :project: STM

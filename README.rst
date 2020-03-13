@@ -8,7 +8,7 @@ This is a collection of libraries. The library is structured as follows:
 
   - ``IMU3000`` - inertial measurement unit 3 ax Gyro + 3 ax Accelerometer
 
-  - ``thermocouple`` - temperature measurement using the MAX31855
+  - ``MAX31855`` - temperature measurement using the MAX31855
 
 * STM - Hardware specific classes for the STM controller familiy (Support for f4 and f7)
 
@@ -41,6 +41,8 @@ This is a collection of libraries. The library is structured as follows:
   - ``Experiment`` - General class of an experiment used to control the experiment flow at a test rig.
 
   - ``ExperimentModule`` - General class of an experiment module used to describe different functionality of a test rig.
+
+  - ``MovingAverage`` - Template class that implements a moving average filter
 
   - ``RequestQueue`` - Template based class for a request queue
 

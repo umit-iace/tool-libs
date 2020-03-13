@@ -2,4 +2,4 @@ SPI
 ~~~
 
 .. doxygenfile:: spi.h
-   :project: Stm
+   :project: STM

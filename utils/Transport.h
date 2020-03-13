@@ -5,7 +5,7 @@
 #ifndef TRANSPORT_H
 #define TRANSPORT_H
 
-#include <stdio.h>
+#include <cstdio>
 
 #include "define.h"
 #include "utils/ExperimentModule.h"

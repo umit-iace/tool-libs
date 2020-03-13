@@ -1,5 +1,5 @@
-Servo.h
-~~~~~~~
+Servo
+~~~~~
 
 .. doxygenfile:: servo.h
-   :project: Stm
+   :project: STM

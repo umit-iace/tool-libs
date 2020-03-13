@@ -1,5 +1,5 @@
-Encode.h
-~~~~~~~~
+Encoder
+~~~~~~~
 
 .. doxygenfile:: encoder.h
-   :project: Stm
+   :project: STM
