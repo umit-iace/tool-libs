@@ -63,13 +63,13 @@ public:
      * until all Modules signal no need for preprocessing
      * @return
      */
-    bool pre() {return false;}
+    virtual bool pre() {return false;}
 
     /**
      * reset ExperimentModule.
      * called upon Experiment STOP
      */
-    void reset() {}
+    virtual void reset() {}
 
     /**
      * Constructor for allocating state and output lists
