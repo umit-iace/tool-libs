@@ -1,27 +1,27 @@
-/** @file thermocouple.h
+/** @file MAX31855.h
  *
  * Copyright (c) 2019 IACE
  */
-#ifndef THERMOCOUPLE_H
-#define THERMOCOUPLE_H
+#ifndef MAX31855_H
+#define MAX31855_H
 
 #include "stm/spi.h"
 
-class Thermocouple : public ChipSelect {
+class MAX31855 : public ChipSelect {
 public:
     /**
      * Constructor
      * @param pin GPIO pin of chip select line
      * @param port GPIO port of chip select line
      */
-    Thermocouple(uint32_t pin, GPIO_TypeDef *port) : ChipSelect(pin, port) { }
+    MAX31855(uint32_t pin, GPIO_TypeDef *port) : ChipSelect(pin, port) { }
 
     /**
      * return currently measured temperature
      * @return temperature in °C
      */
     double temp() {
-        return sensorData.TEMP * 0.25;
+        return sTemp;
     }
 
     /**
@@ -29,7 +29,7 @@ public:
      * @return temperature in °C
      */
     double internal() {
-        return sensorData.INTERNAL * 0.0625;
+        return iTemp;
     }
 
     /**
@@ -47,6 +47,8 @@ public:
      */
     void callback() override {
         bitwisecopy((uint8_t *)&sensorData, 32, sizeof(sensorData), buffer, 1);
+        sTemp = sensorData.TEMP * 0.25;
+        iTemp =  sensorData.INTERNAL * 0.0625;
     }
 
 private:
@@ -66,6 +68,8 @@ private:
         uint16_t TEMP:14;                           ///< thermocouple measured temperature in 0.25°C steps
     } sensorData = {};
     uint8_t buffer[4] = {};
+    double sTemp = 0;
+    double iTemp = 0;
 };
 
-#endif //THERMOCOUPLE_H
+#endif //MAX31855_H
