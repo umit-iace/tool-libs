@@ -5,6 +5,8 @@
 #ifndef TICK_H
 #define TICK_H
 
+#include <stdint.h>
+
 /**
  * Class describing a client to the @ref TickServer.
  *
