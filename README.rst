@@ -26,7 +26,7 @@ This is a collection of libraries. The library is structured as follows:
 
   - ``servo`` - Class for hardware based RC servo control
 
-  - ``spi`` - Classes to use Hardware based SPI functionality using ``RequestQueue``
+  - ``spi`` - Classes to use hardware based SPI functionality using ``RequestQueue``
 
     - ``ChipSelect``
 
@@ -35,6 +35,8 @@ This is a collection of libraries. The library is structured as follows:
     - ``HardwareSPI``
 
   - ``timer`` - Template class for hardware based Timers
+
+  - ``uart`` - Template class for hardware based UART
 
 * Utils - General classes
 
