@@ -48,6 +48,8 @@ This is a collection of libraries. The library is structured as follows:
 
   - ``RequestQueue`` - Template based class for a request queue
 
+  - ``RingBuffer`` - Template class that implements a ring buffer
+
   - ``Tick`` - Classes to realise a general time server at that clients can connect.
 
     - ``TickClient`` - Class describing a client to the TickServer.

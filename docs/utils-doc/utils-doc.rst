@@ -7,6 +7,8 @@ General classes
 
    Experiment_h
    ExperimentModules_h
+   MovingAverage_h
    RequestQueue_h
+   RingBuffer_h
    Tick_h
    Transport_h
