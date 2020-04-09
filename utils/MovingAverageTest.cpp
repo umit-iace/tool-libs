@@ -2,6 +2,9 @@
  *
  * Copyright (c) 2019 IACE
  */
+
+#define BOOST_TEST_MODULE MovingAverageTest
+
 #include "MovingAverage.h"
 
 #include <boost/test/unit_test.hpp>
