@@ -5,7 +5,7 @@
 #ifndef TRANSPORT_H
 #define TRANSPORT_H
 
-#include <cstdio>
+#include <cstdint>
 
 #include "define.h"
 #include "utils/ExperimentModule.h"
@@ -61,7 +61,7 @@ public:
       * @param iId frame identifier
       * @param iPayload frame data as pointer
       */
-    void handleFrame(unsigned char id, unsigned char *p) {
+    void handleFrame(uint8_t id, uint8_t *p) {
     	unPackPointer = p;
         if (frameHandler[id]) {
             frameHandler[id]();

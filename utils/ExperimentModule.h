@@ -5,6 +5,8 @@
 #ifndef EXPERIMENTMODULE_H
 #define EXPERIMENTMODULE_H
 
+#include <cstdint>
+
 /**
  * class describing a generic experiment module
  */
@@ -23,7 +25,7 @@ public:
      * at least one id. gets called for every registered id separately
      * @param id id of current frame to be unpacked
      */
-    virtual void handleFrame(unsigned char id) {}
+    virtual void handleFrame(uint8_t id) {}
 
     /**
      * outgoing Frame
@@ -33,7 +35,7 @@ public:
      * @param id id of current frame to be packed
      * @param lTime current experiment time in ms
      */
-    virtual void sendFrame(unsigned char id, unsigned long lTime) {}
+    virtual void sendFrame(uint8_t id, uint32_t lTime) {}
 
     /**
      * used for connecting experiment modules.
