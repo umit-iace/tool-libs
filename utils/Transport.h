@@ -21,14 +21,14 @@ public:
      * @param payload pointer to payload buffer
      * @param len length of payload buffer
      */
-    virtual int send(uint8_t id, uint8_t *payload, uint8_t len) = 0;
+    virtual int send(uint8_t id, const uint8_t *payload, uint8_t len) = 0;
 
     /**
      * register frame handler to be called by connection upon
      * receiving a valid frame
      * @param handler function pointer to frame handler
      */
-    virtual void registerFrameHandler(void (*handler)(uint8_t id, uint8_t *payload)) = 0;
+    virtual void registerFrameHandler(void (*handler)(uint8_t id, const uint8_t *payload)) = 0;
 };
 
 /**
@@ -42,7 +42,7 @@ public:
     Transport(Connection *conn): conn(conn) {
 	pThis = this;
 
-        conn->registerFrameHandler([](uint8_t iId, uint8_t *iPayload) {
+        conn->registerFrameHandler([](uint8_t iId, const uint8_t *iPayload) {
                     pThis->handleFrame(iId, iPayload);
                 }
         );
@@ -61,7 +61,7 @@ public:
       * @param iId frame identifier
       * @param iPayload frame data as pointer
       */
-    void handleFrame(uint8_t id, uint8_t *p) {
+    void handleFrame(uint8_t id, const uint8_t *p) {
     	unPackPointer = p;
         if (frameHandler[id]) {
             frameHandler[id]();
@@ -119,7 +119,7 @@ private:
 
         Connection *conn = nullptr;
 	unsigned char payload[TRANSPORT_MAX_PAYLOAD];
-	unsigned char *unPackPointer;
+	const unsigned char *unPackPointer;
 	unsigned char cCursor = 0;
 	inline static Transport *pThis = nullptr;
         ExperimentModule *expM[64] = {};
