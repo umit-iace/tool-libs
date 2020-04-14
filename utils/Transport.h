@@ -10,7 +10,26 @@
 #include "define.h"
 #include "utils/ExperimentModule.h"
 
-#include "Min.h"
+/**
+ * @brief Generic abstraction of a frame based connection
+ */
+class Connection {
+public:
+    /**
+     * send a frame to connection
+     * @param id ID of frame
+     * @param payload pointer to payload buffer
+     * @param len length of payload buffer
+     */
+    virtual int send(uint8_t id, uint8_t *payload, uint8_t len) = 0;
+
+    /**
+     * register frame handler to be called by connection upon
+     * receiving a valid frame
+     * @param handler function pointer to frame handler
+     */
+    virtual void registerFrameHandler(void (*handler)(uint8_t id, uint8_t *payload)) = 0;
+};
 
 /**
  * @brief Layer class for the min protocol communication between the host and the microcontroller
@@ -20,10 +39,10 @@ public:
     /**
      * Constructor, that initialize the min protocol
      */
-    Transport() : cMin() {
+    Transport(Connection *conn): conn(conn) {
 	pThis = this;
 
-        cMin.add_application_function([](uint8_t iId, uint8_t *iPayload) {
+        conn->registerFrameHandler([](uint8_t iId, uint8_t *iPayload) {
                     pThis->handleFrame(iId, iPayload);
                 }
         );
@@ -60,11 +79,7 @@ public:
 			pThis->cCursor = 0;
 			pThis->expM[id]->sendFrame(id, lTime);
         		if (pThis->cCursor) {
-#ifdef TRANSPORT_PROTOCOL
-                    pThis->cMin.queue_frame(id, pThis->payload, pThis->cCursor);
-#else
-				    pThis->cMin.send_frame(id, pThis->payload, pThis->cCursor);
-#endif
+                            pThis->conn->send(id, pThis->payload, pThis->cCursor);
 			}
 		}
         }
@@ -102,13 +117,13 @@ private:
 		unPackPointer += sizeof(T);
 	}
 
-	Min cMin;
+        Connection *conn = nullptr;
 	unsigned char payload[TRANSPORT_MAX_PAYLOAD];
 	unsigned char *unPackPointer;
 	unsigned char cCursor = 0;
 	inline static Transport *pThis = nullptr;
-    ExperimentModule *expM[64] = {};
-    void (*frameHandler[64])() = {};
+        ExperimentModule *expM[64] = {};
+        void (*frameHandler[64])() = {};
 };
 
 #endif //TRANSPORT_H
