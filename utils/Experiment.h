@@ -16,7 +16,7 @@ class Experiment {
 public:
     Experiment(unsigned int numberofModules) {
         pExp = this;
-        expMod = new ExperimentModule*[numberofModules]();
+        expMod = new ExperimentModule *[numberofModules]();
         expModLen = numberofModules;
         Transport::registerHandler(1, unpackExp);
     }
@@ -26,7 +26,7 @@ public:
         va_list args;
         va_start(args, mod);
         for (int i = 1; i < expModLen; ++i) {
-            expMod[i] = (ExperimentModule *) va_arg(args, ExperimentModule*);
+            expMod[i] = (ExperimentModule *) va_arg(args, ExperimentModule * );
         }
         va_end(args);
     }

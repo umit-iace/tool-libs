@@ -160,8 +160,7 @@ breathe_doxygen_config_options = {
     'ENABLE_PREPROCESSING': 'YES',
     'MACRO_EXPANSION': 'YES',
     'EXPAND_ONLY_PREDEF': 'YES',
-    'PREDEFINED': '__attribute__(x)= \
-                  SPEEDTECH=1',
+    'PREDEFINED': '__attribute__(x)=',
 }
 
 # Tell sphinx what the primary language being documented is.

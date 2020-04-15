@@ -14,7 +14,8 @@ class HardwarePWM {
 public:
     /**
      * set pwm in percent
-     * @param set [0..1]
+     * @param perc
+     * @param chan
      */
     void pwm(double perc, uint32_t chan) {
         __HAL_TIM_SET_COMPARE(&hPWMTim, chan, perc * period);
@@ -22,15 +23,10 @@ public:
 
     /**
      * Initialize Timer Hardware and PWM pins
-     * @param iPinL
-     * @param gpioPortL
-     * @param iAlternateL
-     * @param chanLeft
-     * @param iPinR
-     * @param gpioPortR
-     * @param iAlternateR
-     * @param chanRight
+     *
      * @param dTim
+     * @param prescaler
+     * @param period
      */
     HardwarePWM(TIM_TypeDef *dTim, uint32_t prescaler, uint32_t period) : period(period) {
         // clock config
@@ -49,6 +45,13 @@ public:
         while (HAL_TIMEx_MasterConfigSynchronization(&hPWMTim, &sMasterConfig) != HAL_OK);
     }
 
+    /**
+     * Starts the pwm
+     * @param iPin
+     * @param gpioPort
+     * @param iAlternate
+     * @param chan
+     */
     void startChannel(uint32_t iPin, GPIO_TypeDef *gpioPort, uint8_t iAlternate, uint32_t chan)
     {
         // init pins

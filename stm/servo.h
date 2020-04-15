@@ -14,7 +14,7 @@ class Servo {
 public:
     /**
      * set servo in percent
-     * @param set [-100..100]
+     * @param perc set [-100..100]
      */
     void left(double perc) {
         uint16_t timing = percentToPWM(perc);
@@ -23,7 +23,7 @@ public:
 
     /**
     * set servo in percent
-    * @param set [-100..100]
+    * @param perc set [-100..100]
     */
     void right(double perc) {
         uint16_t timing = percentToPWM(perc);
@@ -44,11 +44,16 @@ public:
 
     /**
      * Initialize pins and timer for a pwm output
-     * @param iPin pin
-     * @param gpioPort definition of the pin port1
-     * @param iAlternate alternate pin functionality
-     * @param dTim definition of used Timer
-     * @param htim timer handle
+     *
+     * @param iPin1
+     * @param gpioPort1
+     * @param iAlternate1
+     * @param left
+     * @param iPin2
+     * @param gpioPort2
+     * @param iAlternate2
+     * @param right
+     * @param dTim
      */
     Servo(uint32_t iPin1, GPIO_TypeDef *gpioPort1, uint8_t iAlternate1, uint32_t left,
              uint32_t iPin2, GPIO_TypeDef *gpioPort2, uint8_t iAlternate2, uint32_t right,

@@ -68,18 +68,31 @@ public:
 class SPIRequest {
 public:
     ChipSelect *cs;     ///< pointer the \ref ChipSelect instance requesting data
+    /// direction the data should travel
     enum eDir {
         MOSI,
         MISO,
         BOTH
-    } dir;              ///< direction the data should travel
+    } dir;
     uint8_t *tData;     ///< pointer to data to be transmitted
     uint8_t *rData;     ///< pointer to receive buffer
     uint32_t dataLen;   ///< number of bytes to transfer
     bool end;           ///< true, if chip select should be raised after this part of the transfer
 
+    /**
+     * Standard constructor
+     */
     SPIRequest() {};
 
+    /**
+     *
+     * @param cs
+     * @param dir
+     * @param tData
+     * @param rData
+     * @param dataLen
+     * @param end
+     */
     SPIRequest(ChipSelect *cs, enum eDir dir, uint8_t *tData, uint8_t *rData, uint32_t dataLen, bool end) :
             cs(cs), dir(dir), tData(tData), rData(rData), dataLen(dataLen), end(end) {
         deepCopyData(tData);
@@ -137,7 +150,7 @@ public:
      * override virtual RequestQueue function
      *
      * processes a request in the queue.
-     * @param request
+     * @param rq
      */
     void processRequest(SPIRequest &rq) override {
         // activate the chip

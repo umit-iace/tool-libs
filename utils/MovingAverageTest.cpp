@@ -1,4 +1,4 @@
-/** @file MovingAverageTest.h
+/** @file MovingAverageTest.cpp
  *
  * Copyright (c) 2019 IACE
  */

@@ -52,7 +52,6 @@ public:
     }
 
 private:
-    /// sensor data struct. lsb to msb order.
     struct __packed {
         uint8_t OC:1;                               ///< \b error: open circuit
         uint8_t SCG:1;                              ///< \b error: short to GND
@@ -66,7 +65,7 @@ private:
         uint8_t :1;
         //\endcond
         uint16_t TEMP:14;                           ///< thermocouple measured temperature in 0.25°C steps
-    } sensorData = {};
+    } sensorData = {};                              ///< sensor data struct. lsb to msb order.
     uint8_t buffer[4] = {};
     double sTemp = 0;
     double iTemp = 0;

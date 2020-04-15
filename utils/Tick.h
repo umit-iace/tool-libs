@@ -28,8 +28,10 @@ public:
     TickServer(uint8_t numberofClients) : maxClients(numberofClients) {
         clients = new Client[numberofClients]();
     }
+
     /**
      * Method must be called initially by tick client.
+     * @param client reference to client
      * @param ms Tick request time in ms
      */
     bool registerClient(TickClient *client, uint32_t ms) {

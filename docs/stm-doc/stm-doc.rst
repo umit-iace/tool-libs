@@ -11,3 +11,4 @@ Hardware specific classes for the STM controller familiy (Support for f4 and f7)
    Servo_h
    SPI_h
    Timer_h
+   UART_h

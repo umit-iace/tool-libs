@@ -24,8 +24,8 @@ protected:
 public:
     /**
      * create a new request queue for a specific request type
+     *
      * @param length length of queue
-     * @param rType pointer to specific request type
      */
     RequestQueue(unsigned int length) {
         FIFOLENGTH = length;

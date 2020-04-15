@@ -14,9 +14,9 @@ class HardwareTimer {
 public:
     /**
      * Initialize Timer Hardware
-     * @param dTim
+     *
      * @param hTim
-     * @param callback
+     * @param dTim
      */
     HardwareTimer(TIM_HandleTypeDef *hTim, TIM_TypeDef *dTim) : hTim(hTim) {
         this->hTim->Instance = dTim;

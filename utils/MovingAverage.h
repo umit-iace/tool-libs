@@ -4,6 +4,7 @@
  */
 #ifndef MOVINGAVERAGE_H
 #define MOVINGAVERAGE_H
+
 /**
  * Template class that implements a moving average filter as fifo.
  * @tparam T data type of the filter

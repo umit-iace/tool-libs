@@ -99,7 +99,7 @@ public:
      * override virtual RequestQueue function
      *
      * processes a request in the queue.
-     * @param request
+     * @param rq
      */
     void processRequest(I2CRequest &rq) override {
         // transfer the data
@@ -174,6 +174,7 @@ private:
     //\cond false
     inline static HardwareI2C *pThis = nullptr;
     I2C_HandleTypeDef &hI2C = hHWI2C;
+    //\endcond
 };
 
 extern "C" void I2C1_EV_IRQHandler() {
