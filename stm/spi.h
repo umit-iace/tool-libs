@@ -199,7 +199,7 @@ private:
     /**
      * Initialize the MISO, MOSI, and CLK pins and configure SPI instance
      */
-    HardwareSPI() : RequestQueue(50) {
+    HardwareSPI() : RequestQueue(50, HW_SPI_TIMEOUT) {
         this->initPins(HW_SPI_MISO_PIN, HW_SPI_MISO_PORT, HW_SPI_MISO_ALTERNATE,
                 HW_SPI_MOSI_PIN, HW_SPI_MOSI_PORT, HW_SPI_MOSI_ALTERNATE,
                 HW_SPI_SCK_PIN, HW_SPI_SCK_PORT, HW_SPI_SCK_ALTERNATE);

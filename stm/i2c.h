@@ -127,7 +127,7 @@ private:
         pThis->endProcess();
     }
 
-    HardwareI2C() : RequestQueue(50)  {
+    HardwareI2C() : RequestQueue(50, HW_I2C_TIMEOUT)  {
         this->initPins(HW_I2C_SDA_PIN, HW_I2C_SDA_PORT, HW_I2C_SDA_ALTERNATE,
                        HW_I2C_SCL_PIN, HW_I2C_SCL_PORT, HW_I2C_SCL_ALTERNATE);
         this->config(HW_I2C, HW_I2C_BAUD);
