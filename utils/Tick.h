@@ -24,22 +24,33 @@ public:
  * Class describing a tick server to a @ref TickClient.
  */
 class TickServer {
-public:
+private:
+    inline static TickServer *pThis = nullptr;
+
+    static TickServer *server() {
+        if (!pThis) {
+            pThis = new TickServer(TICK_MAX_CLIENTS);
+        }
+        return pThis;
+    }
+
     TickServer(uint8_t numberofClients) : maxClients(numberofClients) {
         clients = new Client[numberofClients]();
     }
 
+public:
     /**
      * Method must be called initially by tick client.
      * @param client reference to client
      * @param ms Tick request time in ms
      */
-    bool registerClient(TickClient *client, uint32_t ms) {
-        if (iClients != maxClients) {
-            clients[iClients].client = client;
-            clients[iClients].ms = ms;
-            clients[iClients].msLastCall = 0;
-            ++iClients;
+    static bool registerClient(TickClient *client, uint32_t ms) {
+        auto *This = TickServer::server();
+        if (This->iClients != This->maxClients) {
+            This->clients[This->iClients].client = client;
+            This->clients[This->iClients].ms = ms;
+            This->clients[This->iClients].msLastCall = 0;
+            ++This->iClients;
             return true;
         }
         return false;
@@ -61,13 +72,14 @@ public:
      * method must be called cyclically
      * @param dT time difference in ms since last call
      */
-    void msCall(uint32_t dT) {
-        millis += dT;
-        for (int i = 0; i < this->iClients; ++i) {
-            Client *client = &this->clients[i];
-            if (millis - client->ms >= client->msLastCall) {
+    static void msCall(uint32_t dT) {
+        auto *This = TickServer::server();
+        This->millis += dT;
+        for (int i = 0; i < This->iClients; ++i) {
+            Client *client = &This->clients[i];
+            if (This->millis - client->ms >= client->msLastCall) {
                 client->client->tick();
-                client->msLastCall = millis;
+                client->msLastCall = This->millis;
             }
         }
     }
