@@ -6,8 +6,6 @@
 #define TRANSPORT_H
 
 #include <cstdint>
-
-#include "define.h"
 #include "utils/ExperimentModule.h"
 
 /**
@@ -31,6 +29,7 @@ public:
     virtual void registerFrameHandler(void (*handler)(uint8_t id, const uint8_t *payload)) = 0;
 };
 
+
 /**
  * @brief Layer class for the min protocol communication between the host and the microcontroller
  */
@@ -39,8 +38,9 @@ public:
     /**
      * Constructor, that initialize the min protocol
      */
-    Transport(Connection *conn) : conn(conn) {
+    Transport(Connection *conn, uint16_t maxPayload) : conn(conn) {
         pThis = this;
+        payload = new unsigned char[maxPayload]();
 
         conn->registerFrameHandler([](uint8_t iId, const uint8_t *iPayload) {
                                        pThis->handleFrame(iId, iPayload);
@@ -119,8 +119,8 @@ private:
     }
 
     Connection *conn = nullptr;
-    unsigned char payload[TRANSPORT_MAX_PAYLOAD];
-    const unsigned char *unPackPointer;
+    unsigned char *payload = nullptr;
+    const unsigned char *unPackPointer = nullptr;
     unsigned char cCursor = 0;
     inline static Transport *pThis = nullptr;
     ExperimentModule *expM[64] = {};
