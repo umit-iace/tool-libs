@@ -8,7 +8,7 @@
 #include <boost/test/unit_test.hpp>
 #include <cstdlib>
 #include <cstdio>
-#include "RequestQueue.h"
+#include "utils/RequestQueue.h"
 
 #define LEN (10)
 
