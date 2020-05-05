@@ -6,7 +6,7 @@
 #define TRANSPORT_H
 
 #include <cstdint>
-#include "utils/ExperimentModule.h"
+#include "ExperimentModule.h"
 
 /**
  * @brief Generic abstraction of a frame based connection
