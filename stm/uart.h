@@ -26,12 +26,10 @@ public:
      */
     HardwareUART(uint32_t iRXPin, GPIO_TypeDef *gpioRXPort, uint8_t iRXAlternate,
                  uint32_t iTXPin, GPIO_TypeDef *gpioTXPort, uint8_t iTXAlternate,
-                 USART_TypeDef *dUsart, uint32_t iBaudRate, UART_HandleTypeDef *hUart) : iRXPin(iRXPin), gpioRXPort(gpioRXPort),
-                                                                                         iRXAlternate(iRXAlternate),
-                                                                                         iTXPin(iTXPin), gpioTXPort(gpioTXPort),
-                                                                                         iTXAlternate(iTXAlternate),
-                                                                                         dUsart(dUsart), iBaudRate(iBaudRate),
-                                                                                         hUart(hUart){
+                 USART_TypeDef *dUsart, uint32_t iBaudRate, UART_HandleTypeDef *hUart) :
+                    iRXPin(iRXPin), gpioRXPort(gpioRXPort), iRXAlternate(iRXAlternate),
+                    iTXPin(iTXPin), gpioTXPort(gpioTXPort), iTXAlternate(iTXAlternate),
+                    dUsart(dUsart), iBaudRate(iBaudRate), hUart(hUart) {
         this->initRX();
         this->initTX();
         this->config();

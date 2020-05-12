@@ -14,8 +14,8 @@ class HardwarePWM {
 public:
     /**
      * set pwm in percent
-     * @param perc
-     * @param chan
+     * @param perc [0..1]
+     * @param chan Timer channel (TIM_CHANNEL_x)
      */
     void pwm(double perc, uint32_t chan) {
         __HAL_TIM_SET_COMPARE(&hPWMTim, chan, perc * period);
@@ -24,9 +24,11 @@ public:
     /**
      * Initialize Timer Hardware and PWM pins
      *
-     * @param dTim
-     * @param prescaler
-     * @param period
+     * @param dTim TIMx
+     * @param prescaler 16bit value
+     * @param period 16bit value
+     *
+     * Timer counts with frequency of `TIM_periph / prescaler` from 0 to `period`
      */
     HardwarePWM(TIM_TypeDef *dTim, uint32_t prescaler, uint32_t period) : period(period) {
         // clock config
@@ -46,11 +48,11 @@ public:
     }
 
     /**
-     * Starts the pwm
-     * @param iPin
-     * @param gpioPort
-     * @param iAlternate
-     * @param chan
+     * enable PWM output on given timer channel
+     * @param iPin pin number of PWM output
+     * @param gpioPort pin port of PWM output
+     * @param iAlternate alternate function for PWM output
+     * @param chan timer channel number (TIM_CHANNEL_x)
      */
     void startChannel(uint32_t iPin, GPIO_TypeDef *gpioPort, uint8_t iAlternate, uint32_t chan)
     {
