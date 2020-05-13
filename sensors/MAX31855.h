@@ -36,7 +36,7 @@ public:
      * request measurement of sensor data
      */
     void sense() {
-        SPIRequest r = {this, SPIRequest::MISO, nullptr, buffer, sizeof(buffer), true};
+        SPIRequest r = {this, SPIRequest::MISO, nullptr, buffer, sizeof(buffer), 0};
         HardwareSPI::master()->request(r);
     }
 
@@ -45,7 +45,7 @@ public:
      *
      * copy data from buffer into struct.
      */
-    void callback() override {
+    void callback(uint8_t cbData) override {
         bitwisecopy((uint8_t *)&sensorData, 32, sizeof(sensorData), buffer, 1);
         sTemp = sensorData.TEMP * 0.25;
         iTemp =  sensorData.INTERNAL * 0.0625;

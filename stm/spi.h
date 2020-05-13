@@ -51,14 +51,16 @@ public:
         HAL_GPIO_WritePin(port,iPin,(GPIO_PinState) !sel);
     }
 
-    ChipSelect(uint32_t iCSPIN, GPIO_TypeDef *gpioCSPort) : iPin(iCSPIN), port(gpioCSPort) {
+    ChipSelect(uint32_t iCSPIN, GPIO_TypeDef *gpioCSPort) :
+            iPin(iCSPIN), port(gpioCSPort) {
         this->initCS();
     }
 
     /**
      * callback. is called as soon as requested data arrived over wire.
      */
-    virtual void callback() = 0;
+    virtual void callback(uint8_t cbData) { }
+
 };
 
 /**
@@ -77,7 +79,7 @@ public:
     uint8_t *tData;     ///< pointer to data to be transmitted
     uint8_t *rData;     ///< pointer to receive buffer
     uint32_t dataLen;   ///< number of bytes to transfer
-    bool end;           ///< true, if chip select should be raised after this part of the transfer
+    uint8_t cbData;     ///< data to use in callback
 
     /**
      * Standard constructor
@@ -91,10 +93,12 @@ public:
      * @param tData
      * @param rData
      * @param dataLen
-     * @param end
+     * @param cbData
      */
-    SPIRequest(ChipSelect *cs, enum eDir dir, uint8_t *tData, uint8_t *rData, uint32_t dataLen, bool end) :
-            cs(cs), dir(dir), tData(tData), rData(rData), dataLen(dataLen), end(end) {
+    SPIRequest(ChipSelect *cs, enum eDir dir, uint8_t *tData, uint8_t *rData,
+            uint32_t dataLen, uint8_t cbData) :
+            cs(cs), dir(dir), tData(tData), rData(rData),
+            dataLen(dataLen), cbData(cbData) {
         deepCopyData(tData);
     }
 
@@ -107,7 +111,7 @@ public:
         tData = nullptr;
         rData = nullptr;
         dataLen = 0;
-        end = false;
+        cbData = 0;
     }
 
     SPIRequest &operator=(const SPIRequest &other) {
@@ -116,7 +120,7 @@ public:
         tData = other.tData;
         rData = other.rData;
         dataLen = other.dataLen;
-        end = other.end;
+        cbData = other.cbData;
         deepCopyData(other.tData);
         return *this;
     }
@@ -177,12 +181,10 @@ private:
      */
     static void transferComplete(SPI_HandleTypeDef *hspi) {
         auto &r = pThis->lastRequest();
-        if (r.end) {
-            // deactivate chip
-            r.cs->selectChip(false);
-            // signal data arrival
-            r.cs->callback();
-        }
+        // deactivate chip
+        r.cs->selectChip(false);
+        // signal data arrival
+        r.cs->callback(r.cbData);
         // signal request complete
         pThis->endProcess();
     }
