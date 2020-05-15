@@ -59,7 +59,7 @@ public:
     /**
      * callback. is called as soon as requested data arrived over wire.
      */
-    virtual void callback(uint8_t cbData) { }
+    virtual void callback(void *cbData) { }
 
 };
 
@@ -79,7 +79,7 @@ public:
     uint8_t *tData;     ///< pointer to data to be transmitted
     uint8_t *rData;     ///< pointer to receive buffer
     uint32_t dataLen;   ///< number of bytes to transfer
-    uint8_t cbData;     ///< data to use in callback
+    void *cbData;     ///< data to use in callback
 
     /**
      * Standard constructor
@@ -96,7 +96,7 @@ public:
      * @param cbData
      */
     SPIRequest(ChipSelect *cs, enum eDir dir, uint8_t *tData, uint8_t *rData,
-            uint32_t dataLen, uint8_t cbData) :
+            uint32_t dataLen, void *cbData) :
             cs(cs), dir(dir), tData(tData), rData(rData),
             dataLen(dataLen), cbData(cbData) {
         deepCopyData(tData);
@@ -111,7 +111,7 @@ public:
         tData = nullptr;
         rData = nullptr;
         dataLen = 0;
-        cbData = 0;
+        cbData = nullptr;
     }
 
     SPIRequest &operator=(const SPIRequest &other) {
@@ -184,7 +184,9 @@ private:
         // deactivate chip
         r.cs->selectChip(false);
         // signal data arrival
-        r.cs->callback(r.cbData);
+        if (r.cbData) {
+            r.cs->callback(r.cbData);
+        }
         // signal request complete
         pThis->endProcess();
     }

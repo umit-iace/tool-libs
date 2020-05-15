@@ -97,8 +97,8 @@ public:
     /**
      * callback when async read is finished
      */
-    void callback(uint8_t userData) override {
-        enum callbackUserData reqType = (enum callbackUserData)userData;
+    void callback(void *userData) override {
+        enum callbackUserData reqType = *(enum callbackUserData*)&userData;
         uint16_t rtd;
         switch (reqType) {
             case TEMPREQ:
@@ -152,7 +152,7 @@ public:
                     (thr >> 8) & 0xff, thr & 0xff};
 
         HardwareSPI::master()->request(SPIRequest(this, SPIRequest::MOSI, data, nullptr,
-                    3, NOREQ));
+                    3, (void*)NOREQ));
     }
 
     /**
@@ -164,7 +164,7 @@ public:
                     (thr >> 8) & 0xff, thr & 0xff};
 
         HardwareSPI::master()->request(SPIRequest(this, SPIRequest::MOSI, data, nullptr,
-                    3, NOREQ));
+                    3, (void*)NOREQ));
     }
 
 private:
@@ -203,26 +203,26 @@ private:
     void setConfig(uint8_t val) {
         config = val;
         uint8_t data[2] = {WRITE | REG_CONFIG, config};
-        SPIRequest r = {this, SPIRequest::MOSI, data, nullptr, 2, CONFIGREQ};
+        SPIRequest r = {this, SPIRequest::MOSI, data, nullptr, 2, (void*)CONFIGREQ};
         HardwareSPI::master()->request(r);
     }
 
     void getTempData() {
         uint8_t tx[3] = {READ | REG_RTD, 0, 0};
-        SPIRequest r = {this, SPIRequest::BOTH, tx, sensorData, sizeof tx, TEMPREQ};
+        SPIRequest r = {this, SPIRequest::BOTH, tx, sensorData, sizeof tx, (void*)TEMPREQ};
         HardwareSPI::master()->request(r);
     }
 
     void getStatusData() {
         uint8_t tx[2] = {READ | REG_STATUS, 0};
-        SPIRequest r = {this, SPIRequest::BOTH, tx, statusData, sizeof tx, STATUSREQ};
+        SPIRequest r = {this, SPIRequest::BOTH, tx, statusData, sizeof tx, (void*)STATUSREQ};
         HardwareSPI::master()->request(r);
     }
 
     void getAllData() {
         allData[0] = READ | REG_CONFIG;
         SPIRequest r = {this, SPIRequest::BOTH, allData, allData,
-            9, ALLDATAREQ};
+            9, (void*)ALLDATAREQ};
         HardwareSPI::master()->request(r);
     }
 };
