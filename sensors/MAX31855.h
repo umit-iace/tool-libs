@@ -6,6 +6,7 @@
 #define MAX31855_H
 
 #include "stm/spi.h"
+#include "math.h"
 
 class MAX31855 : public ChipSelect {
 public:
@@ -47,8 +48,13 @@ public:
      */
     void callback(uint8_t cbData) override {
         bitwisecopy((uint8_t *)&sensorData, 32, sizeof(sensorData), buffer, 1);
-        sTemp = sensorData.TEMP * 0.25;
-        iTemp =  sensorData.INTERNAL * 0.0625;
+        if (!sensorData.FAULT) {
+            sTemp = sensorData.TEMP * 0.25;
+            iTemp =  sensorData.INTERNAL * 0.0625;
+        } else {
+            sTemp = NAN;
+            iTemp = NAN;
+        }
     }
 
 private:
