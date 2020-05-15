@@ -149,7 +149,7 @@ public:
      */
     void setLThr(uint16_t thr) {
         uint8_t data[3] = {WRITE | REG_LOW_FAULT_THRESHOLD,
-                    (thr >> 8) & 0xff, thr & 0xff};
+                    (uint8_t)(thr >> 8), (uint8_t)thr};
 
         HardwareSPI::master()->request(SPIRequest(this, SPIRequest::MOSI, data, nullptr,
                     3, (void*)NOREQ));
@@ -161,7 +161,7 @@ public:
      */
     void setHThr(uint16_t thr) {
         uint8_t data[3] = {WRITE | REG_HIGH_FAULT_THRESHOLD,
-                    (thr >> 8) & 0xff, thr & 0xff};
+                    (uint8_t)(thr >> 8), (uint8_t)thr};
 
         HardwareSPI::master()->request(SPIRequest(this, SPIRequest::MOSI, data, nullptr,
                     3, (void*)NOREQ));
