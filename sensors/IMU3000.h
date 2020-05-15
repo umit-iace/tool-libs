@@ -52,7 +52,7 @@ private:
 
     void readGyroData() {
         I2CRequest gyroread (
-                ADDR_GYRO << 1,
+                ADDR_GYRO,
                 I2CRequest::READ,
                 0x1D,
                 (uint8_t *)gyroData,
@@ -63,7 +63,7 @@ private:
 
     void readAccData() {
         I2CRequest accread (
-                ADDR_ACC << 1,
+                ADDR_ACC,
                 I2CRequest::READ,
                 0x32,
                 (uint8_t *)accData,
@@ -146,7 +146,7 @@ private:
 
     void gyroWriteReg(uint8_t reg, uint8_t val) {
         I2CRequest gyroReq (
-                ADDR_GYRO << 1,
+                ADDR_GYRO,
                 I2CRequest::WRITE,
                 reg,
                 &val,
@@ -157,7 +157,7 @@ private:
 
     void accWriteReg(uint8_t reg, uint8_t val) {
         I2CRequest accReq (
-                ADDR_ACC << 1,
+                ADDR_ACC,
                 I2CRequest::WRITE,
                 reg,
                 &val,

@@ -18,7 +18,7 @@ I2C_HandleTypeDef hHWI2C;
  */
 class I2CRequest {
 public:
-    uint8_t address;     ///<
+    uint8_t address;     ///< 7bit address of device
     enum eDir {
         WRITE,
         READ
@@ -105,10 +105,10 @@ public:
         // transfer the data
         switch (rq.dir) {
             case I2CRequest::WRITE:
-                HAL_I2C_Mem_Write_IT(&this->hI2C, rq.address, rq.memAddress, I2C_MEMADD_SIZE_8BIT, rq.pData, rq.dataLen);
+                HAL_I2C_Mem_Write_IT(&this->hI2C, rq.address << 1, rq.memAddress, I2C_MEMADD_SIZE_8BIT, rq.pData, rq.dataLen);
                 break;
             case I2CRequest::READ:
-                HAL_I2C_Mem_Read_IT(&this->hI2C, rq.address, rq.memAddress, I2C_MEMADD_SIZE_8BIT, rq.pData, rq.dataLen);
+                HAL_I2C_Mem_Read_IT(&this->hI2C, rq.address << 1, rq.memAddress, I2C_MEMADD_SIZE_8BIT, rq.pData, rq.dataLen);
                 break;
         }
     }
