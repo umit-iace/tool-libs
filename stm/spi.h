@@ -238,7 +238,7 @@ private:
         hSPI.Init.Direction = SPI_DIRECTION_2LINES;
         hSPI.Init.DataSize = SPI_DATASIZE_8BIT;
         hSPI.Init.CLKPolarity = iClkPol;
-        hSPI.Init.CLKPhase = SPI_PHASE_1EDGE;
+        hSPI.Init.CLKPhase = SPI_PHASE_2EDGE;
         hSPI.Init.NSS = SPI_NSS_SOFT;
         hSPI.Init.BaudRatePrescaler = iBaudPresc;
         hSPI.Init.FirstBit = SPI_FIRSTBIT_MSB;
