@@ -207,7 +207,12 @@ private:
         this->initPins(HW_SPI_MISO_PIN, HW_SPI_MISO_PORT, HW_SPI_MISO_ALTERNATE,
                 HW_SPI_MOSI_PIN, HW_SPI_MOSI_PORT, HW_SPI_MOSI_ALTERNATE,
                 HW_SPI_SCK_PIN, HW_SPI_SCK_PORT, HW_SPI_SCK_ALTERNATE);
-        this->config(HW_SPI, HW_SPI_BAUD_PRESCALER, HW_SPI_CLK_POLARITY);
+#if !defined(HW_SPI) || !defined(HW_SPI_BAUD_PRESCALER) ||\
+    !defined(HW_SPI_CLK_POLARITY) || !defined(HW_SPI_CLK_PHASE)
+#error "you have not set all necessary configuration defines!"
+#endif
+        this->config(HW_SPI, HW_SPI_BAUD_PRESCALER,
+                HW_SPI_CLK_POLARITY, HW_SPI_CLK_PHASE);
     }
 
     //\cond false
@@ -234,13 +239,14 @@ private:
         HAL_GPIO_Init(gpioSCKPort, &GPIO_InitStruct);
     }
 
-    void config(SPI_TypeDef *dSPI, uint32_t iBaudPresc, uint32_t iClkPol) {
+    void config(SPI_TypeDef *dSPI, uint32_t iBaudPresc,
+            uint32_t iClkPol, uint32_t iClkPhase) {
         hSPI.Instance = dSPI;
         hSPI.Init.Mode = SPI_MODE_MASTER;
         hSPI.Init.Direction = SPI_DIRECTION_2LINES;
         hSPI.Init.DataSize = SPI_DATASIZE_8BIT;
         hSPI.Init.CLKPolarity = iClkPol;
-        hSPI.Init.CLKPhase = SPI_PHASE_2EDGE;
+        hSPI.Init.CLKPhase = iClkPhase;
         hSPI.Init.NSS = SPI_NSS_SOFT;
         hSPI.Init.BaudRatePrescaler = iBaudPresc;
         hSPI.Init.FirstBit = SPI_FIRSTBIT_MSB;
