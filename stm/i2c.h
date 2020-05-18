@@ -162,6 +162,8 @@ private:
 
         HAL_I2C_RegisterCallback(&hI2C, HAL_I2C_MEM_TX_COMPLETE_CB_ID, transferComplete);
         HAL_I2C_RegisterCallback(&hI2C, HAL_I2C_MEM_RX_COMPLETE_CB_ID, transferComplete);
+        HAL_I2C_RegisterCallback(&hI2C, HAL_I2C_MASTER_TX_COMPLETE_CB_ID, transferComplete);
+        HAL_I2C_RegisterCallback(&hI2C, HAL_I2C_MASTER_RX_COMPLETE_CB_ID, transferComplete);
 
         HAL_NVIC_SetPriority(I2C1_ER_IRQn, HW_I2C_IT_PRIO);
         HAL_NVIC_EnableIRQ(I2C1_ER_IRQn);

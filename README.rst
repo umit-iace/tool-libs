@@ -6,6 +6,8 @@ This is a collection of libraries. The library is structured as follows:
 
 * Sensors - Classes implementing specific sensors used in our test rigs
 
+  - ``ADS1115`` - external analog to digital voltage converter
+
   - ``AS1545`` - hall effect based angular position measurement
 
   - ``IMU3000`` - inertial measurement unit 3 ax Gyro + 3 ax Accelerometer
