@@ -26,6 +26,7 @@ public:
     uint8_t memAddress;  ///< memory address
     uint8_t *pData;     ///< pointer to data
     uint32_t dataLen;   ///< number of bytes to transfer
+    void (*process)(I2CRequest &, I2C_HandleTypeDef *);
     void (*callback)(uint8_t *data);
 
     I2CRequest() = default;
@@ -35,14 +36,18 @@ public:
         dir = other.dir;
         memAddress = other.memAddress;
         dataLen = other.dataLen;
+        process = other.process;
         callback = other.callback;
         deepCopyDataPointer(other.pData);
         return *this;
     }
 
-    I2CRequest(uint8_t address, enum eDir dir, uint8_t mem, uint8_t *pData,
-                uint32_t dataLen, void (*callback)(uint8_t *data)) :
+    I2CRequest(uint8_t address, enum eDir dir, uint8_t mem,
+                uint8_t *pData, uint32_t dataLen,
+                void (*process)(I2CRequest &rq, I2C_HandleTypeDef *hi2c),
+                void (*callback)(uint8_t *data)) :
             address(address), dir(dir), memAddress(mem),
+            process(process),
             callback(callback), dataLen(dataLen) {
         deepCopyDataPointer(pData);
     }
@@ -56,6 +61,7 @@ public:
         memAddress = 0;
         pData = nullptr;
         dataLen = 0;
+        process = nullptr;
         callback = nullptr;
     }
 
@@ -102,15 +108,7 @@ public:
      * @param rq
      */
     void processRequest(I2CRequest &rq) override {
-        // transfer the data
-        switch (rq.dir) {
-            case I2CRequest::WRITE:
-                HAL_I2C_Mem_Write_IT(&this->hI2C, rq.address << 1, rq.memAddress, I2C_MEMADD_SIZE_8BIT, rq.pData, rq.dataLen);
-                break;
-            case I2CRequest::READ:
-                HAL_I2C_Mem_Read_IT(&this->hI2C, rq.address << 1, rq.memAddress, I2C_MEMADD_SIZE_8BIT, rq.pData, rq.dataLen);
-                break;
-        }
+        rq.process(rq, &hI2C);
     }
 
 private:

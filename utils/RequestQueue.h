@@ -66,7 +66,7 @@ protected:
         } else if (TIMEOUT && getTime() - timeOf[iOutIndex] > TIMEOUT) {
             // update timing to reflect restart
             for (auto index = iOutIndex; index != iInIndex; inc(index)) {
-                timeOf[index] = getTime(); 
+                timeOf[index] = getTime();
             }
             // restart
             this->processRequest(queue[iOutIndex]);
