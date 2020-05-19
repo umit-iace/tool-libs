@@ -7,3 +7,4 @@ Classes implementing specific sensors used in our test rigs
 
    IMU3000_h
    MAX31855_h
+   AS5145_h
