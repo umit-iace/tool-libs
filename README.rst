@@ -13,6 +13,8 @@ This is a collection of libraries. The library is structured as follows:
   - ``MAX31865`` - temperature measurement using the MAX31865 with temperature
     dependent resistors like the PT100
 
+  - ``AS1545`` - hall effect based angular position measurement  
+
 * STM - Hardware specific classes for the STM controller familiy (Support for f4 and f7)
 
   - ``encoder`` - Class for hardware based quadratic encoder support
