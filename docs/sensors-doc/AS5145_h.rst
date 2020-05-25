@@ -1,5 +1,5 @@
 AS5145.h
-~~~~~~~~~~
+~~~~~~~~
 
 .. doxygenfile:: AS5145.h
    :project: Sensors

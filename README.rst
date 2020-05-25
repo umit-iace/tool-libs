@@ -6,14 +6,14 @@ This is a collection of libraries. The library is structured as follows:
 
 * Sensors - Classes implementing specific sensors used in our test rigs
 
+  - ``AS1545`` - hall effect based angular position measurement
+
   - ``IMU3000`` - inertial measurement unit 3 ax Gyro + 3 ax Accelerometer
 
   - ``MAX31855`` - temperature measurement using the MAX31855 with thermocouples
 
   - ``MAX31865`` - temperature measurement using the MAX31865 with temperature
     dependent resistors like the PT100
-
-  - ``AS1545`` - hall effect based angular position measurement  
 
 * STM - Hardware specific classes for the STM controller familiy (Support for f4 and f7)
 
