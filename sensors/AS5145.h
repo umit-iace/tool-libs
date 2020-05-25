@@ -12,7 +12,8 @@
  */
 class HallSensor : public ChipSelect {
 private:
-    /// sensor data struct. lsb to msb order.
+    ///\cond false
+    // sensor data struct. lsb to msb order.
     struct __packed SensorData {
         uint8_t EVEN:1;
         uint8_t DEC:1;
@@ -27,6 +28,7 @@ private:
     uint8_t *buffer = nullptr;          // temporary data buffer
     const unsigned int BUFLEN;          // needed length of buffer to store data from all sensors
     int num = 0;                        // number of sensors attached to daisy-chain
+    ///\endcond
 
 public:
     /**
@@ -60,6 +62,7 @@ public:
         HardwareSPI::master()->request(r);
     }
 
+    ///\cond false
     /**
      * callback when data is successfully measured
      *
@@ -68,5 +71,6 @@ public:
     void callback(void *cbData) override {
         bitwisecopy((uint8_t *)sensor, NUMBITS, sizeof(*sensor), buffer, num);
     }
+    ///\endcond
 };
 #endif //AS5145_H
