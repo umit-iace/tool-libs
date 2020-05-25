@@ -46,9 +46,8 @@ public:
     }
 
     /**
-     * return currently measured sensor angle
      * @param i index of sensor in chain
-     * @return angle
+     * @return measured sensor angle
      */
     double getAngle(int i = 0) {
         return sensor[i].POS;
