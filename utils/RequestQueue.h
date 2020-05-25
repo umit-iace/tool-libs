@@ -77,6 +77,7 @@ protected:
      * create a new request queue for a specific request type
      *
      * @param length length of queue
+     * @param timeout timeout in [ms] before retransmission of unanswered request
      */
     RequestQueue(unsigned int length, unsigned int timeout) :
             FIFOLENGTH(length), TIMEOUT(timeout) {
