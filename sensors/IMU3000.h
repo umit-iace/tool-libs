@@ -8,15 +8,48 @@
 #include "stm/hal.h"
 #include "stm/i2c.h"
 
+///\cond false
 #define ADDR_GYRO       (0b1101000)
 #define ADDR_ACC        (0x53)
+///\endcond
 
 class IMU3000 {
 public:
-    IMU3000() {
-        this->init();
+    /**
+     * possible ranges for accelerometer
+     */
+    enum acc_range {
+        ACC_2G = 0,
+        ACC_4G = 1,
+        ACC_8G = 2,
+        ACC_16G = 3
+    };
+
+    /**
+     * possible ranges for gyro
+     *
+     * measured in degrees/sec.
+     */
+    enum gyro_range {
+        GYRO_250 = 0,
+        GYRO_500 = 1,
+        GYRO_1000 = 2,
+        GYRO_2000 = 3
+    };
+
+    /**
+     * initialize the accelerometer and the gyro
+     */
+    IMU3000(enum acc_range ar=ACC_16G, bool afr=true,
+            enum gyro_range gr=GYRO_250, uint8_t gfilt=1, uint8_t gdiv=4) {
+        setAccRange(ar, afr);
+        accWriteReg(0x2D, 1 << 3); // enable acceleration measurements
+        setGyroConf(gr, gfilt, gdiv);
     }
 
+    /**
+     * start async read of acceleration and gyro data from sensor
+     */
     void measure() {
         readAccData();
         readGyroData();
@@ -28,7 +61,7 @@ public:
      */
     double *getGyro() {
         for (int i = 0; i < 3; ++i) {
-            gyro[i] = gyroData[i] / gyroFactor * 3.14159265 / 180;
+            gyro[i] = gyroData[i] / gyroFactor * 3.14159265358979 / 180;
         }
         return gyro;
     }
@@ -45,6 +78,7 @@ public:
     }
 
 private:
+    ///\cond false
     int16_t gyroData[3] = {};
     int16_t accData[3] = {};
 
@@ -87,15 +121,6 @@ private:
         }
     }
 
-    /**
-     * possible ranges for accelerometer
-     */
-    enum acc_range {
-        ACC_2G = 0,
-        ACC_4G = 1,
-        ACC_8G = 2,
-        ACC_16G = 3
-    };
 
     /**
      * set the range and correct factor for accelerometer
@@ -112,18 +137,6 @@ private:
     }
 
     /**
-     * possible ranges for gyro
-     *
-     * measured in degrees/sec.
-     */
-    enum gyro_range {
-        GYRO_250 = 0,
-        GYRO_500 = 1,
-        GYRO_1000 = 2,
-        GYRO_2000 = 3
-    };
-
-    /**
      * configure Gyro settings
      * @param range full scale range
      * @param filt digital low pass filter
@@ -136,15 +149,6 @@ private:
         gyroWriteReg(0x15, div); // gyro sample rate
         gyroWriteReg(0x3E, 1); // clk sel
         gyroWriteReg(0x3D, 1); // rst gyro
-    }
-
-    /**
-     * initialize the accelerometer and the gyro
-     */
-    void init() {
-        setAccRange(ACC_16G, true);
-        accWriteReg(0x2D, 1 << 3); // enable acceleration measurements
-        setGyroConf(GYRO_250, 1, 4);
     }
 
     void gyroWriteReg(uint8_t reg, uint8_t val) {
@@ -184,6 +188,7 @@ private:
                 break;
         }
     }
+    ///\endcond
 };
 
 #endif //IMU3000_H
