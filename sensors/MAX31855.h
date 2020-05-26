@@ -18,16 +18,18 @@ public:
     MAX31855(uint32_t pin, GPIO_TypeDef *port) : ChipSelect(pin, port) { }
 
     /**
-     * return currently measured temperature
-     * @return temperature in °C
+     * measured sensor temperature
+     *
+     * @return temperature in °C, NAN if sensor fault
      */
     double temp() {
         return sTemp;
     }
 
     /**
-     * return currently measured internal temperature of chip
-     * @return temperature in °C
+     * measured internal chip temperature
+     *
+     * @return temperature in °C, NAN if sensor fault
      */
     double internal() {
         return iTemp;

@@ -52,7 +52,7 @@ public:
      * @param port chip select pin port
      * @param numWires sensor type enum
      * @param Rref reference resistance
-     * @param Rnom nominal resistance of sensor at 0`C
+     * @param Rnom nominal resistance of sensor at 0°C
      *
      * configures sensor for auto conversion with 50Hz filter
      */
@@ -67,14 +67,17 @@ public:
     }
 
     /**
-     * return temperature [C] obtained from linear approximation
+     * linear temperature approximation
+     * @return temperature in °C, NAN if sensor fault
      */
     double tempLin() {
         return dTempLin;
     }
 
     /**
-     * return temperature [C] obtained from quadratic approximation
+     * quadratic temperature approximation
+     *
+     * @return temperature in °C, NAN if sensor fault
      */
     double temp() {
         return dTemp;
