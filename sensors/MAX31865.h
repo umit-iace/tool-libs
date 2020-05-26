@@ -31,6 +31,7 @@ public:
         PT4WIRE = 0
     };
 
+    ///\cond false
     // Register Addresses
     enum {
         REG_CONFIG = 0,
@@ -45,6 +46,7 @@ public:
         READ = 0,
         WRITE = 0x80
     };
+    ///\endcond
 
     /**
      * configure temperature sensor
@@ -97,6 +99,7 @@ public:
         getStatusData();
     }
 
+    ///\cond false
     /**
      * callback when async read is finished
      */
@@ -130,9 +133,10 @@ public:
                 break;
         }
     }
+    ///\endcond
 
     /**
-     * return fault byte read from sensor
+     * @return fault byte read from sensor
      */
     uint8_t fault() {
         return this->iFault;
@@ -171,6 +175,7 @@ public:
     }
 
 private:
+    ///\cond false
     const double Rnom = 1000;
     const double Rref = 0;
     // from MAX31865 datasheet
@@ -228,6 +233,7 @@ private:
             9, (void*)ALLDATAREQ};
         HardwareSPI::master()->request(r);
     }
+    ///\endcond
 };
 
 #endif //MAX31865_H
