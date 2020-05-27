@@ -100,6 +100,7 @@ public:
      */
     ADS1115(uint8_t address = 0b1001000, enum range fs = FS6144,
             enum dataRate dr = SPS64, enum mux mx = AIN0):
+                address(address),
                 eFullScale(fs), eDataRate(dr), eMux(mx) {
         updateConfig();
     }
@@ -134,13 +135,14 @@ public:
      * @return last measured voltage [V]
      */
     double volts() {
-        return *(uint16_t *)buffer * uV[eFullScale] * 1e-6;
+        double adc = (buffer[0] << 8) + buffer[1];
+        return adc * uV[eFullScale] * 1e-6;
     }
 
 private:
     ///\cond false
     uint8_t address;
-    uint8_t buffer[2];
+    uint8_t buffer[2] = {};
 
     void setPointer(uint8_t reg) {
         I2CRequest point (
@@ -167,7 +169,7 @@ private:
     }
 
     void write(uint8_t reg, uint16_t val) {
-        uint8_t data[3] = {reg, (uint8_t)(val<<8), (uint8_t)val};
+        uint8_t data[3] = {reg, (uint8_t)(val>>8), (uint8_t)val};
         I2CRequest write (
                 address,
                 I2CRequest::WRITE,
