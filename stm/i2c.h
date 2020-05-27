@@ -150,8 +150,18 @@ private:
 
     void config(I2C_TypeDef *i2c, uint32_t baud) {
         hI2C.Instance = i2c;
+#if defined(STM32F407xx)
         hI2C.Init.ClockSpeed = baud;
         hI2C.Init.DutyCycle = I2C_DUTYCYCLE_2;
+#elif defined(STM32F767xx)
+        // shoot me now
+        // hardcoded to 400kHz if i2cclk 216MHz
+        hI2C.Init.Timing = 0x7 << 28 | // presc
+                            4 << 20 | // data setup time
+                            4 << 16 | // data hold time
+                            21 << 8 | // high period
+                            40 << 0; // low period
+#endif
         hI2C.Init.OwnAddress1 = 0;
         hI2C.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
         hI2C.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
