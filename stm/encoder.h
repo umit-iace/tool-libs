@@ -25,8 +25,17 @@ public:
         return __HAL_TIM_GetCounter(handle);
     }
 
+    /**
+     *  @brief returns value of encode in rad
+     *  @return encoder position in [rad]
+     */
+    double getPosRad(){
+        return ((this->getPos()*2.0*M_PI)/this->dResolution);
+    }
 private:
     TIM_HandleTypeDef *handle = nullptr;
+    double dResolution;
+
     void init(TIM_TypeDef *tim) {
         TIM_Encoder_InitTypeDef sConfig = {};
         TIM_MasterConfigTypeDef sMasterConfig = {};
