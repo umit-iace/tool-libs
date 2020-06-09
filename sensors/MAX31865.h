@@ -66,6 +66,8 @@ public:
                         1 << 1 | // clear faults
                         1 << 0 // 50Hz filter
                         );
+        this->setLThr(0);
+        this->setHThr(0xffff);
     }
 
     /**
