@@ -99,6 +99,13 @@ public:
         getStatusData();
     }
 
+    /**
+     * async read all data from sensor
+     */
+    void readAllData() {
+        getAllData();
+    }
+
     ///\cond false
     /**
      * callback when async read is finished
@@ -107,6 +114,14 @@ public:
         enum callbackUserData reqType = *(enum callbackUserData*)&userData;
         uint16_t rtd;
         switch (reqType) {
+            case ALLDATAREQ:
+                sensorData[1] = allData[2];
+                sensorData[2] = allData[3];
+                hThr = allData[4]<<8 | allData[5];
+                lThr = allData[6]<<8 | allData[7];
+                statusData[1] = allData[8];
+                iFault = statusData[1];
+                /* fallthrough */
             case TEMPREQ:
                 rtd = (sensorData[1] << 8) | sensorData[2];
                 if (rtd & 1) { // fault
@@ -120,7 +135,7 @@ public:
                     // quadratic:
                     // from
                     // R(t) = R0 (1 + aT + bT^2)
-                    // !! ONLY for temperatures > 0`C !!
+                    // !! ONLY for temperatures > 0°C !!
                     dTemp = -a2b - sqrt(a2b*a2b - (Rnom - Rrtd)/(b*Rnom));
                     /* dTemp = (Z1 + sqrt(Z2 + Z3 * Rrtd)) / Z4; */
                 }
