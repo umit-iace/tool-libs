@@ -2,7 +2,8 @@
 tool-libs
 =========
 
-This is a collection of libraries. The library is structured as follows:
+This is a collection of libraries used at the UMIT-Tirol Institute of
+Automation and Control Engineering. It includes the following components:
 
 * Sensors - Classes implementing specific sensors used in our test rigs
 
@@ -83,3 +84,17 @@ and to generate the documentation run
     $ make html
 
 in the **docs** directory.
+
+Contributing
+------------
+
+Every bit of help is appreciated! Whether it's just fixing typos, or adding
+support for different controllers or sensors, we try keeping things in order.
+
+So please keep lists in the documentation (e.g. this file) sorted alphabetically,
+and help keeping the commit history as clean as possible. Consider working in
+feature branches, and make sure to rebase your commits on top of master before
+merging.
+
+Thank you for helping out!
+
