@@ -277,7 +277,7 @@ static void bitwisecopy(uint8_t *dest, size_t numbits, size_t szof, uint8_t *src
     uint32_t srcI = 0;
     for (size_t n = 0; n < len; ++n) {
         uint32_t destI = numbits;
-        dest += n*szof;
+        dest += n?szof:0;
         do {
             --destI;
 
@@ -285,7 +285,7 @@ static void bitwisecopy(uint8_t *dest, size_t numbits, size_t szof, uint8_t *src
             *(dest + destI / 8) |= ((*(src + srcI / 8) >> 7 - srcI % 8) & 0x1U) << destI % 8;
 
             ++srcI;
-        } while (srcI < numbits);
+        } while (destI > 0);
     }
 }
 
