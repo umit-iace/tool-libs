@@ -30,6 +30,29 @@ public:
     }
 
     /**
+     * Returns the current index of the ringbuffer.
+     * @return index as int
+     */
+    uint16_t getCurrentIndex() {
+        return iPrevIndex;
+    }
+
+    /**
+     * Returns the value at the given index.
+     * @param iIndex the index as int
+     * @return the value at the index as double
+     */
+    double getAt(unsigned int iIndex) {
+        if (iIndex <= 0) {
+            return (double) this->tSamples[0];
+        } else if (iIndex >= N) {
+            return (double) this->tSamples[N];
+        } else {
+            return (double) this->tSamples[iIndex];
+        }
+    }
+
+    /**
      * Operator overload to add a new value to the filter.
      * @param tSample new value
      */
