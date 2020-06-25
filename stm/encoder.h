@@ -10,7 +10,8 @@ class Encoder {
 public:
     Encoder(uint32_t pinA, GPIO_TypeDef *portA, uint8_t alternateA,
             uint32_t pinB, GPIO_TypeDef *portB, uint8_t alternateB,
-            TIM_TypeDef *tim, TIM_HandleTypeDef *handle) : handle(handle) {
+            TIM_TypeDef *tim, TIM_HandleTypeDef *handle, double dResolution)
+	: handle(handle), dResolution(dResolution){
         init_pins(pinA, portA, alternateA);
         init_pins(pinB, portB, alternateB);
         init(tim);
@@ -18,7 +19,6 @@ public:
 
     /**
      * return current value of encoder
-     * @todo calculate directly in rad?
      * @return
      */
     int16_t getPos() {
@@ -26,8 +26,8 @@ public:
     }
 
     /**
-     *  @brief returns value of encode in rad
-     *  @return encoder position in [rad]
+     *  @brief returns value of encoder in rad
+     *  @return <double> encoder position in [rad] 
      */
     double getPosRad(){
         return ((this->getPos()*2.0*M_PI)/this->dResolution);
