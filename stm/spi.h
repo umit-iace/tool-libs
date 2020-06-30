@@ -6,6 +6,7 @@
 #define STM_SPI_H
 
 #include "stm/hal.h"
+#include "stm/gpio.h"
 #include "utils/RequestQueue.h"
 /* *********************************************
  * When using this, use the following line in your interrupt header file (e.g. stm32f7xx_it.h)
@@ -32,28 +33,15 @@ SPI_HandleTypeDef hHWSPI;
  * to send/get data over the wire.
  */
 class ChipSelect {
-private:
-    uint32_t iPin;
-    GPIO_TypeDef *port;
-
-    void initCS() {
-        GPIO_InitTypeDef GPIO_InitStruct = {};
-        GPIO_InitStruct.Pin = iPin;
-        GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-        HAL_GPIO_Init(port, &GPIO_InitStruct);
-        selectChip(false);
-    }
-
+    DIO pin;
 public:
     void selectChip(bool sel) {
-        HAL_GPIO_WritePin(port,iPin,(GPIO_PinState) !sel);
+        this->pin.set(!sel);
     }
 
     ChipSelect(uint32_t iCSPIN, GPIO_TypeDef *gpioCSPort) :
-            iPin(iCSPIN), port(gpioCSPort) {
-        this->initCS();
+            pin(iCSPIN, gpioCSPort) {
+        this->selectChip(false);
     }
 
     /**
