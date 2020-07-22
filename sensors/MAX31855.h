@@ -68,10 +68,10 @@ private:
         uint8_t SCG:1;                              ///< \b error: short to GND
         uint8_t SCV:1;                              ///< \b error: short to VCC
         uint8_t :1;
-        uint16_t INTERNAL:12;                       ///< internal measured temperature in 0.0625°C steps
+        int16_t INTERNAL:12;                       ///< internal measured temperature in 0.0625°C steps
         uint8_t FAULT:1;                            ///< \b error: fault in thermocouple reading
         uint8_t :1;
-        uint16_t TEMP:14;                           ///< thermocouple measured temperature in 0.25°C steps
+        int16_t TEMP:14;                           ///< thermocouple measured temperature in 0.25°C steps
     } sensorData = {};                              ///< sensor data struct. lsb to msb order.
     uint8_t buffer[4] = {};
     double sTemp = 0;
