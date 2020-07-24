@@ -27,6 +27,12 @@ class RequestQueue {
 public:
     /**
      * publicly visible request method
+     *
+     * by default simply adds request to queue
+     *
+     * can be overloaded
+     * @param r Request to add to queue
+     * @return 0 if successful
      */
     virtual int request(Request r) {
         return addRequest(r);
@@ -48,6 +54,8 @@ private:
 protected:
     /**
      * add a request to the queue
+     * @param r Request to add
+     * @return 0 if successful
      */
     int addRequest(Request &r) {
         int ret = -1;
@@ -73,6 +81,7 @@ protected:
         }
         return ret;
     }
+
     /**
      * create a new request queue for a specific request type
      *
@@ -90,6 +99,11 @@ protected:
         delete[] timeOf;
     }
 
+    /**
+     * inplace increment index with wraparound
+     * @param index
+     * @return incremented index
+     */
     unsigned int inc(unsigned int &index) {
         return index = (index + 1) % FIFOLENGTH;
     }
