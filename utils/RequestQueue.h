@@ -72,12 +72,14 @@ protected:
             this->bActive = true;
             this->processRequest(queue[iOutIndex]);
         } else if (TIMEOUT && getTime() - timeOf[iOutIndex] > TIMEOUT) {
+            this->abortRequest(queue[iOutIndex]);
             // update timing to reflect restart
             for (auto index = iOutIndex; index != iInIndex; inc(index)) {
                 timeOf[index] = getTime();
             }
             // restart
-            this->processRequest(queue[iOutIndex]);
+//            this->processRequest(queue[iOutIndex]);
+            endProcess();
         }
         return ret;
     }
@@ -159,6 +161,11 @@ protected:
      * process a given request
      */
     virtual void processRequest(Request &) = 0;
+
+    /**
+     * abort a failed (e.g. timed-out) request
+     */
+    virtual void abortRequest(Request &) { };
 
     /**
      * get current time in ms
