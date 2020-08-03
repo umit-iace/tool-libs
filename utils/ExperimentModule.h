@@ -68,10 +68,10 @@ public:
     virtual bool init() { return false; }
 
     /**
-     * reset ExperimentModule.
+     * stop ExperimentModule.
      * called upon Experiment STOP
      */
-    virtual void reset() {}
+    virtual void stop() {}
 
     /**
      * Constructor for allocating state and output lists

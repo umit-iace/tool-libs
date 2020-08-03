@@ -122,7 +122,7 @@ public:
                 // do stuff
                 this->lTime = 0;
                 for (int i = 0; i < expModLen; ++i) {
-                    expMod[i]->reset();
+                    expMod[i]->stop();
                 }
                 // state machine
                 this->eState = IDLE;
