@@ -10,31 +10,53 @@ class Encoder {
 public:
     Encoder(uint32_t pinA, GPIO_TypeDef *portA, uint8_t alternateA,
             uint32_t pinB, GPIO_TypeDef *portB, uint8_t alternateB,
-            TIM_TypeDef *tim, TIM_HandleTypeDef *handle, double dResolution)
-	: handle(handle), dResolution(dResolution){
+            TIM_TypeDef *tim, TIM_HandleTypeDef *handle)
+            : handle(handle) {
         init_pins(pinA, portA, alternateA);
         init_pins(pinB, portB, alternateB);
         init(tim);
     }
 
+
     /**
-     * return current value of encoder
-     * @return
+     * @brief access the counter of the timer connected to the encoder
+     * @return <int16_t> TimCounter
      */
     int16_t getPos() {
         return __HAL_TIM_GetCounter(handle);
     }
 
     /**
-     *  @brief returns value of encoder in rad
-     *  @return <double> encoder position in [rad] 
-     */
-    double getPosRad(){
-        return ((this->getPos()*2.0*M_PI)/this->dResolution);
+    * @brief access current value of encoder
+    *        with overflow correction
+    * @return <double>  position [rad]
+    */
+    double getPosRad() {
+        int16_t currEnc = __HAL_TIM_GetCounter(handle);
+        dPosition += (double) (currEnc-lastEnc) * 2.0 * M_PI/this->dResolution;
+        lastEnc = currEnc;
+        return dPosition;
     }
+
+    /**
+    * @brief function to retrieve the current Resolution
+    * @return <double> dResolution
+    */
+    double getResolution(){
+        return this->dResolution;
+    }
+
+    /**
+     * @brief sets the parameter dResoltion
+     * @param <double> newResolution
+     */
+    void setResolution(double newResolution){
+        if(newResolution != 0)
+            this->dResolution = newResolution;
+    }
+
 private:
     TIM_HandleTypeDef *handle = nullptr;
-    double dResolution;
 
     void init(TIM_TypeDef *tim) {
         TIM_Encoder_InitTypeDef sConfig = {};
@@ -75,5 +97,8 @@ private:
         GPIO_InitStruct.Alternate = alternate;
         HAL_GPIO_Init(gpio, &GPIO_InitStruct);
     }
+private:
+    int16_t lastEnc = 0;
+    double dPosition = 0, dResolution = 1;
 };
 #endif //STM_ENCODER_H
