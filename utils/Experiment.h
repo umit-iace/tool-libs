@@ -49,7 +49,6 @@ private:
     /// enum of possible experiment states
     enum ExpState {
         IDLE,
-        START,
         PRE,
         RUN,
         STOP
@@ -85,13 +84,8 @@ public:
                 //do stuff
                 // state machine
                 if (this->bExperimentActive) {
-                    this->eState = START;
+                    this->eState = PRE;
                 }
-                break;
-            case START:
-                // do stuff
-                // state machine
-                this->eState = PRE;
                 break;
             case PRE:
                 pre = false;
