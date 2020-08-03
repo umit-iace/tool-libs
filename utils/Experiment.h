@@ -47,11 +47,12 @@ public:
         pExp->bExperimentActive = false;
     }
 
-private:
-    inline static Experiment *pExp = nullptr;  ///< static pointer to experiment instance. Needed for interrupt callback
-
-    ExperimentModule **expMod = nullptr;
-    unsigned int expModLen = 0;
+    /**
+     * read current Experiment state
+     */
+    static enum ExpState getState() {
+        return pExp->eState;
+    }
 
     /// enum of possible experiment states
     enum ExpState {
@@ -60,6 +61,13 @@ private:
         RUN,
         STOP
     };
+
+private:
+    inline static Experiment *pExp = nullptr;  ///< static pointer to experiment instance. Needed for interrupt callback
+
+    ExperimentModule **expMod = nullptr;
+    unsigned int expModLen = 0;
+
     enum ExpState eState = IDLE;                ///< current state of experiment
 
     unsigned long lTime = 0;                    ///< milliseconds since start of experiment
