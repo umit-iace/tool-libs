@@ -6,7 +6,7 @@ General classes
 .. toctree::
 
    Experiment_h
-   ExperimentModules_h
+   ExperimentModule_h
    MovingAverage_h
    RequestQueue_h
    RingBuffer_h
