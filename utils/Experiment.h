@@ -14,6 +14,10 @@
  */
 class Experiment {
 public:
+    /**
+     * Initialize the experiment with a fixed amount of ExperimentModules
+     * @param numberofModules number of ExperimentModules the experiment will run
+     */
     Experiment(unsigned int numberofModules) {
         pExp = this;
         expMod = new ExperimentModule *[numberofModules]();
@@ -21,6 +25,11 @@ public:
         Transport::registerHandler(1, unpackExp);
     }
 
+    /**
+     * register all ExperimentModules in the order they will run
+     * @param mod first ExperimentModule
+     * @param ... following ExperimentModules
+     */
     void registerModules(ExperimentModule *mod, ...) {
         expMod[0] = mod;
         va_list args;
@@ -37,13 +46,14 @@ private:
     ExperimentModule **expMod = nullptr;
     unsigned int expModLen = 0;
 
+    /// enum of possible experiment states
     enum ExpState {
         IDLE,
         START,
         PRE,
         RUN,
         STOP
-    };                                          ///< enum of possible experiment states
+    };
     enum ExpState eState = IDLE;                ///< current state of experiment
 
     unsigned long lTime = 0;                    ///< milliseconds since start of experiment
@@ -125,6 +135,7 @@ public:
                 break;
         }
     }
+    ///\endcond
 };
 
 #endif //EXPERIMENT_H
