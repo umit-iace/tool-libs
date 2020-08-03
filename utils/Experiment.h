@@ -49,7 +49,7 @@ private:
     /// enum of possible experiment states
     enum ExpState {
         IDLE,
-        PRE,
+        INIT,
         RUN,
         STOP
     };
@@ -59,7 +59,7 @@ private:
     bool bExperimentActive = false;
     unsigned long keepaliveTime = 0;
 
-    bool pre = false;
+    bool init = false;
 
     /**
      * unpack active bit from wire
@@ -84,16 +84,16 @@ public:
                 //do stuff
                 // state machine
                 if (this->bExperimentActive) {
-                    this->eState = PRE;
+                    this->eState = INIT;
                 }
                 break;
-            case PRE:
-                pre = false;
+            case INIT:
+                init = false;
                 for (int i = 0; i < expModLen; ++i) {
-                    pre |= expMod[i]->pre();
+                    init |= expMod[i]->init();
                 }
                 // state machine
-                if (!pre) {
+                if (!init) {
                     this->eState = RUN;
                 }
                 break;
