@@ -40,6 +40,13 @@ public:
         va_end(args);
     }
 
+    /**
+     * stop Experiment in emergencies
+     */
+    static void stop() {
+        pExp->bExperimentActive = false;
+    }
+
 private:
     inline static Experiment *pExp = nullptr;  ///< static pointer to experiment instance. Needed for interrupt callback
 
