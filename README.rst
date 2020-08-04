@@ -22,9 +22,7 @@ Automation and Control Engineering. It includes the following components:
 
   - ``encoder`` - Class for hardware based quadratic encoder support
 
-  - ``gpio`` - Classes encapsulating general purpose input/outputs
-
-    - currently supports only a simple digital input/output pin
+  - ``gpio`` - Classes encapsulating digital pins
 
   - ``hal`` - points to the correct HAL include for the used family
 
