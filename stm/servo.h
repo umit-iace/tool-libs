@@ -5,6 +5,7 @@
 #ifndef STM_SERVO_H
 #define STM_SERVO_H
 
+#include "stm/gpio.h"
 #include "stm/hal.h"
 
 /**
@@ -60,17 +61,8 @@ public:
              TIM_TypeDef *dTim) :
                  iCleft(left), iCright(right) {
         // init pins
-        GPIO_InitTypeDef GPIO_InitStruct = {};
-        GPIO_InitStruct.Pin = iPin1;
-        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-        GPIO_InitStruct.Alternate = iAlternate1;
-        HAL_GPIO_Init(gpioPort1, &GPIO_InitStruct);
-
-        GPIO_InitStruct.Pin = iPin2;
-        GPIO_InitStruct.Alternate = iAlternate2;
-        HAL_GPIO_Init(gpioPort2, &GPIO_InitStruct);
+        AFIO(iPin1, gpioPort1, iAlternate1);
+        AFIO(iPin2, gpioPort2, iAlternate2);
 
         // clock config
         TIM_MasterConfigTypeDef sMasterConfig = {};
