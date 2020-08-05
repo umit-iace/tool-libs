@@ -41,7 +41,7 @@ public:
     }
 
     /**
-    * @brief function to retrieve the current Resolution
+    * @brief function to retrieve the current resolution
     * @return dResolution
     */
     double getResolution(){
@@ -100,8 +100,8 @@ private:
         HAL_GPIO_Init(gpio, &GPIO_InitStruct);
     }
 private:
-    int16_t lastEnc = 0;           ///< last Measurement of Encoder
+    int16_t lastEnc = 0;           ///< last measurement
     double dPosition = 0;          ///< stores current position in [rad]
-    double dResolution = 2 * M_PI; ///< default Resolution
+    double dResolution = 2 * M_PI; ///< default resolution
 };
 #endif //STM_ENCODER_H
