@@ -5,6 +5,7 @@
 #ifndef STM_ENCODER_H
 #define STM_ENCODER_H
 #include "stm/hal.h"
+#include <assert.h>
 
 class Encoder {
 public:
@@ -20,7 +21,7 @@ public:
 
     /**
      * @brief access the counter of the timer connected to the encoder
-     * @return <int16_t> TimCounter
+     * @return TimCounter
      */
     int16_t getPos() {
         return __HAL_TIM_GetCounter(handle);
@@ -29,10 +30,11 @@ public:
     /**
     * @brief access current value of encoder
     *        with overflow correction
-    * @return <double>  position [rad]
+    * @return position [rad]
     */
     double getPosRad() {
         int16_t currEnc = __HAL_TIM_GetCounter(handle);
+        assert(this->dResolution != 0);
         dPosition += (double) (currEnc-lastEnc) * 2.0 * M_PI/this->dResolution;
         lastEnc = currEnc;
         return dPosition;
@@ -40,7 +42,7 @@ public:
 
     /**
     * @brief function to retrieve the current Resolution
-    * @return <double> dResolution
+    * @return dResolution
     */
     double getResolution(){
         return this->dResolution;
@@ -48,7 +50,7 @@ public:
 
     /**
      * @brief sets the parameter dResoltion
-     * @param <double> newResolution
+     * @param newResolution
      */
     void setResolution(double newResolution){
         if(newResolution != 0)
@@ -98,7 +100,8 @@ private:
         HAL_GPIO_Init(gpio, &GPIO_InitStruct);
     }
 private:
-    int16_t lastEnc = 0;
-    double dPosition = 0, dResolution = 1;
+    int16_t lastEnc = 0;           ///< last Measurement of Encoder
+    double dPosition = 0;          ///< stores current position in [rad]
+    double dResolution = 2 * M_PI; ///< default Resolution
 };
 #endif //STM_ENCODER_H
