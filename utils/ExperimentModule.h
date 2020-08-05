@@ -60,18 +60,18 @@ public:
     double *getState() { return states; }
 
     /**
-     * preprocess.
-     * called cyclically in the Experiment PRE state,
+     * initialize.
+     * called cyclically in the Experiment INIT state,
      * until all Modules signal no need for preprocessing
-     * @return
+     * @return false if ready
      */
-    virtual bool pre() { return false; }
+    virtual bool init() { return false; }
 
     /**
-     * reset ExperimentModule.
+     * stop ExperimentModule.
      * called upon Experiment STOP
      */
-    virtual void reset() {}
+    virtual void stop() {}
 
     /**
      * Constructor for allocating state and output lists

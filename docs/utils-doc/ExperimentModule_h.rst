@@ -1,4 +1,4 @@
-ExperimentModules.h
+ExperimentModule.h
 ~~~~~~~~~~~~~~~~~~~
 
 .. doxygenfile:: ExperimentModule.h
