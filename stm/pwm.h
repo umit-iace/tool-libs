@@ -23,7 +23,7 @@ public:
     /**
      * Initialize Timer Hardware and PWM pins
      *
-     * @param hTim handle of configured HardwareTimer
+     * @param hTim hTim of configured HardwareTimer
      * @param iPin pin number of PWM output
      * @param gpioPort pin port of PWM output
      * @param iAlternate alternate function for PWM output
