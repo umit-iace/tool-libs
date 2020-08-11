@@ -28,15 +28,17 @@ public:
     /**
      * publicly visible request method
      *
-     * by default simply adds request to queue
+     * implement this to get the needed behavior
      *
-     * can be overloaded
+     * useful functions to get there:
+     *   * add
+     *   * find
+     *   * check
      * @param r Request to add to queue
      * @return 0 if successful
      */
-    virtual int request(Request r) {
-        return addRequest(r);
-    }
+    virtual short request(Request r) = 0;
+
 #ifdef BOOST_TEST_MODULE
 protected:
 #else
@@ -52,36 +54,6 @@ private:
     bool bFull = false;
 
 protected:
-    /**
-     * add a request to the queue
-     * @param r Request to add
-     * @return 0 if successful
-     */
-    int addRequest(Request &r) {
-        int ret = -1;
-        if (!this->bFull) {
-            queue[iInIndex] = r;
-            timeOf[iInIndex] = getTime();
-
-            inc(iInIndex);
-            bFull = iInIndex == iOutIndex && this->bActive;
-            ret = 0;
-        }
-
-        if (!this->bActive) {
-            this->bActive = true;
-            this->processRequest(queue[iOutIndex]);
-        } else if (TIMEOUT && getTime() - timeOf[iOutIndex] > TIMEOUT) {
-            // update timing to reflect restart
-            for (auto index = iOutIndex; index != iInIndex; inc(index)) {
-                timeOf[index] = getTime();
-            }
-            // restart
-            this->processRequest(queue[iOutIndex]);
-        }
-        return ret;
-    }
-
     /**
      * create a new request queue for a specific request type
      *
@@ -99,27 +71,50 @@ protected:
         delete[] timeOf;
     }
 
+    /// possible return values of RequestQueue methods
+    enum qRet {
+        QOK,            ///< no need to take action
+        QFULL,          ///< queue is full, unable to add request
+    }
+
     /**
-     * inplace increment index with wraparound
-     * @param index
-     * @return incremented index
+     * add a request to the queue
+     * @param r Request to add
+     * @return 0 if successful
      */
-    unsigned int inc(unsigned int &index) {
-        return index = (index + 1) % QUEUELENGTH;
+    enum qRet add(Request &r) {
+        enum qRet ret = QFULL;
+        if (!bFull) {
+            queue[iInIndex] = r;
+            timeOf[iInIndex] = getTime();
+
+            inc(iInIndex);
+            bFull = iInIndex == iOutIndex && bActive;
+            ret = QOK;
+        }
+    return ret;
+    }
+
+    /**
+     * check if some action needs to be taken, and take it
+     */
+    void check() {
+        if (TIMEOUT && getTime() - timeOf[iOutIndex] > TIMEOUT) {
+            abort();
+        } else if (!bActive) {
+            bActive = true;
+            begin();
+        }
     }
 
     /**
      * check if request is currently in queue
      * @param r request to look for
-     * @param updateTime if true, updates found request time to _now_
      * @return true if the request is found in the queue
      */
-    bool findRequest(Request &r, bool updateTime = false) {
+    bool find(Request &r) {
         for (auto index = iOutIndex; index != iInIndex; inc(index)) {
             if (r == queue[index]) {
-                if (updateTime) {
-                    timeOf[index] = getTime();
-                }
                 return true;
             }
         }
@@ -129,9 +124,19 @@ protected:
     /**
      * get request at outindex
      */
-    Request &lastRequest() {
+    Request &current() {
         return queue[iOutIndex];
     }
+
+    /**
+     * process a given request
+     */
+    virtual void begin() = 0;
+
+    /**
+     * abort a given request
+     */
+    virtual void abort() = 0;
 
     /**
      * end processing the next request in the queue.
@@ -139,7 +144,7 @@ protected:
      * call this function when processing the request is done.
      * removes processed request from list, increments outindex
      */
-    void endProcess() {
+    void end() {
         // remove request
         queue[iOutIndex].~Request();
         timeOf[iOutIndex] = 0;
@@ -151,19 +156,24 @@ protected:
             // queue empty
             bActive = false;
         } else {
-            processRequest(queue[iOutIndex]);
+            begin();
         }
     }
-
-    /**
-     * process a given request
-     */
-    virtual void processRequest(Request &) = 0;
 
     /**
      * get current time in ms
      */
     virtual unsigned long getTime() = 0;
+
+private:
+    /**
+     * inplace increment index with wraparound
+     * @param index
+     * @return incremented index
+     */
+    unsigned int inc(unsigned int &index) {
+        return index = (index + 1) % QUEUELENGTH;
+    }
 };
 
 #endif //REQUESTQUEUE_H
