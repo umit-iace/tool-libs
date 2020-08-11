@@ -42,7 +42,7 @@ protected:
 #else
 private:
 #endif
-    const unsigned int FIFOLENGTH;
+    const unsigned int QUEUELENGTH;
     const unsigned int TIMEOUT;
     Request *queue = nullptr;
     unsigned long long *timeOf = nullptr;
@@ -89,7 +89,7 @@ protected:
      * @param timeout timeout in [ms] before retransmission of unanswered request
      */
     RequestQueue(unsigned int length, unsigned int timeout) :
-            FIFOLENGTH(length), TIMEOUT(timeout) {
+            QUEUELENGTH(length), TIMEOUT(timeout) {
         queue = new Request[length]();
         timeOf = new unsigned long long[length]();
     }
@@ -105,7 +105,7 @@ protected:
      * @return incremented index
      */
     unsigned int inc(unsigned int &index) {
-        return index = (index + 1) % FIFOLENGTH;
+        return index = (index + 1) % QUEUELENGTH;
     }
 
     /**
