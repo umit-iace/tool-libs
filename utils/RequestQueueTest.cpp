@@ -10,8 +10,18 @@
 #include <cstdio>
 #include "RequestQueue.h"
 
+#define LEN (10)
+
 class TestRequest {
 public:
+    inline static unsigned int list[LEN] = {};
+    inline static unsigned int index = 0;
+    static void reset() {
+        for (int i = 0; i < LEN; ++i) {
+            list[i] = 0;
+        }
+        index = 0;
+    }
     double dMem = 3.6;
     char **sTest = nullptr;
     struct {
@@ -19,21 +29,20 @@ public:
         unsigned int gpio;
     };
 
-    TestRequest() {
-        dMem = 0;
-        pin = 0;
-        gpio = 0;
-    }
+    TestRequest() : dMem(0), pin(0), gpio(0) { }
 
-    TestRequest(int p, unsigned int g) :
-            pin(p), gpio(g)
-    {
-    }
+    TestRequest(int p, unsigned int g) : pin(p), gpio(g) { }
 
     ~TestRequest() {
         pin = 0;
         gpio = 0;
         dMem = 0;
+    }
+
+    void doit() {
+        printf("Pin: %d\n\t on port: %X\n"
+               "mem: %f\n", pin, gpio, dMem);
+        list[index++] = pin;
     }
 
     bool operator==(TestRequest &r) {
@@ -51,31 +60,29 @@ class TestFifo: public RequestQueue<TestRequest> {
 public:
     TestFifo(unsigned int l): RequestQueue(l, 2) {}
 
-    int getIn() {
-        return this->iInIndex;
+    short request(TestRequest r) override {
+        enum qRet ret = find(r);
+        if (ret != QFOUND) {
+            ret = add(r);
+        }
+        check();
+        return ret;
     }
 
-    int getOut() {
-        return this->iOutIndex;
-    }
-
-    bool isActive() {
-        return this->bActive;
-    }
-
-    void processRequest(TestRequest &r) {
-        printf("Pin: %d\n\t on port: %X\n"
-               "mem: %f\n", r.pin, r.gpio, r.dMem);
+    void begin() override {
+        TestRequest r = current();
         if (!bStop) {
-            printf("processed.\n");
-            endProcess();
+            r.doit();
+            printf("done.\n");
+            end();
         } else {
-            printf("not processed.\n");
+            printf("\n");
         }
     }
 
-    TestRequest *getQueue(){
-        return this->queue;
+    void abort() override {
+        TestRequest r = current();
+        printf("aborted pin: %d\n", r.pin);
     }
 
     unsigned long getTime() override {
@@ -92,61 +99,66 @@ public:
         printf("started\n");
         this->bStop = false;
     }
-    bool find(TestRequest &r) {
-        return findRequest(r);
-    }
+
+    using RequestQueue::find;
+    using RequestQueue::qRet;
 };
 
 
 BOOST_AUTO_TEST_CASE( emptyRequestTest ) {
-        printf("\n\nemptyRequestTest\n\n");
-        const int fifosize = 10;
-        const int testsize = 6;
-        TestFifo fifo(fifosize);
-        uint8_t zeros[fifosize*sizeof(TestRequest)] = {};
+    printf("\n\nemptyRequestTest\n\n");
+    TestRequest::reset();
+    const int fifosize = 10;
+    const int testsize = 6;
+    TestFifo fifo(fifosize);
 
-        BOOST_CHECK_EQUAL(fifo.getIn(), fifo.getOut());
+    for (int i = 5; i < 5+testsize; ++i) {
+        auto R = TestRequest(i, 0x11f7a345+i);
+        fifo.request(R);
+    }
+    BOOST_CHECK_EQUAL(TestRequest::list[0], 5);
+    BOOST_CHECK_EQUAL(TestRequest::list[testsize-1], 5+testsize-1);
 
-        for (int i = 0; i < testsize; ++i) {
-            auto R = TestRequest(i, 0x11f7a345+i);
-            fifo.request(R);
-        }
-
-        BOOST_CHECK_EQUAL(fifo.getIn(), fifo.getOut());
-
-        BOOST_CHECK_EQUAL(fifo.getIn(), testsize);
-
-        BOOST_CHECK_EQUAL(fifo.isActive(), false);
-
-        BOOST_CHECK_EQUAL(memcmp(fifo.getQueue(), zeros, fifosize*sizeof(TestRequest)), 0);
 }
 
 BOOST_AUTO_TEST_CASE(overfullTest) {
-        printf("\n\noverfullTest\n\n");
-        int fifosize = 5;
-        int testsize = 10;
-        TestFifo fifo(fifosize);
-        fifo.stop();
-        for (int i = 0; i < testsize; ++i) {
-            auto R = TestRequest(i, 0x11f7a345+i);
-            BOOST_CHECK_EQUAL(fifo.request(R), i < fifosize ? 0 : -1);
-        }
-        fifo.start();
-        auto r = TestRequest(121, 0xbabeface);
-        BOOST_CHECK_EQUAL(fifo.request(r), -1);
-        BOOST_CHECK_EQUAL(fifo.getIn(), 0);
-        BOOST_CHECK_EQUAL(fifo.request(r), 0);
-        BOOST_CHECK_EQUAL(fifo.getIn(), 1);
+    printf("\n\noverfullTest\n\n");
+    TestRequest::reset();
+    BOOST_CHECK_EQUAL(TestRequest::list[0], 0);
+    BOOST_CHECK_EQUAL(TestRequest::index, 0);
+    int fifosize = 5;
+    int testsize = 10;
+    TestFifo fifo(fifosize);
+    fifo.stop();
+    for (int i = 5; i < 5 + testsize; ++i) {
+        auto R = TestRequest(i, 0x11f7a345+i);
+        BOOST_CHECK_EQUAL(fifo.request(R), i-5 < fifosize ? TestFifo::qRet::QOK : TestFifo::qRet::QFULL);
+    }
+    BOOST_CHECK_EQUAL(TestRequest::list[0], 0);
+    BOOST_CHECK_EQUAL(TestRequest::list[testsize - 1], 0);
+    fifo.start();
+    auto r = TestRequest(121, 0xbabeface);
+    BOOST_CHECK_EQUAL(fifo.request(r), TestFifo::qRet::QFULL);
+    BOOST_CHECK_EQUAL(TestRequest::list[0], 5);
+    BOOST_CHECK_EQUAL(TestRequest::list[fifosize - 1], fifosize-1+5);
+    BOOST_CHECK_EQUAL(fifo.request(r), TestFifo::qRet::QOK);
+    BOOST_CHECK_EQUAL(TestRequest::list[fifosize], 121);
 }
 
+
 BOOST_AUTO_TEST_CASE(findRequestTest) {
-        printf("\n\nfindRequestTest\n\n");
-        TestFifo fifo(2);
-        auto R = TestRequest(0, 0x11f7a345);
-        fifo.request(R);
-        BOOST_CHECK_EQUAL(fifo.find(R), false);
-        fifo.stop();
-        fifo.request(R);
-        BOOST_CHECK_EQUAL(fifo.find(R), true);
+    printf("\n\nfindRequestTest\n\n");
+    TestRequest::reset();
+    TestFifo fifo(2);
+    auto R = TestRequest(0, 0x11f7a345);
+    fifo.request(R);
+    BOOST_CHECK_EQUAL(fifo.find(R), TestFifo::qRet::QOK);
+    fifo.stop();
+    BOOST_CHECK_EQUAL(fifo.request(R), TestFifo::qRet::QOK);
+    fifo.start();
+    fifo.getTime();
+    fifo.getTime(); // make sure queue aborts on next check()
+    BOOST_CHECK_EQUAL(fifo.request(R), TestFifo::qRet::QFOUND);
+    BOOST_CHECK_EQUAL(fifo.find(R), TestFifo::qRet::QOK);
 }
 
