@@ -40,11 +40,7 @@ public:
      */
     virtual short request(Request r) = 0;
 
-#ifdef BOOST_TEST_MODULE
-protected:
-#else
 private:
-#endif
     const unsigned int QUEUELENGTH;
     const unsigned int TIMEOUT;
     Request *queue = nullptr;
