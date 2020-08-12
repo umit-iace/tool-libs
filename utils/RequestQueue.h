@@ -107,6 +107,7 @@ protected:
         }
         if (!bActive) {
             bActive = true;
+            timeOf[iOutIndex] = getTime();
             begin();
         }
     }
@@ -164,6 +165,7 @@ protected:
             bActive = false;
         }
         if (bActive) {
+            timeOf[iOutIndex] = getTime();
             begin();
         }
     }
