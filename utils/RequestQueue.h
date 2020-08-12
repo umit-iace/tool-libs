@@ -6,20 +6,21 @@
 #define REQUESTQUEUE_H
 
 /**
- * Abstract class implementing a request queue
+ * Abstract class implementing a request queue that is useful for
+ * making things happen asynchronously
  *
  * in case your specific Request class uses dynamically allocated memory,
  * make sure its copy operator and destructor work correctly.
  *
- * if you use the findRequest functionality, the `==` operator needs to
+ * if you use the find(Request) functionality, the `==` operator needs to
  * be correctly defined as well.
  *
  *
- * in order to use this Queue system, inherit it, and make sure to
- * implement the `getTime` according to your hardware,
- * and the `processRequest` function to process your specific request.
+ * in order to use this queueing system, inherit it, and make sure to
+ * implement the virtual methods according to your hardware, and expected
+ * behavior.
  *
- * When processing a request is truly done, you must call `endProcess`
+ * When processing of a request is finished, you must call `end`
  * in order to progress the queue!
  */
 template<typename Request>
@@ -122,27 +123,27 @@ protected:
     }
 
     /**
-     * get request at outindex
+     * get request which needs to be handled
      */
     Request &current() {
         return queue[iOutIndex];
     }
 
     /**
-     * process a given request
+     * start processing the current request
      */
     virtual void begin() = 0;
 
     /**
-     * abort a given request
+     * abort processing of the current request
      */
     virtual void abort() = 0;
 
     /**
-     * end processing the next request in the queue.
+     * end processing of the current request
      *
      * call this function when processing the request is done.
-     * removes processed request from list, increments outindex
+     * removes processed request from list, moves on to the next.
      */
     void end() {
         // remove request
