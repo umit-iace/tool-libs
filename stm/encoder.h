@@ -33,7 +33,21 @@ public:
     */
     double getPosRad() {
         int16_t iCurrEnc = this->getPos();
-        dPosition += (double) (iCurrEnc - iLastEnc) * 2.0 * M_PI / this->dResolution;
+        int16_t iDiffEnc = iCurrEnc - iLastEnc;
+        dPosition += iDiffEnc * 2.0 * M_PI / this->dResolution;
+        iLastEnc = iCurrEnc;
+        return dPosition;
+    }
+
+    /**
+    * @brief access current value of encoder
+    *        with overflow correction
+    * @return position [rad]
+    */
+    double getPosDeg() {
+        int16_t iCurrEnc = this->getPos();
+        int16_t iDiffEnc = iCurrEnc - iLastEnc;
+        dPosition += iDiffEnc * 360 / this->dResolution;
         iLastEnc = iCurrEnc;
         return dPosition;
     }
