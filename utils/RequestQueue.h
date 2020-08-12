@@ -76,7 +76,8 @@ protected:
     enum qRet {
         QOK,            ///< no need to take action
         QFULL,          ///< queue is full, unable to add request
-    }
+        QFOUND,         ///< request found in queue
+    };
 
     /**
      * add a request to the queue
@@ -113,15 +114,15 @@ protected:
     /**
      * check if request is currently in queue
      * @param r request to look for
-     * @return true if the request is found in the queue
+     * @return QFOUND if the request is found in the queue
      */
-    bool find(Request &r) {
+    enum qRet find(Request &r) {
         for (auto index = iOutIndex; index != iInIndex; inc(index)) {
             if (r == queue[index]) {
-                return true;
+                return QFOUND;
             }
         }
-        return false;
+        return QOK;
     }
 
     /**
