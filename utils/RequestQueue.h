@@ -59,7 +59,7 @@ protected:
      * create a new request queue for a specific request type
      *
      * @param length length of queue
-     * @param timeout timeout in [ms] before retransmission of unanswered request
+     * @param timeout timeout in ms
      */
     RequestQueue(unsigned int length, unsigned int timeout) :
             QUEUELENGTH(length), TIMEOUT(timeout) {
@@ -101,8 +101,10 @@ protected:
      */
     void check() {
         if (TIMEOUT && getTime() - timeOf[iOutIndex] > TIMEOUT) {
+            bActive = false;
             abort();
-        } else if (!bActive) {
+        }
+        if (!bActive) {
             bActive = true;
             begin();
         }
@@ -136,6 +138,9 @@ protected:
 
     /**
      * abort processing of the current request
+     *
+     * if the request should be taken out of the queue, call end()
+     * in this method. otherwise the request will be restarted.
      */
     virtual void abort() = 0;
 
@@ -156,7 +161,8 @@ protected:
         if (iOutIndex == iInIndex) {
             // queue empty
             bActive = false;
-        } else {
+        }
+        if (bActive) {
             begin();
         }
     }
