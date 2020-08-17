@@ -47,13 +47,6 @@ public:
         pExp->bExperimentActive = false;
     }
 
-    /**
-     * read current Experiment state
-     */
-    static enum ExpState getState() {
-        return pExp->eState;
-    }
-
     /// enum of possible experiment states
     enum ExpState {
         IDLE,
@@ -61,6 +54,13 @@ public:
         RUN,
         STOP
     };
+
+    /**
+     * read current Experiment state
+     */
+    static enum ExpState getState() {
+        return pExp->eState;
+    }
 
 private:
     inline static Experiment *pExp = nullptr;  ///< static pointer to experiment instance. Needed for interrupt callback
