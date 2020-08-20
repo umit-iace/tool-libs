@@ -17,13 +17,13 @@ public:
      * make sure the pins for the encoder are on
      * channels 1 and 2 of the used timer.
      *
+     * @param Tim Microcontroller Timer Peripheral (e.g. TIM2)
      * @param pinA pin number of encoder A pin
      * @param portA port of encoder A pin
      * @param alternateA alternate function of encoder A pin
      * @param pinB pin number of encoder B pin
      * @param portB port of encoder B pin
      * @param alternateB alternate function of encoder B pin
-     * @param hTim timer handle
      * @param factor all encompassing conversion factor from encoder value
      * to needed unit\n
      * Examples:
@@ -35,13 +35,15 @@ public:
      *    a 6cm radius wheel:
      *    \verbatim factor = 1 / pow(2, 10) * M_PI * 0.06; \endverbatim
      */
-    Encoder(uint32_t pinA, GPIO_TypeDef *portA, uint8_t alternateA,
+    Encoder(TIM_TypeDef *Tim,
+            uint32_t pinA, GPIO_TypeDef *portA, uint8_t alternateA,
             uint32_t pinB, GPIO_TypeDef *portB, uint8_t alternateB,
-            TIM_HandleTypeDef *hTim, double dFactor)
-            : hTim(hTim), dFactor(dFactor) {
+            double dFactor)
+            : dFactor(dFactor), tim(HardwareTimer(Tim, 0, 0xffff)) {
         AFIO(pinA, portA, alternateA);
         AFIO(pinB, portB, alternateB);
 
+        TIM_HandleTypeDef *htim = tim.handle();
         TIM_Encoder_InitTypeDef sConfig = {};
         sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
         sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
@@ -52,8 +54,8 @@ public:
         sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
         sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
         sConfig.IC2Filter = 0;
-        while (HAL_TIM_Encoder_Init(hTim, &sConfig) != HAL_OK);
-        while (HAL_TIM_Encoder_Start(hTim, TIM_CHANNEL_ALL) != HAL_OK);
+        while (HAL_TIM_Encoder_Init(htim, &sConfig) != HAL_OK);
+        while (HAL_TIM_Encoder_Start(htim, TIM_CHANNEL_ALL) != HAL_OK);
     }
 
     /**
@@ -62,7 +64,7 @@ public:
      * do this periodically to update encoder state
      */
     void measure() {
-        int16_t iCurrEnc = __HAL_TIM_GET_COUNTER(hTim);
+        int16_t iCurrEnc = __HAL_TIM_GET_COUNTER(tim.handle());
         uint32_t iCurrTick = HAL_GetTick();
         double dDiff = (int16_t)(iCurrEnc - iLastVal) * dFactor;
         dPosition += dDiff;
@@ -104,14 +106,14 @@ public:
      * @brief reset encoder position
      */
     void zero() {
-        __HAL_TIM_SET_COUNTER(hTim, 0);
+        __HAL_TIM_SET_COUNTER(tim.handle(), 0);
         iLastVal = 0;
         dPosition = 0;
     }
 
 private:
     ///\cond false
-    TIM_HandleTypeDef *hTim = nullptr;
+    HardwareTimer tim;
     double dFactor = 1;
     int16_t iLastVal = 0;
     uint32_t iLastTick = 0;
