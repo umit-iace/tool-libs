@@ -4,6 +4,8 @@
  */
 #ifndef STM_ENCODER_H
 #define STM_ENCODER_H
+
+#include "stm/gpio.h"
 #include "stm/hal.h"
 
 class Encoder {
@@ -11,8 +13,8 @@ public:
     Encoder(uint32_t pinA, GPIO_TypeDef *portA, uint8_t alternateA,
             uint32_t pinB, GPIO_TypeDef *portB, uint8_t alternateB,
             TIM_TypeDef *tim, TIM_HandleTypeDef *handle) : handle(handle) {
-        init_pins(pinA, portA, alternateA);
-        init_pins(pinB, portB, alternateB);
+        AFIO(pinA, portA, alternateA);
+        AFIO(pinB, portB, alternateB);
         init(tim);
     }
 
@@ -64,16 +66,6 @@ private:
         while (HAL_TIMEx_MasterConfigSynchronization(handle, &sMasterConfig) != HAL_OK);
 
         while (HAL_TIM_Encoder_Start(handle, TIM_CHANNEL_ALL) != HAL_OK);
-    }
-
-    void init_pins(uint32_t pin, GPIO_TypeDef *gpio, uint8_t alternate) {
-        GPIO_InitTypeDef GPIO_InitStruct = {};
-        GPIO_InitStruct.Pin = pin;
-        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-        GPIO_InitStruct.Alternate = alternate;
-        HAL_GPIO_Init(gpio, &GPIO_InitStruct);
     }
 };
 #endif //STM_ENCODER_H

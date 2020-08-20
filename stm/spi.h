@@ -5,8 +5,8 @@
 #ifndef STM_SPI_H
 #define STM_SPI_H
 
-#include "stm/hal.h"
 #include "stm/gpio.h"
+#include "stm/hal.h"
 #include "utils/RequestQueue.h"
 /* *********************************************
  * When using this, use the following line in your interrupt header file (e.g. stm32f7xx_it.h)
@@ -192,9 +192,12 @@ private:
      * Initialize the MISO, MOSI, and CLK pins and configure SPI instance
      */
     HardwareSPI() : RequestQueue(50, HW_SPI_TIMEOUT) {
-        this->initPins(HW_SPI_MISO_PIN, HW_SPI_MISO_PORT, HW_SPI_MISO_ALTERNATE,
-                HW_SPI_MOSI_PIN, HW_SPI_MOSI_PORT, HW_SPI_MOSI_ALTERNATE,
-                HW_SPI_SCK_PIN, HW_SPI_SCK_PORT, HW_SPI_SCK_ALTERNATE);
+        AFIO(HW_SPI_MISO_PIN, HW_SPI_MISO_PORT, HW_SPI_MISO_ALTERNATE,
+            GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
+        AFIO(HW_SPI_MOSI_PIN, HW_SPI_MOSI_PORT, HW_SPI_MOSI_ALTERNATE,
+            GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
+        AFIO(HW_SPI_SCK_PIN, HW_SPI_SCK_PORT, HW_SPI_SCK_ALTERNATE,
+            GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
 #if !defined(HW_SPI) || !defined(HW_SPI_BAUD_PRESCALER) ||\
     !defined(HW_SPI_CLK_POLARITY) || !defined(HW_SPI_CLK_PHASE)
 #error "you have not set all necessary configuration defines!"
@@ -206,26 +209,6 @@ private:
     //\cond false
     inline static HardwareSPI *pThis = nullptr;
     SPI_HandleTypeDef &hSPI = hHWSPI;
-
-    void initPins(uint32_t iMISOPin, GPIO_TypeDef *gpioMISOPort, uint8_t iMISOAlternate,
-                  uint32_t iMOSIPin, GPIO_TypeDef *gpioMOSIPort, uint8_t iMOSIAlternate,
-                  uint32_t iSCKPin, GPIO_TypeDef *gpioSCKPort, uint8_t iSCKAlternate) {
-        GPIO_InitTypeDef GPIO_InitStruct = {};
-        GPIO_InitStruct.Pin = iMISOPin;
-        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-        GPIO_InitStruct.Alternate = iMISOAlternate;
-        HAL_GPIO_Init(gpioMISOPort, &GPIO_InitStruct);
-
-        GPIO_InitStruct.Pin = iMOSIPin;
-        GPIO_InitStruct.Alternate = iMOSIAlternate;
-        HAL_GPIO_Init(gpioMOSIPort, &GPIO_InitStruct);
-
-        GPIO_InitStruct.Pin = iSCKPin;
-        GPIO_InitStruct.Alternate = iSCKAlternate;
-        HAL_GPIO_Init(gpioSCKPort, &GPIO_InitStruct);
-    }
 
     void config(SPI_TypeDef *dSPI, uint32_t iBaudPresc,
             uint32_t iClkPol, uint32_t iClkPhase) {

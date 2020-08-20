@@ -5,6 +5,7 @@
 #ifndef STM_PWM_H
 #define STM_PWM_H
 
+#include "stm/gpio.h"
 #include "stm/hal.h"
 
 /**
@@ -37,13 +38,7 @@ public:
         while (HAL_TIM_PWM_Init(hTim) != HAL_OK);
 
         // pin config
-        GPIO_InitTypeDef GPIO_InitStruct = {};
-        GPIO_InitStruct.Pin = iPin;
-        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-        GPIO_InitStruct.Alternate = iAlternate;
-        HAL_GPIO_Init(gpioPort, &GPIO_InitStruct);
+        AFIO(iPin, gpioPort, iAlternate);
 
         // channel config
         TIM_OC_InitTypeDef sConfigOC = {};

@@ -5,6 +5,7 @@
 #ifndef STM_UART_H
 #define STM_UART_H
 
+#include "stm/gpio.h"
 #include "stm/hal.h"
 
 /**
@@ -27,11 +28,10 @@ public:
     HardwareUART(uint32_t iRXPin, GPIO_TypeDef *gpioRXPort, uint8_t iRXAlternate,
                  uint32_t iTXPin, GPIO_TypeDef *gpioTXPort, uint8_t iTXAlternate,
                  USART_TypeDef *dUsart, uint32_t iBaudRate, UART_HandleTypeDef *hUart) :
-                    iRXPin(iRXPin), gpioRXPort(gpioRXPort), iRXAlternate(iRXAlternate),
-                    iTXPin(iTXPin), gpioTXPort(gpioTXPort), iTXAlternate(iTXAlternate),
                     dUsart(dUsart), iBaudRate(iBaudRate), hUart(hUart) {
-        this->initRX();
-        this->initTX();
+        AFIO(iRXPin, gpioRXPort, iRXAlternate);
+        AFIO(iTXPin, gpioTXPort, iTXAlternate);
+
         this->config();
     }
 
@@ -45,34 +45,6 @@ private:
 
     uint32_t iBaudRate;
 
-    uint32_t iRXPin;
-    GPIO_TypeDef *gpioRXPort;
-    uint8_t iRXAlternate;
-
-    uint32_t iTXPin;
-    GPIO_TypeDef *gpioTXPort;
-    uint8_t iTXAlternate;
-
-    void initRX() {
-        GPIO_InitTypeDef GPIO_InitStruct = {};
-        GPIO_InitStruct.Pin = this->iRXPin;
-        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-        GPIO_InitStruct.Alternate = this->iRXAlternate;
-        HAL_GPIO_Init(this->gpioRXPort, &GPIO_InitStruct);
-    };
-
-    void initTX() {
-        GPIO_InitTypeDef GPIO_InitStruct = {};
-        GPIO_InitStruct.Pin = this->iTXPin;
-        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-        GPIO_InitStruct.Alternate = this->iTXAlternate;
-        HAL_GPIO_Init(this->gpioTXPort, &GPIO_InitStruct);
-    };
-
     void config() {
         *this->hUart = {};
         this->hUart->Instance = this->dUsart;
@@ -84,10 +56,8 @@ private:
         this->hUart->Init.HwFlowCtl = UART_HWCONTROL_NONE;
         this->hUart->Init.OverSampling = UART_OVERSAMPLING_16;
         while (HAL_UART_Init(this->hUart) != HAL_OK);
-
     };
     //\endcond
-
 };
 
 #endif //STM_UART_H

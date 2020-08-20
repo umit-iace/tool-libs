@@ -12,9 +12,24 @@
  */
 class DIO {
 private:
+    ///\cond false
     uint32_t iPin;
     GPIO_TypeDef *port;
+    ///\endcond
 public:
+    DIO(uint32_t pin, GPIO_TypeDef *port,
+            uint32_t mode = GPIO_MODE_OUTPUT_PP,
+            uint32_t pull = GPIO_NOPULL) {
+        this->iPin = pin;
+        this->port = port;
+        GPIO_InitTypeDef GPIO_InitStruct = {};
+        GPIO_InitStruct.Pin = iPin;
+        GPIO_InitStruct.Mode = mode;
+        GPIO_InitStruct.Pull = pull;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+        HAL_GPIO_Init(port, &GPIO_InitStruct);
+    }
+
     /**
      * set digital output level
      * @param high true/false
@@ -37,17 +52,23 @@ public:
     void toggle() {
         HAL_GPIO_TogglePin(port, iPin);
     }
+};
 
-    DIO(uint32_t pin, GPIO_TypeDef *port,
-        uint32_t mode = GPIO_MODE_OUTPUT_PP,
-        uint32_t pull = GPIO_NOPULL) {
-        this->iPin = pin;
-        this->port = port;
+/**
+ * Wrapper class for pins in alternate configuration mode
+ */
+class AFIO {
+public:
+    AFIO(uint32_t pin, GPIO_TypeDef *port, uint32_t alternate,
+            uint32_t pull = GPIO_NOPULL,
+            uint32_t speed = GPIO_SPEED_FREQ_LOW,
+            uint32_t mode = GPIO_MODE_AF_PP) {
         GPIO_InitTypeDef GPIO_InitStruct = {};
-        GPIO_InitStruct.Pin = iPin;
+        GPIO_InitStruct.Pin = pin;
         GPIO_InitStruct.Mode = mode;
         GPIO_InitStruct.Pull = pull;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+        GPIO_InitStruct.Speed = speed;
+        GPIO_InitStruct.Alternate = alternate;
         HAL_GPIO_Init(port, &GPIO_InitStruct);
     }
 };

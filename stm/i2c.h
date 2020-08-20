@@ -5,6 +5,7 @@
 #ifndef STM_I2C_H
 #define STM_I2C_H
 
+#include "stm/gpio.h"
 #include "stm/hal.h"
 #include "utils/RequestQueue.h"
 
@@ -126,26 +127,11 @@ private:
     }
 
     HardwareI2C() : RequestQueue(50, HW_I2C_TIMEOUT)  {
-        this->initPins(HW_I2C_SDA_PIN, HW_I2C_SDA_PORT, HW_I2C_SDA_ALTERNATE,
-                       HW_I2C_SCL_PIN, HW_I2C_SCL_PORT, HW_I2C_SCL_ALTERNATE);
+        AFIO(HW_I2C_SDA_PIN, HW_I2C_SDA_PORT, HW_I2C_SDA_ALTERNATE,
+            GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH, GPIO_MODE_AF_OD);
+        AFIO(HW_I2C_SCL_PIN, HW_I2C_SCL_PORT, HW_I2C_SCL_ALTERNATE,
+            GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH, GPIO_MODE_AF_OD);
         this->config(HW_I2C, HW_I2C_BAUD);
-    }
-
-    void initPins(uint32_t sdaPin, GPIO_TypeDef *sdaPort, uint8_t sdaAlternate,
-                uint32_t sclPin, GPIO_TypeDef *sclPort, uint8_t sclAlternate) {
-
-        GPIO_InitTypeDef GPIO_InitStruct = {};
-
-        GPIO_InitStruct.Pin = sdaPin;
-        GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-        GPIO_InitStruct.Alternate = sdaAlternate;
-        HAL_GPIO_Init(sdaPort, &GPIO_InitStruct);
-
-        GPIO_InitStruct.Pin = sclPin;
-        GPIO_InitStruct.Alternate = sclAlternate;
-        HAL_GPIO_Init(sclPort, &GPIO_InitStruct);
     }
 
     void config(I2C_TypeDef *i2c, uint32_t baud) {
