@@ -49,6 +49,7 @@ private:
     const unsigned int TIMEOUT;
     Request *queue = nullptr;
     unsigned long *timeOf = nullptr;
+    unsigned int todo = 0;
     unsigned int iInIndex = 0;
     unsigned int iOutIndex = 0;
     bool bActive = false;
@@ -82,6 +83,7 @@ protected:
             return -1;
         }
         queue[iInIndex] = r;
+        todo++;
         /* timeOf[iInIndex] = getTime(); */
 
         inc(iInIndex);
@@ -93,11 +95,11 @@ protected:
      * check if some action needs to be taken, and take it
      */
     void poll() {
-        if (TIMEOUT && getTime() - timeOf[iOutIndex] > TIMEOUT) {
+        if (TIMEOUT && bActive && getTime() - timeOf[iOutIndex] > TIMEOUT) {
             bActive = false;
             timeout(queue[iOutIndex]);
         }
-        if (!bActive) {
+        if (!bActive && todo){
             bActive = true;
             timeOf[iOutIndex] = getTime();
             begin(queue[iOutIndex]);
@@ -146,6 +148,7 @@ protected:
         // remove request
         queue[iOutIndex].~Request();
         timeOf[iOutIndex] = 0;
+        todo--;
 
         inc(iOutIndex);
         bFull = false;
