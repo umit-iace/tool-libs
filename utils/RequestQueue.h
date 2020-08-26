@@ -48,7 +48,7 @@ private:
     const unsigned int QUEUELENGTH;
     const unsigned int TIMEOUT;
     Request *queue = nullptr;
-    unsigned long long *timeOf = nullptr;
+    unsigned long *timeOf = nullptr;
     unsigned int iInIndex = 0;
     unsigned int iOutIndex = 0;
     bool bActive = false;
@@ -64,7 +64,7 @@ protected:
     RequestQueue(unsigned int length, unsigned int timeout) :
             QUEUELENGTH(length), TIMEOUT(timeout) {
         queue = new Request[length]();
-        timeOf = new unsigned long long[length]();
+        timeOf = new unsigned long[length]();
     }
 
     ~RequestQueue() {
