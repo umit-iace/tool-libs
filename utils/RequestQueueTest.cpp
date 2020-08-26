@@ -94,7 +94,7 @@ public:
         printf("stopped\n");
         this->bStop = true;
     }
-    
+
     void start() {
         printf("started\n");
         this->bStop = false;
