@@ -29,7 +29,7 @@ public:
     /**
      * publicly visible request method
      *
-     * implement this to get the needed behavior
+     * override this to get the needed behavior
      *
      * useful functions to get there:
      *   * add
@@ -38,7 +38,11 @@ public:
      * @param r Request to add to queue
      * @return 0 if successful
      */
-    virtual short request(Request r) = 0;
+    virtual short request(Request r) {
+        short ret = add(r);
+        poll();
+        return ret;
+    }
 
 private:
     const unsigned int QUEUELENGTH;
