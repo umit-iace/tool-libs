@@ -12,7 +12,7 @@
  * in case your specific Request class uses dynamically allocated memory,
  * make sure its copy operator and destructor work correctly.
  *
- * if you use the find(Request) functionality, the `==` operator needs to
+ * if you use the exists(Request) functionality, the `==` operator needs to
  * be correctly defined as well.
  *
  *
@@ -33,7 +33,7 @@ public:
      *
      * useful functions to get there:
      *   * add
-     *   * find
+     *   * exists
      *   * poll
      * @param r Request to add to queue
      * @return 0 if successful
@@ -109,17 +109,17 @@ protected:
     }
 
     /**
-     * check if request is currently in queue
+     * check if request exists in queue
      * @param r request to look for
-     * @return QFOUND if the request is found in the queue
+     * @return true if request is in queue
      */
-    enum qRet find(Request &r) {
+    bool exists(Request &r) {
         for (auto index = iOutIndex; index != iInIndex; inc(index)) {
             if (r == queue[index]) {
-                return QFOUND;
+                return true;
             }
         }
-        return QOK;
+        return false;
     }
 
     /**
