@@ -72,29 +72,21 @@ protected:
         delete[] timeOf;
     }
 
-    /// possible return values of RequestQueue methods
-    enum qRet {
-        QOK,            ///< no need to take action
-        QFULL,          ///< queue is full, unable to add request
-        QFOUND,         ///< request found in queue
-    };
-
     /**
      * add a request to the queue
      * @param r Request to add
-     * @return 0 if successful
+     * @return 0 if successful, -1 otherwise
      */
-    enum qRet add(Request &r) {
-        enum qRet ret = QFULL;
-        if (!bFull) {
-            queue[iInIndex] = r;
-            timeOf[iInIndex] = getTime();
-
-            inc(iInIndex);
-            bFull = iInIndex == iOutIndex && bActive;
-            ret = QOK;
+    short add(Request &r) {
+        if (bFull) {
+            return -1;
         }
-    return ret;
+        queue[iInIndex] = r;
+        /* timeOf[iInIndex] = getTime(); */
+
+        inc(iInIndex);
+        bFull = iInIndex == iOutIndex && bActive;
+        return 0;
     }
 
     /**
