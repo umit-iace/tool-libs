@@ -57,36 +57,25 @@ public:
 
 class TestFifo: public RequestQueue<TestRequest> {
     bool bStop = false;
+    uint32_t time = 0;
 public:
     TestFifo(unsigned int l): RequestQueue(l, 2) {}
 
-    short request(TestRequest r) override {
-        enum qRet ret = exists(r);
-        if (ret != QFOUND) {
-            ret = add(r);
-        }
-        poll();
-        return ret;
-    }
-
-    void begin() override {
-        TestRequest r = current();
+    void begin(TestRequest &r) override {
         if (!bStop) {
             r.doit();
             printf("done.\n");
             end();
         } else {
-            printf("\n");
+            printf("skp\n");
         }
     }
 
-    void abort() override {
-        TestRequest r = current();
+    void timeout(TestRequest &r) override {
         printf("aborted pin: %d\n", r.pin);
     }
 
     unsigned long getTime() override {
-        static unsigned long time = 1;
         return time++;
     }
 
@@ -101,7 +90,6 @@ public:
     }
 
     using RequestQueue::exists;
-    using RequestQueue::qRet;
 };
 
 
@@ -132,16 +120,19 @@ BOOST_AUTO_TEST_CASE(overfullTest) {
     fifo.stop();
     for (int i = 5; i < 5 + testsize; ++i) {
         auto R = TestRequest(i, 0x11f7a345+i);
-        BOOST_CHECK_EQUAL(fifo.request(R), i-5 < fifosize ? TestFifo::qRet::QOK : TestFifo::qRet::QFULL);
+        BOOST_CHECK_EQUAL(fifo.request(R), i-5 < fifosize ? 0 : -1);
     }
+    // make sure request times out
+    fifo.getTime();
+    fifo.getTime();
     BOOST_CHECK_EQUAL(TestRequest::list[0], 0);
     BOOST_CHECK_EQUAL(TestRequest::list[testsize - 1], 0);
     fifo.start();
     auto r = TestRequest(121, 0xbabeface);
-    BOOST_CHECK_EQUAL(fifo.request(r), TestFifo::qRet::QFULL);
+    BOOST_CHECK_EQUAL(fifo.request(r), -1);
     BOOST_CHECK_EQUAL(TestRequest::list[0], 5);
     BOOST_CHECK_EQUAL(TestRequest::list[fifosize - 1], fifosize-1+5);
-    BOOST_CHECK_EQUAL(fifo.request(r), TestFifo::qRet::QOK);
+    BOOST_CHECK_EQUAL(fifo.request(r), 0);
     BOOST_CHECK_EQUAL(TestRequest::list[fifosize], 121);
 }
 
@@ -152,13 +143,14 @@ BOOST_AUTO_TEST_CASE(findRequestTest) {
     TestFifo fifo(2);
     auto R = TestRequest(0, 0x11f7a345);
     fifo.request(R);
-    BOOST_CHECK_EQUAL(fifo.exists(R), TestFifo::qRet::QOK);
+    BOOST_CHECK_EQUAL(fifo.exists(R), false);
     fifo.stop();
-    BOOST_CHECK_EQUAL(fifo.request(R), TestFifo::qRet::QOK);
+    BOOST_CHECK_EQUAL(fifo.request(R), 0);
     fifo.start();
     fifo.getTime();
     fifo.getTime(); // make sure queue aborts on next poll()
-    BOOST_CHECK_EQUAL(fifo.request(R), TestFifo::qRet::QFOUND);
-    BOOST_CHECK_EQUAL(fifo.exists(R), TestFifo::qRet::QOK);
+    BOOST_CHECK_EQUAL(fifo.exists(R), true);
+    fifo.request(R);
+    BOOST_CHECK_EQUAL(fifo.exists(R), false);
 }
 
