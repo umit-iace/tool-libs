@@ -95,12 +95,12 @@ protected:
     void poll() {
         if (TIMEOUT && getTime() - timeOf[iOutIndex] > TIMEOUT) {
             bActive = false;
-            abort();
+            timeout(queue[iOutIndex]);
         }
         if (!bActive) {
             bActive = true;
             timeOf[iOutIndex] = getTime();
-            begin();
+            begin(queue[iOutIndex]);
         }
     }
 
@@ -119,29 +119,27 @@ protected:
     }
 
     /**
-     * get request which needs to be handled
-     */
-    Request &current() {
-        return queue[iOutIndex];
-    }
-
-    /**
+     * start callback to application.
+     *
      * start processing the current request
      */
-    virtual void begin() = 0;
+    virtual void begin(Request &r) = 0;
 
     /**
-     * abort processing of the current request
+     * timeout callback to application.
+     *
+     * this may be a good place to consider aborting the current request
      *
      * if the request should be taken out of the queue, call end()
      * in this method. otherwise the request will be restarted.
      */
-    virtual void abort() = 0;
+    virtual void timeout(Request &r) = 0;
 
     /**
      * end processing of the current request
      *
-     * call this function when processing the request is done.
+     * call this function in the application when processing the
+     * request is done.\n
      * removes processed request from list, moves on to the next.
      */
     void end() {
@@ -158,7 +156,7 @@ protected:
         }
         if (bActive) {
             timeOf[iOutIndex] = getTime();
-            begin();
+            begin(queue[iOutIndex]);
         }
     }
 
