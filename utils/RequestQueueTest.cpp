@@ -65,7 +65,7 @@ public:
         if (ret != QFOUND) {
             ret = add(r);
         }
-        check();
+        poll();
         return ret;
     }
 
@@ -157,7 +157,7 @@ BOOST_AUTO_TEST_CASE(findRequestTest) {
     BOOST_CHECK_EQUAL(fifo.request(R), TestFifo::qRet::QOK);
     fifo.start();
     fifo.getTime();
-    fifo.getTime(); // make sure queue aborts on next check()
+    fifo.getTime(); // make sure queue aborts on next poll()
     BOOST_CHECK_EQUAL(fifo.request(R), TestFifo::qRet::QFOUND);
     BOOST_CHECK_EQUAL(fifo.find(R), TestFifo::qRet::QOK);
 }
