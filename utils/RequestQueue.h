@@ -34,7 +34,7 @@ public:
      * useful functions to get there:
      *   * add
      *   * find
-     *   * check
+     *   * poll
      * @param r Request to add to queue
      * @return 0 if successful
      */
@@ -96,7 +96,7 @@ protected:
     /**
      * check if some action needs to be taken, and take it
      */
-    void check() {
+    void poll() {
         if (TIMEOUT && getTime() - timeOf[iOutIndex] > TIMEOUT) {
             bActive = false;
             abort();
