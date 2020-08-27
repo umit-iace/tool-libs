@@ -32,15 +32,15 @@ public:
      * override this to get the needed behavior
      *
      * useful functions to get there:
-     *   * add
-     *   * exists
-     *   * poll
+     *   * rqAdd
+     *   * rqExists
+     *   * rqPoll
      * @param r Request to add to queue
      * @return 0 if successful
      */
     virtual short request(Request r) {
-        short ret = add(r);
-        poll();
+        short ret = rqAdd(r);
+        rqPoll();
         return ret;
     }
 
@@ -78,7 +78,7 @@ protected:
      * @param r Request to add
      * @return 0 if successful, -1 otherwise
      */
-    short add(Request &r) {
+    short rqAdd(Request &r) {
         if (bFull) {
             return -1;
         }
@@ -94,15 +94,15 @@ protected:
     /**
      * check if some action needs to be taken, and take it
      */
-    void poll() {
+    void rqPoll() {
         if (TIMEOUT && bActive && getTime() - timeOf[iOutIndex] > TIMEOUT) {
             bActive = false;
-            timeout(queue[iOutIndex]);
+            rqTimeout(queue[iOutIndex]);
         }
         if (!bActive && todo){
             bActive = true;
             timeOf[iOutIndex] = getTime();
-            begin(queue[iOutIndex]);
+            rqBegin(queue[iOutIndex]);
         }
     }
 
@@ -111,7 +111,7 @@ protected:
      * @param r request to look for
      * @return true if request is in queue
      */
-    bool exists(Request &r) {
+    bool rqExists(Request &r) {
         for (auto index = iOutIndex; index != iInIndex; inc(index)) {
             if (r == queue[index]) {
                 return true;
@@ -123,7 +123,7 @@ protected:
     /**
      * get request which is being handled
      */
-    Request &current() {
+    Request &rqCurrent() {
         return queue[iOutIndex];
     }
 
@@ -132,7 +132,7 @@ protected:
      *
      * start processing the current request
      */
-    virtual void begin(Request &r) = 0;
+    virtual void rqBegin(Request &r) = 0;
 
     /**
      * timeout callback to application.
@@ -142,7 +142,7 @@ protected:
      * if the request should be taken out of the queue, call end()
      * in this method. otherwise the request will be restarted.
      */
-    virtual void timeout(Request &r) = 0;
+    virtual void rqTimeout(Request &r) = 0;
 
     /**
      * end processing of the current request
@@ -151,7 +151,7 @@ protected:
      * request is done.\n
      * removes processed request from list, moves on to the next.
      */
-    void end() {
+    void rqEnd() {
         // remove request
         queue[iOutIndex].~Request();
         timeOf[iOutIndex] = 0;
@@ -166,7 +166,7 @@ protected:
         }
         if (bActive) {
             timeOf[iOutIndex] = getTime();
-            begin(queue[iOutIndex]);
+            rqBegin(queue[iOutIndex]);
         }
     }
 
