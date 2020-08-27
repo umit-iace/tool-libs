@@ -61,17 +61,17 @@ class TestFifo: public RequestQueue<TestRequest> {
 public:
     TestFifo(unsigned int l): RequestQueue(l, 2) {}
 
-    void begin(TestRequest &r) override {
+    void rqBegin(TestRequest &r) override {
         if (!bStop) {
             r.doit();
             printf("done.\n");
-            end();
+            rqEnd();
         } else {
             printf("skp\n");
         }
     }
 
-    void timeout(TestRequest &r) override {
+    void rqTimeout(TestRequest &r) override {
         printf("aborted pin: %d\n", r.pin);
     }
 
@@ -89,7 +89,7 @@ public:
         this->bStop = false;
     }
 
-    using RequestQueue::exists;
+    using RequestQueue::rqExists;
 };
 
 
@@ -143,14 +143,14 @@ BOOST_AUTO_TEST_CASE(findRequestTest) {
     TestFifo fifo(2);
     auto R = TestRequest(0, 0x11f7a345);
     fifo.request(R);
-    BOOST_CHECK_EQUAL(fifo.exists(R), false);
+    BOOST_CHECK_EQUAL(fifo.rqExists(R), false);
     fifo.stop();
     BOOST_CHECK_EQUAL(fifo.request(R), 0);
     fifo.start();
     fifo.getTime();
     fifo.getTime(); // make sure queue aborts on next poll()
-    BOOST_CHECK_EQUAL(fifo.exists(R), true);
+    BOOST_CHECK_EQUAL(fifo.rqExists(R), true);
     fifo.request(R);
-    BOOST_CHECK_EQUAL(fifo.exists(R), false);
+    BOOST_CHECK_EQUAL(fifo.rqExists(R), false);
 }
 
