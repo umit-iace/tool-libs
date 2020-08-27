@@ -144,7 +144,7 @@ public:
      * processes a request in the queue.
      * @param rq
      */
-    void processRequest(SPIRequest &rq) override {
+    void rqBegin(SPIRequest &rq) override {
         // activate the chip
         rq.cs->selectChip(true);
 
@@ -162,13 +162,24 @@ public:
         }
     }
 
+    /**
+     * override virtual RequestQueue function
+     *
+     * timeout -> abort
+     */
+     void rqTimeout(SPIRequest &rq) override {
+         HAL_SPI_Abort_IT(&this->hSPI);
+         rq.cs->selectChip(false);
+         rqEnd();
+     }
+
 private:
     /**
      * complete the data transfer, signal request completion
      * @param hspi
      */
     static void transferComplete(SPI_HandleTypeDef *hspi) {
-        auto &r = pThis->lastRequest();
+        auto &r = pThis->rqCurrent();
         // deactivate chip
         r.cs->selectChip(false);
         // signal data arrival
@@ -176,7 +187,7 @@ private:
             r.cs->callback(r.cbData);
         }
         // signal request complete
-        pThis->endProcess();
+        pThis->rqEnd();
     }
 
 public:
