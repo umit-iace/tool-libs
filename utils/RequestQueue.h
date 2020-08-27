@@ -121,6 +121,13 @@ protected:
     }
 
     /**
+     * get request which is being handled
+     */
+    Request &current() {
+        return queue[iOutIndex];
+    }
+
+    /**
      * start callback to application.
      *
      * start processing the current request
