@@ -24,14 +24,16 @@
   UPfeil/.style={black,Pfeil=#1,font={\sffamily\itshape}},% für Spannungspfeile
   IPfeil/.style={black,Pfeil=#1,font={\ttfamily\itshape}} % für Strompfeile
 }
+% custom linewidth
+\def\lW{1.1}
 
 \node [block, minimum width=6em, minimum height=3.5em] (traj) {\begin{tabular}{c}ExpTraj \end{tabular}};
 \node [sum, node distance=1cm, right=of traj] (sum) {};
 \node [block, node distance=1cm, minimum width=6em, minimum height=3.5em, right=of sum] (ctrl) {\begin{tabular}{c}ExpCtrl \end{tabular}};
 \node [block, node distance=1cm, minimum width=6em, minimum height=3.5em, below=of ctrl] (rig) {\begin{tabular}{c}ExpRig \end{tabular}};
 
-\draw[->] (traj) -- node [above] {$w$} (sum);
-\draw[->] (sum) -- node [above] {$e$} (ctrl);
-\draw[->] (ctrl) -- node [right] {$u$} (rig);
-\draw[->] (rig) node [xshift = -2cm,yshift = 0.5cm, left] {y} -| (sum);
+\draw[->,line width=\lW] (traj) -- node [above] {$w$} (sum);
+\draw[->,line width=\lW] (sum) -- node [above] {$e$} (ctrl);
+\draw[->,line width=\lW] (ctrl) -- node [right] {$u$} (rig);
+\draw[->,line width=\lW] (rig) node [xshift = -2cm,yshift = 0.5cm, left] {y} -| (sum);
 

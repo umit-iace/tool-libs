@@ -10,7 +10,7 @@
 \tikzstyle{input} = [coordinate]
 \tikzstyle{output} = [coordinate]
 \tikzstyle{coord} = [coordinate]
-\tikzstyle{pinstyle} = [pin edge={to-,thin,black}]
+\tikzstyle{pinstyle} = [pin edge={to-,black}]
 \tikzstyle{vecArrow} = [thick, decoration={markings,mark=at position
    1 with {\arrow[semithick]{open triangle 60}}},
    double distance=1.4pt, shorten >= 5.5pt,
@@ -26,22 +26,22 @@
 }
 
 
-
 % create blocks for state machine
 \node [rblock, minimum width=3.5em, minimum height=3.5em] (idle) {\begin{tabular}{c} IDLE \end{tabular}};
-\node [rblock, node distance=5cm, minimum height=3.5em, minimum width=3.5em, right=of idle] (init) {\begin{tabular}{c} INIT \end{tabular}};
-\node [rblock, node distance=2cm, minimum height=3.5em, minimum width=3.5em, below=of init] (run) {\begin{tabular}{c} RUN \end{tabular}};
-\node [rblock, node distance=5cm, minimum height=3.5em, minimum width=3.5em, left=of run] (stop) {\begin{tabular}{c} STOP \end{tabular}};
+\node [rblock, node distance=5em, minimum height=3.5em, minimum width=3.5em, right=of idle] (init) {\begin{tabular}{c} INIT \end{tabular}};
+\node [rblock, node distance=2em, minimum height=3.5em, minimum width=3.5em, below=of init] (run) {\begin{tabular}{c} RUN \end{tabular}};
+\node [rblock, node distance=5em, minimum height=3.5em, minimum width=3.5em, left=of run] (stop) {\begin{tabular}{c} STOP \end{tabular}};
 
+\def\lW{1.2}
 
 % connect blocks 
-\draw[->] (idle) -- node [above] {\small\textbf{pyWisp}$\rightarrow$start()} (init);
-\draw[->] (init) -- node [right]  {\small\textbf{exp}$\rightarrow$module\textbf{X}$\rightarrow$init()} (run);
-\draw[->] (run) -- node [below] {
+\draw[->, line width=\lW] (idle) -- node [above, yshift=2.5em] {\small\textbf{pyWisp}$\rightarrow$start()} (init);
+\draw[->, line width=\lW] (init) -- node [below, rotate=-90, yshift=5em]  {\vspace{2em}\small\textbf{exp}$\rightarrow$module\textbf{X}$\rightarrow$init()} (run);
+\draw[->, line width=\lW] (run) -- node [below, yshift=-2.5em] {
 \small\begin{tabular}{c} 
 	\textbf{pyWisp}$\rightarrow$stop() \\
 	\textbf{exp}$\rightarrow$checkHeartbeat() \\
 	module\textbf{X}$\rightarrow$stop() 
 	\end{tabular}
 } (stop);
-\draw[->] (stop) -- node [right] {\small\textbf{exp}$\rightarrow$module\textbf{X}$\rightarrow$stop()} (idle);
+\draw[->, line width=\lW] (stop) -- node [below, rotate=90, yshift=5em] {\small\textbf{exp}$\rightarrow$module\textbf{X}$\rightarrow$stop()} (idle);
