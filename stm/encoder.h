@@ -2,6 +2,7 @@
  *
  * Copyright (c) 2020 IACE
  */
+
 #ifndef STM_ENCODER_H
 #define STM_ENCODER_H
 
@@ -10,46 +11,40 @@
 
 class Encoder {
 public:
-    Encoder(uint32_t pinA, GPIO_TypeDef *portA, uint8_t alternateA,
+    /**
+     * Encoder constructor.
+     *
+     * make sure the pins for the encoder are on
+     * channels 1 and 2 of the used timer.
+     *
+     * @param Tim Microcontroller Timer Peripheral (e.g. TIM2)
+     * @param pinA pin number of encoder A pin
+     * @param portA port of encoder A pin
+     * @param alternateA alternate function of encoder A pin
+     * @param pinB pin number of encoder B pin
+     * @param portB port of encoder B pin
+     * @param alternateB alternate function of encoder B pin
+     * @param factor all encompassing conversion factor from encoder value
+     * to needed unit\n
+     * Examples:
+     *  * 4-bit/revolution rotary encoder, position in \c degrees:
+     *    \verbatim factor = 1 / pow(2, 4) * 360; \endverbatim
+     *  * 12-bit/revolution rotary encoder, position in \c radiants:
+     *    \verbatim factor = 1 / pow(2, 12) * M_PI; \endverbatim
+     *  * 10-bit/revolution rotary encoder, position in \c m traveled with
+     *    a 6cm radius wheel:
+     *    \verbatim factor = 1 / pow(2, 10) * M_PI * 0.06; \endverbatim
+     */
+    Encoder(TIM_TypeDef *Tim,
+            uint32_t pinA, GPIO_TypeDef *portA, uint8_t alternateA,
             uint32_t pinB, GPIO_TypeDef *portB, uint8_t alternateB,
-            TIM_TypeDef *tim, TIM_HandleTypeDef *handle) : handle(handle) {
+            double dFactor)
+            : dFactor(dFactor), tim(HardwareTimer(Tim, 0, 0xffff)) {
         AFIO(pinA, portA, alternateA);
         AFIO(pinB, portB, alternateB);
-        init(tim);
-    }
 
-    /**
-     * return current value of encoder
-     * @todo calculate directly in rad?
-     * @return
-     */
-    int16_t getPos() {
-        return __HAL_TIM_GetCounter(handle);
-    }
-
-    /**
-     *  @brief returns value of encode in rad
-     *  @return encoder position in [rad]
-     */
-    double getPosRad(){
-        return ((this->getPos()*2.0*M_PI)/this->dResolution);
-    }
-private:
-    TIM_HandleTypeDef *handle = nullptr;
-    double dResolution;
-
-    void init(TIM_TypeDef *tim) {
+        TIM_HandleTypeDef *htim = tim.handle();
         TIM_Encoder_InitTypeDef sConfig = {};
-        TIM_MasterConfigTypeDef sMasterConfig = {};
-        *handle = {};
-
-        handle->Instance = tim;
-        handle->Init.Prescaler = 0;
-        handle->Init.CounterMode = TIM_COUNTERMODE_UP;
-        handle->Init.Period = 0xffff;
-        handle->Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-        handle->Init.RepetitionCounter = 0;
-        handle->Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
         sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
         sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
         sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
@@ -59,13 +54,73 @@ private:
         sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
         sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
         sConfig.IC2Filter = 0;
-        while (HAL_TIM_Encoder_Init(handle, &sConfig) != HAL_OK);
-
-        sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-        sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-        while (HAL_TIMEx_MasterConfigSynchronization(handle, &sMasterConfig) != HAL_OK);
-
-        while (HAL_TIM_Encoder_Start(handle, TIM_CHANNEL_ALL) != HAL_OK);
+        while (HAL_TIM_Encoder_Init(htim, &sConfig) != HAL_OK);
+        while (HAL_TIM_Encoder_Start(htim, TIM_CHANNEL_ALL) != HAL_OK);
     }
+
+    /**
+     * @brief measure the sensor
+     *
+     * do this periodically to update encoder state
+     */
+    void measure() {
+        int16_t iCurrEnc = __HAL_TIM_GET_COUNTER(tim.handle());
+        uint32_t iCurrTick = HAL_GetTick();
+        double dDiff = (int16_t)(iCurrEnc - iLastVal) * dFactor;
+        dPosition += dDiff;
+        dSpeed = dDiff / (iCurrTick - iLastTick) * 1000;
+        iLastVal = iCurrEnc;
+        iLastTick = iCurrTick;
+    }
+
+    /**
+     * @brief return the counter value of the timer connected to the encoder
+     * @return 16bit counter value
+     */
+    int16_t getValue() {
+        return iLastVal;
+    }
+
+    /**
+    * @brief return current value of encoder
+    * with overflow correction
+    * @return position, based on initialized factor
+    */
+    double getPosition() {
+        return dPosition;
+    }
+
+    /**
+     * @brief return current speed of encoder
+     *
+     * **disclaimer** this is just the numerically differentiated position
+     * of the encoder.
+     *
+     * @return speed, based on initialized factor / s
+     */
+    double getSpeed() {
+        return dSpeed;
+    }
+
+    /**
+     * @brief reset encoder position
+     */
+    void zero() {
+        __HAL_TIM_SET_COUNTER(tim.handle(), 0);
+        iLastVal = 0;
+        dPosition = 0;
+    }
+
+private:
+    ///\cond false
+    HardwareTimer tim;
+    double dFactor = 1;
+    int16_t iLastVal = 0;
+    uint32_t iLastTick = 0;
+
+    double dPosition = 0;
+    double dSpeed = 0;
+    ///\endcond
 };
+
 #endif //STM_ENCODER_H
