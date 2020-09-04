@@ -34,8 +34,6 @@ Automation and Control Engineering. It includes the following components:
 
   - ``pwm`` - Class for hardware based pwm outputs
 
-  - ``servo`` - Class for hardware based RC servo control
-
   - ``spi`` - Classes to use hardware based SPI functionality using ``RequestQueue``
 
     - ``ChipSelect``
