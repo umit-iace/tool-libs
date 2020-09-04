@@ -27,3 +27,15 @@ BOOST_AUTO_TEST_CASE( LinearInterpolatorInterpolateTest ) {
 
     BOOST_CHECK_EQUAL(li(1.5), 3);
 }
+
+BOOST_AUTO_TEST_CASE( LinearInterpolatorInterpolateMultipleTest ) {
+
+    double dx[4] = {1, 2, 3, 4};
+    double dy[4] = {2, 4, 2, 4};
+    LinearInterpolator li(dx, dy, 4);
+
+    BOOST_CHECK_EQUAL(li(1.5), 3);
+    BOOST_CHECK_EQUAL(li(2),4);
+    BOOST_CHECK_EQUAL(li(2.5), 3);
+    BOOST_CHECK_EQUAL(li(3.5), 3);
+}

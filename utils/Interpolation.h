@@ -29,8 +29,8 @@ public:
             sort();
     }
 
-    ~Interpolator() {
-        delete this->P;
+    virtual ~Interpolator() {
+        delete[] this->P;
     }
 
     /**
@@ -84,10 +84,11 @@ protected:
         }
 
         for (unsigned int i = 0; i < iCount - 1; ++i) {
-            if (dx > this->P[i].x && dx < this->P[i + 1].x) {
-                double dm = ((this->P[i + 1].y - this->P[i].y) / (this->P[i + 1].x - this->P[i].x));
-                return  dm * (dx - this->P[i].x) + this->P[i].y;
+            if (dx > this->P[i + 1].x) {
+                continue;
             }
+            double dm = ((this->P[i + 1].y - this->P[i].y) / (this->P[i + 1].x - this->P[i].x));
+            return  dm * (dx - this->P[i].x) + this->P[i].y;
         }
         return 0;
     }
