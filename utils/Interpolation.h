@@ -11,24 +11,26 @@
 class Interpolator {
 public:
     /**
-     * Constructor for a general interpolator with sorted arrays
+     * Constructor for a general interpolator
      * @param dx array of x values
      * @param dy array of y values
-     * @param count of values in array
+     * @param iCount of values in array
+     * @param bSort flag is arrays must sorted
      */
-    Interpolator(double *dx, double *dy, const unsigned int iCount) : iCount(iCount) {
-        this->dx = new double[iCount];
-        this->dy = new double[iCount];
+    Interpolator(double *dx, double *dy, const unsigned int iCount, bool bSort) : iCount(iCount) {
+        this->P = new Vec[iCount];
 
         for (unsigned int i = 0; i < iCount; ++i) {
-            this->dx[i] = dx[i];
-            this->dy[i] = dy[i];
+            this->P[i].x = dx[i];
+            this->P[i].y = dy[i];
         }
+
+        if (bSort)
+            sort();
     }
 
     ~Interpolator() {
-        delete dx;
-        delete dy;
+        delete this->P;
     }
 
     /**
@@ -42,9 +44,22 @@ public:
 protected:
     virtual double interpolate(double dx) = 0;
 
-    double *dx;             ///< array of x positions
-    double *dy;             ///< array of y values
-    unsigned int iCount;    ///< number of points in array
+    unsigned int iCount;                ///< number of points in array
+    struct Vec { double x, y;} *P;      ///< points with x and y values
+
+private:
+    void sort() {
+        Vec vTemp;
+        for(unsigned int i = 0; i < iCount - 1; i++) {
+            for(unsigned int j = 0; j < iCount - i - 1; j++) {
+                if (this->P[j].x > this->P[j + 1].x){
+                    vTemp = this->P[j];
+                    this->P[j] = this->P[j + 1];
+                    this->P[j + 1] = vTemp;
+                }
+            }
+        }
+    }
 };
 
 /**
@@ -58,22 +73,20 @@ public:
      * @param dy array of y values
      * @param count of values in array
      */
-    LinearInterpolator(double *dx, double *dy, const unsigned int iCount) : Interpolator(dx, dy, iCount) {
-    }
+    LinearInterpolator(double *dx, double *dy, const unsigned int iCount, bool bSort=false) : Interpolator(dx, dy, iCount, bSort) {}
 
 protected:
     double interpolate(double dx) {
-        if (dx <= this->dx[0]) {
-            return this->dy[0];
-        } else if (dx >= this->dx[this->iCount - 1]) {
-            return this->dy[iCount - 1];
+        if (dx <= this->P[0].x) {
+            return this->P[0].y;
+        } else if (dx >= this->P[this->iCount - 1].x) {
+            return this->P[iCount - 1].y;
         }
 
         for (unsigned int i = 0; i < iCount - 1; ++i) {
-            if (dx > this->dx[i] && dx < this->dx[i + 1]) {
-                return ((this->dy[i + 1] - this->dy[i]) / (this->dx[i + 1] - this->dx[i])) * dx +
-                       (this->dy[i] * this->dx[i + 1] - this->dy[i + 1] * this->dx[i]) /
-                       (this->dx[i + 1] - this->dx[i]);
+            if (dx > this->P[i].x && dx < this->P[i + 1].x) {
+                double dm = ((this->P[i + 1].y - this->P[i].y) / (this->P[i + 1].x - this->P[i].x));
+                return  dm * (dx - this->P[i].x) + this->P[i].y;
             }
         }
         return 0;
