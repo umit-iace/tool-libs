@@ -18,7 +18,7 @@ Automation and Control Engineering. It includes the following components:
   - ``MAX31865`` - temperature measurement using the MAX31865 with temperature
     dependent resistors like the PT100
 
-* STM - Hardware specific classes for the STM controller familiy (Support for f4 and f7)
+* STM - Hardware specific classes for the STM controller family (Support for f4 and f7)
 
   - ``encoder`` - Class for hardware based quadratic encoder support
 
@@ -48,15 +48,15 @@ Automation and Control Engineering. It includes the following components:
 
   - ``uart`` - Template class for hardware based UART
 
-* Utils - General classes
+* Utils - Generally useful classes
 
   - ``Experiment`` - General class of an experiment used to control the experiment flow at a test rig.
 
   - ``ExperimentModule`` - General class of an experiment module used to describe different functionality of a test rig.
 
-  - ``Interpolation`` - Classes that implements different interpolation algorithm.
+  - ``Interpolation`` - Classes that implement different interpolation algorithms.
 
-    - ``LinearInterpolator`` - Class describing linear interpolation method.
+    - ``LinearInterpolator`` - Class implementing the linear interpolation method.
 
   - ``MovingAverage`` - Template class that implements a moving average filter
 
