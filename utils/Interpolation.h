@@ -19,6 +19,25 @@ public:
      */
     Interpolator(double *dx, double *dy, const unsigned int iCount, bool bSort)
             : iCount(iCount) {
+        if (dx) && (dy)
+            this->setData(dx, dy, iCount, bSort);
+    }
+
+    /**
+     * Initialises the points.
+     * @param dx array of x values
+     * @param dy array of y values
+     * @param iCount of values in array
+     * @param bSort true if arrays must be sorted
+     */
+    void setData(double *dx, double *dy, unsigned int iCount, bool bSort=false) {
+        if (!dx) || (!dy)
+            return
+
+        if (this->P) {
+            delete[] this->P;
+        }
+
         this->P = new Vec[iCount];
 
         for (unsigned int i = 0; i < iCount; ++i) {
@@ -84,6 +103,8 @@ public:
     LinearInterpolator(double *dx, double *dy, const unsigned int iCount, bool bSort=false)
             : Interpolator(dx, dy, iCount, bSort) {}
 
+
+    LinearInterpolator() : Interpolator({}, {}, 0, false) {}
 protected:
     ///\cond false
     double interpolate(double dx) {

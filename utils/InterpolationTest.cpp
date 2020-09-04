@@ -28,6 +28,27 @@ BOOST_AUTO_TEST_CASE( LinearInterpolatorInterpolateTest ) {
     BOOST_CHECK_EQUAL(li(1.5), 3);
 }
 
+BOOST_AUTO_TEST_CASE( LinearInterpolatorSetDataTest ) {
+
+    double dx[2] = {1, 2};
+    double dy[2] = {2, 4};
+    LinearInterpolator li(dx, dy, 2);
+
+    BOOST_CHECK_EQUAL(li(1.5), 3);
+
+    li.setData({1, 2, 3, 4}, {2, 4, 2, 4}, 4};
+    BOOST_CHECK_EQUAL(li(0.5), 2);
+}
+
+
+BOOST_AUTO_TEST_CASE( LinearInterpolatorChangeDataTest ) {
+
+    LinearInterpolator li;
+
+    li.setData({1, 2, 3, 4}, {2, 4, 2, 4}, 4};
+    BOOST_CHECK_EQUAL(li(0.5), 2);
+}
+
 BOOST_AUTO_TEST_CASE( LinearInterpolatorInterpolateMultipleTest ) {
 
     double dx[4] = {1, 2, 3, 4};
