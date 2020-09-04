@@ -54,6 +54,10 @@ Automation and Control Engineering. It includes the following components:
 
   - ``ExperimentModule`` - General class of an experiment module used to describe different functionality of a test rig.
 
+  - ``Interpolation`` - Classes that implements different interpolation algorithm.
+
+    - ``LinearInterpolator`` - Class describing linear interpolation method.
+
   - ``MovingAverage`` - Template class that implements a moving average filter
 
   - ``RequestQueue`` - Template based class for a request queue
