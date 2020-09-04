@@ -15,9 +15,10 @@ public:
      * @param dx array of x values
      * @param dy array of y values
      * @param iCount of values in array
-     * @param bSort flag is arrays must sorted
+     * @param bSort true if arrays must be sorted
      */
-    Interpolator(double *dx, double *dy, const unsigned int iCount, bool bSort) : iCount(iCount) {
+    Interpolator(double *dx, double *dy, const unsigned int iCount, bool bSort)
+            : iCount(iCount) {
         this->P = new Vec[iCount];
 
         for (unsigned int i = 0; i < iCount; ++i) {
@@ -29,6 +30,9 @@ public:
             sort();
     }
 
+    /**
+     * virtual destructor
+     */
     virtual ~Interpolator() {
         delete[] this->P;
     }
@@ -42,6 +46,7 @@ public:
     }
 
 protected:
+    ///\cond false
     virtual double interpolate(double dx) = 0;
 
     unsigned int iCount;                ///< number of points in array
@@ -60,10 +65,12 @@ private:
             }
         }
     }
+    ///\endcond
 };
 
 /**
- * Specific linear interpolator
+ * Class implementing linear interpolation
+ * for a fixed number of datapoints
  */
 class LinearInterpolator : public Interpolator {
 public:
@@ -71,11 +78,14 @@ public:
      * Constructor for a linear interpolator
      * @param dx array of x values
      * @param dy array of y values
-     * @param count of values in array
+     * @param iCount of values in array
+     * @param bSort true if arrays must be sorted
      */
-    LinearInterpolator(double *dx, double *dy, const unsigned int iCount, bool bSort=false) : Interpolator(dx, dy, iCount, bSort) {}
+    LinearInterpolator(double *dx, double *dy, const unsigned int iCount, bool bSort=false)
+            : Interpolator(dx, dy, iCount, bSort) {}
 
 protected:
+    ///\cond false
     double interpolate(double dx) {
         if (dx <= this->P[0].x) {
             return this->P[0].y;
@@ -90,8 +100,8 @@ protected:
             double dm = ((this->P[i + 1].y - this->P[i].y) / (this->P[i + 1].x - this->P[i].x));
             return  dm * (dx - this->P[i].x) + this->P[i].y;
         }
-        return 0;
     }
+    ///\endcond
 };
 
 #endif //INTERPOLATION_H
