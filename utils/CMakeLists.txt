@@ -1,6 +1,9 @@
 project(ToolLibsTests)
 
-use_host_compiler()
+if(COMMAND use_host_compiler)
+    use_host_compiler()
+endif()
+
 set(CMAKE_SIZEOF_VOID_P 8)
 set(BOOST_INCLUDEDIR /usr/include)
 find_package(Boost COMPONENTS unit_test_framework)
@@ -19,4 +22,10 @@ if (Boost_FOUND)
     target_include_directories(MATest PUBLIC ${Boost_INCLUDE_DIRS})
     target_link_libraries(MATest ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
     add_test(NAME MovingAverageTest COMMAND MATest)
+
+    add_executable(IntTest InterpolationTest.cpp)
+    target_compile_definitions(IntTest PUBLIC BOOST_TEST_DYN_LINK)
+    target_include_directories(IntTest PUBLIC ${Boost_INCLUDE_DIRS})
+    target_link_libraries(IntTest ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+    add_test(NAME InterpolationTest COMMAND IntTest)
 endif()
