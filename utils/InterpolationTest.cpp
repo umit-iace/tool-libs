@@ -36,7 +36,9 @@ BOOST_AUTO_TEST_CASE( LinearInterpolatorSetDataTest ) {
 
     BOOST_CHECK_EQUAL(li(1.5), 3);
 
-    li.setData({1, 2, 3, 4}, {2, 4, 2, 4}, 4};
+    double dxN[4] = {1, 2, 3, 4};
+    double dyN[4] = {2, 4, 2, 4};
+    li.setData(dxN, dyN, 4);
     BOOST_CHECK_EQUAL(li(0.5), 2);
 }
 
@@ -45,7 +47,9 @@ BOOST_AUTO_TEST_CASE( LinearInterpolatorChangeDataTest ) {
 
     LinearInterpolator li;
 
-    li.setData({1, 2, 3, 4}, {2, 4, 2, 4}, 4};
+    double dxN[4] = {1, 2, 3, 4};
+    double dyN[4] = {2, 4, 2, 4};
+    li.setData(dxN, dyN, 4);
     BOOST_CHECK_EQUAL(li(0.5), 2);
 }
 

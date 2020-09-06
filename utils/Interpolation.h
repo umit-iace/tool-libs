@@ -19,8 +19,7 @@ public:
      */
     Interpolator(double *dx, double *dy, const unsigned int iCount, bool bSort)
             : iCount(iCount) {
-        if (dx) && (dy)
-            this->setData(dx, dy, iCount, bSort);
+        this->setData(dx, dy, iCount, bSort);
     }
 
     /**
@@ -31,8 +30,8 @@ public:
      * @param bSort true if arrays must be sorted
      */
     void setData(double *dx, double *dy, unsigned int iCount, bool bSort=false) {
-        if (!dx) || (!dy)
-            return
+        if ((!dx) || (!dy))
+            return;
 
         if (this->P) {
             delete[] this->P;
@@ -61,7 +60,10 @@ public:
      * @param dx x position to interpolate
      */
     double operator()(double dx) {
-        return this->interpolate(dx);
+        if (this->P)
+            return this->interpolate(dx);
+        else
+            return 0;
     }
 
 protected:
@@ -104,7 +106,7 @@ public:
             : Interpolator(dx, dy, iCount, bSort) {}
 
 
-    LinearInterpolator() : Interpolator({}, {}, 0, false) {}
+    LinearInterpolator() : Interpolator(nullptr, nullptr, 0, false) {}
 protected:
     ///\cond false
     double interpolate(double dx) {
@@ -121,6 +123,7 @@ protected:
             double dm = ((this->P[i + 1].y - this->P[i].y) / (this->P[i + 1].x - this->P[i].x));
             return  dm * (dx - this->P[i].x) + this->P[i].y;
         }
+        return this->P[iCount -1].y;
     }
     ///\endcond
 };
