@@ -48,6 +48,16 @@ public:
             sort();
     }
 
+    void updateData(double *dx, double *dy) {
+        if ((!dx) || (!dy))
+            return;
+
+        for (unsigned int i = 0; i < iCount; ++i) {
+            this->P[i].x = dx[i];
+            this->P[i].y = dy[i];
+        }
+    }
+
     /**
      * virtual destructor
      */
