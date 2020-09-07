@@ -5,6 +5,10 @@
 #ifndef INTERPOLATION_H
 #define INTERPOLATION_H
 
+struct Vec {
+    double x, y;
+};
+
 /**
  * Base class for an interpolator
  */
@@ -17,17 +21,41 @@ public:
      * @param iCount of values in array
      * @param bSort true if arrays must be sorted
      */
-    Interpolator(double *dx, double *dy, const unsigned int iCount, bool bSort)
-            : iCount(iCount) {
-        this->P = new Vec[iCount];
+    Interpolator(double *dx, double *dy, const unsigned int iCount, bool bSort) {
+        setData(dx, dy, iCount, bSort);
+    }
 
-        for (unsigned int i = 0; i < iCount; ++i) {
+    /**
+     * Initialises the points.
+     * @param dx array of x values
+     * @param dy array of y values
+     * @param iCount of values in array
+     * @param bSort true if arrays must be sorted
+     */
+    void setData(double *dx, double *dy, unsigned int iCount, bool bSort=false) {
+        if ((!dx) || (!dy))
+            return;
+
+        this->iCount = iCount;
+        this->P = new Vec[this->iCount];
+
+        for (unsigned int i = 0; i < this->iCount; ++i) {
             this->P[i].x = dx[i];
             this->P[i].y = dy[i];
         }
 
         if (bSort)
             sort();
+    }
+
+    void updateData(double *dx, double *dy) {
+        if ((!dx) || (!dy))
+            return;
+
+        for (unsigned int i = 0; i < this->iCount; ++i) {
+            this->P[i].x = dx[i];
+            this->P[i].y = dy[i];
+        }
     }
 
     /**
@@ -42,15 +70,18 @@ public:
      * @param dx x position to interpolate
      */
     double operator()(double dx) {
-        return this->interpolate(dx);
+        if (this->P)
+            return this->interpolate(dx);
+        else
+            return 0;
     }
 
 protected:
     ///\cond false
     virtual double interpolate(double dx) = 0;
 
-    unsigned int iCount;                ///< number of points in array
-    struct Vec { double x, y;} *P;      ///< points with x and y values
+    unsigned int iCount;                 ///< number of points in array
+    Vec *P;                              ///< points with x and y values
 
 private:
     void sort() {
@@ -84,6 +115,8 @@ public:
     LinearInterpolator(double *dx, double *dy, const unsigned int iCount, bool bSort=false)
             : Interpolator(dx, dy, iCount, bSort) {}
 
+
+    LinearInterpolator() : Interpolator(nullptr, nullptr, 0, false) {}
 protected:
     ///\cond false
     double interpolate(double dx) {
@@ -100,6 +133,7 @@ protected:
             double dm = ((this->P[i + 1].y - this->P[i].y) / (this->P[i + 1].x - this->P[i].x));
             return  dm * (dx - this->P[i].x) + this->P[i].y;
         }
+        return this->P[iCount -1].y;
     }
     ///\endcond
 };
