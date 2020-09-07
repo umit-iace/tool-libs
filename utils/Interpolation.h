@@ -5,6 +5,10 @@
 #ifndef INTERPOLATION_H
 #define INTERPOLATION_H
 
+struct Vec {
+    double x, y;
+};
+
 /**
  * Base class for an interpolator
  */
@@ -17,9 +21,8 @@ public:
      * @param iCount of values in array
      * @param bSort true if arrays must be sorted
      */
-    Interpolator(double *dx, double *dy, const unsigned int iCount, bool bSort)
-            : iCount(iCount) {
-        this->setData(dx, dy, iCount, bSort);
+    Interpolator(double *dx, double *dy, const unsigned int iCount, bool bSort) {
+        setData(dx, dy, iCount, bSort);
     }
 
     /**
@@ -33,13 +36,10 @@ public:
         if ((!dx) || (!dy))
             return;
 
-        if (this->P) {
-            delete[] this->P;
-        }
+        this->iCount = iCount;
+        this->P = new Vec[this->iCount];
 
-        this->P = new Vec[iCount];
-
-        for (unsigned int i = 0; i < iCount; ++i) {
+        for (unsigned int i = 0; i < this->iCount; ++i) {
             this->P[i].x = dx[i];
             this->P[i].y = dy[i];
         }
@@ -52,7 +52,7 @@ public:
         if ((!dx) || (!dy))
             return;
 
-        for (unsigned int i = 0; i < iCount; ++i) {
+        for (unsigned int i = 0; i < this->iCount; ++i) {
             this->P[i].x = dx[i];
             this->P[i].y = dy[i];
         }
@@ -80,8 +80,8 @@ protected:
     ///\cond false
     virtual double interpolate(double dx) = 0;
 
-    unsigned int iCount;                ///< number of points in array
-    struct Vec { double x, y;} *P;      ///< points with x and y values
+    unsigned int iCount;                 ///< number of points in array
+    Vec *P;                              ///< points with x and y values
 
 private:
     void sort() {

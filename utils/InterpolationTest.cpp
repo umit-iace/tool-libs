@@ -40,7 +40,7 @@ BOOST_AUTO_TEST_CASE( LinearInterpolatorUpdateDataTest ) {
     double dyN[2] = {4, 6};
 
     li.updateData(dxN, dyN);
-    BOOST_CHECK_EQUAL(li(3), 5);
+    BOOST_CHECK_EQUAL(li(2.5), 5);
 }
 
 BOOST_AUTO_TEST_CASE( LinearInterpolatorInitUpdateDataTest ) {
@@ -53,7 +53,7 @@ BOOST_AUTO_TEST_CASE( LinearInterpolatorInitUpdateDataTest ) {
     double dyN[2] = {4, 6};
 
     li.updateData(dxN, dyN);
-    BOOST_CHECK_EQUAL(li(3), 5);
+    BOOST_CHECK_EQUAL(li(2.5), 5);
 }
 
 BOOST_AUTO_TEST_CASE( LinearInterpolatorSetDataTest ) {
@@ -69,7 +69,6 @@ BOOST_AUTO_TEST_CASE( LinearInterpolatorSetDataTest ) {
     li.setData(dxN, dyN, 4);
     BOOST_CHECK_EQUAL(li(0.5), 2);
 }
-
 
 BOOST_AUTO_TEST_CASE( LinearInterpolatorChangeDataTest ) {
 
