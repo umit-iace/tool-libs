@@ -37,6 +37,11 @@ public:
             return;
 
         this->iCount = iCount;
+
+        if (this->P) {
+            delete[] this->P;
+        }
+
         this->P = new Vec[this->iCount];
 
         for (unsigned int i = 0; i < this->iCount; ++i) {
@@ -81,7 +86,7 @@ protected:
     virtual double interpolate(double dx) = 0;
 
     unsigned int iCount;                 ///< number of points in array
-    Vec *P;                              ///< points with x and y values
+    Vec *P = nullptr;                              ///< points with x and y values
 
 private:
     void sort() {
