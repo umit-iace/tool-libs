@@ -13,6 +13,11 @@ extern "C" {
 I2C_HandleTypeDef hHWI2C;
 };
 
+enum I2CMessageType {
+    I2C_DIRECT_TYPE,
+    I2C_MEM_TYPE
+};
+
 /**
  * struct defining an I2C request.
  * use this when requesting data from the \ref HardwareI2C
@@ -27,7 +32,7 @@ public:
     uint8_t memAddress;  ///< memory address
     uint8_t *pData;     ///< pointer to data
     uint32_t dataLen;   ///< number of bytes to transfer
-    void (*process)(I2CRequest &, I2C_HandleTypeDef *);
+    enum I2CMessageType type;
     void (*callback)(uint8_t *data);
 
     I2CRequest() = default;
@@ -37,7 +42,7 @@ public:
         dir = other.dir;
         memAddress = other.memAddress;
         dataLen = other.dataLen;
-        process = other.process;
+        type = other.type;
         callback = other.callback;
         deepCopyDataPointer(other.pData);
         return *this;
@@ -45,10 +50,10 @@ public:
 
     I2CRequest(uint8_t address, enum eDir dir, uint8_t mem,
                 uint8_t *pData, uint32_t dataLen,
-                void (*process)(I2CRequest &rq, I2C_HandleTypeDef *hi2c),
+                enum I2CMessageType type,
                 void (*callback)(uint8_t *data)) :
             address(address), dir(dir), memAddress(mem),
-            process(process),
+            type(type),
             callback(callback), dataLen(dataLen) {
         deepCopyDataPointer(pData);
     }
@@ -62,7 +67,7 @@ public:
         memAddress = 0;
         pData = nullptr;
         dataLen = 0;
-        process = nullptr;
+        type = I2C_DIRECT_TYPE;
         callback = nullptr;
     }
 
@@ -102,29 +107,72 @@ public:
         return pThis;
     }
 
+private:
     /**
      * override virtual RequestQueue function
      *
      * processes a request in the queue.
      * @param rq
      */
-    void processRequest(I2CRequest &rq) override {
-        rq.process(rq, &hI2C);
+    void rqBegin(I2CRequest &rq) override {
+        switch (rq.type) {
+            case I2C_DIRECT_TYPE:
+                switch (rq.dir) {
+                    case I2CRequest::READ:
+                        HAL_I2C_Master_Receive_IT(&hI2C, rq.address << 1,
+                                                  rq.pData, rq.dataLen);
+                        break;
+                    case I2CRequest::WRITE:
+                        HAL_I2C_Master_Transmit_IT(&hI2C, rq.address << 1,
+                                                   rq.pData, rq.dataLen);
+                        break;
+                }
+                break;
+            case I2C_MEM_TYPE:
+                switch (rq.dir) {
+                    case I2CRequest::READ:
+                        HAL_I2C_Mem_Read_IT(&hI2C, rq.address << 1,
+                                            rq.memAddress, I2C_MEMADD_SIZE_8BIT,
+                                            rq.pData, rq.dataLen);
+                        break;
+                    case I2CRequest::WRITE:
+                        HAL_I2C_Mem_Write_IT(&hI2C, rq.address << 1,
+                                             rq.memAddress, I2C_MEMADD_SIZE_8BIT,
+                                             rq.pData, rq.dataLen);
+                        break;
+                }
+                break;
+        }
     }
 
-private:
+    /**
+     * timeout
+     */
+    void rqTimeout(I2CRequest &rq) override {
+        HAL_I2C_Master_Abort_IT(&hI2C, rq.address << 1);
+        rqEnd();
+    }
     /**
      * complete the data transfer, signal request completion
      * @param hi2c
      */
     static void transferComplete(I2C_HandleTypeDef *hi2c) {
-        auto r = pThis->lastRequest();
+        auto r = pThis->rqCurrent();
         if (r.callback) {
             r.callback(r.pData);
         }
         // signal request complete
-        pThis->endProcess();
+        pThis->rqEnd();
     }
+
+    /**
+     * error callback.
+     *
+     * abort current request.
+     */
+     static void errorCallback(I2C_HandleTypeDef *hI2C) {
+         pThis->rqEnd();
+     }
 
     HardwareI2C() : RequestQueue(50, HW_I2C_TIMEOUT)  {
         AFIO(HW_I2C_SDA_PIN, HW_I2C_SDA_PORT, HW_I2C_SDA_ALTERNATE,
@@ -160,6 +208,8 @@ private:
         HAL_I2C_RegisterCallback(&hI2C, HAL_I2C_MEM_RX_COMPLETE_CB_ID, transferComplete);
         HAL_I2C_RegisterCallback(&hI2C, HAL_I2C_MASTER_TX_COMPLETE_CB_ID, transferComplete);
         HAL_I2C_RegisterCallback(&hI2C, HAL_I2C_MASTER_RX_COMPLETE_CB_ID, transferComplete);
+
+        HAL_I2C_RegisterCallback(&hI2C, HAL_I2C_ERROR_CB_ID, errorCallback);
 
         HAL_NVIC_SetPriority(I2C1_ER_IRQn, HW_I2C_IT_PRIO);
         HAL_NVIC_EnableIRQ(I2C1_ER_IRQn);

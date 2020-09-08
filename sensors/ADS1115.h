@@ -151,7 +151,7 @@ private:
                 0,
                 &reg,
                 1,
-                process,
+                I2C_DIRECT_TYPE,
                 nullptr);
         HardwareI2C::master()->request(point);
     }
@@ -163,7 +163,7 @@ private:
                 0,
                 buffer,
                 2,
-                process,
+                I2C_DIRECT_TYPE,
                 nullptr);
         HardwareI2C::master()->request(meas);
     }
@@ -176,20 +176,9 @@ private:
                 0,
                 data,
                 3,
-                process,
+                I2C_DIRECT_TYPE,
                 nullptr);
         HardwareI2C::master()->request(write);
-    }
-
-    static void process(I2CRequest &rq, I2C_HandleTypeDef *hI2C) {
-        switch(rq.dir) {
-        case I2CRequest::READ:
-            HAL_I2C_Master_Receive_IT(hI2C, rq.address << 1, rq.pData, rq.dataLen);
-            break;
-        case I2CRequest::WRITE:
-            HAL_I2C_Master_Transmit_IT(hI2C, rq.address << 1, rq.pData, rq.dataLen);
-            break;
-        }
     }
     ///\endcond
 };

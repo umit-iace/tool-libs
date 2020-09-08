@@ -5,6 +5,7 @@
 #ifndef IMU3000_H
 #define IMU3000_H
 
+#include <cstdint>
 #include "stm/hal.h"
 #include "stm/i2c.h"
 
@@ -92,7 +93,7 @@ private:
                 0x1D,
                 (uint8_t *)gyroData,
                 6,
-                process,
+                I2C_MEM_TYPE,
                 flip3HW);
         HardwareI2C::master()->request(gyroread);
     }
@@ -104,7 +105,7 @@ private:
                 0x32,
                 (uint8_t *)accData,
                 6,
-                process,
+                I2C_MEM_TYPE,
                 nullptr);
         HardwareI2C::master()->request(accread);
     }
@@ -158,7 +159,7 @@ private:
                 reg,
                 &val,
                 1,
-                process,
+                I2C_MEM_TYPE,
                 nullptr);
         HardwareI2C::master()->request(gyroReq);
     }
@@ -170,24 +171,11 @@ private:
                 reg,
                 &val,
                 1,
-                process,
+                I2C_MEM_TYPE,
                 nullptr);
         HardwareI2C::master()->request(accReq);
     }
 
-    static void process(I2CRequest &rq, I2C_HandleTypeDef *hI2C) {
-        // transfer the data
-        switch (rq.dir) {
-            case I2CRequest::WRITE:
-                HAL_I2C_Mem_Write_IT(hI2C, rq.address << 1, rq.memAddress,
-                        I2C_MEMADD_SIZE_8BIT, rq.pData, rq.dataLen);
-                break;
-            case I2CRequest::READ:
-                HAL_I2C_Mem_Read_IT(hI2C, rq.address << 1, rq.memAddress,
-                        I2C_MEMADD_SIZE_8BIT, rq.pData, rq.dataLen);
-                break;
-        }
-    }
     ///\endcond
 };
 
