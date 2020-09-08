@@ -13,10 +13,6 @@ extern "C" {
 I2C_HandleTypeDef hHWI2C;
 };
 
-enum I2CMessageType {
-    I2C_DIRECT_TYPE,
-    I2C_MEM_TYPE
-};
 
 /**
  * struct defining an I2C request.
@@ -25,21 +21,21 @@ enum I2CMessageType {
 class I2CRequest {
 public:
     uint8_t address;     ///< 7bit address of device
-    enum eDir {
-        WRITE,
-        READ
-    } dir;              ///< direction the data should travel
     uint8_t memAddress;  ///< memory address
     uint8_t *pData;     ///< pointer to data
     uint32_t dataLen;   ///< number of bytes to transfer
-    enum I2CMessageType type;
+    enum I2CMessageType {
+        I2C_DIRECT_READ = 1 << 0,
+        I2C_DIRECT_WRITE = 1 << 1,
+        I2C_MEM_READ = 1 << 2,
+        I2C_MEM_WRITE = 1 << 3,
+    } type;
     void (*callback)(uint8_t *data);
 
     I2CRequest() = default;
 
     I2CRequest &operator=(const I2CRequest &other) {
         address = other.address;
-        dir = other.dir;
         memAddress = other.memAddress;
         dataLen = other.dataLen;
         type = other.type;
@@ -48,36 +44,37 @@ public:
         return *this;
     }
 
-    I2CRequest(uint8_t address, enum eDir dir, uint8_t mem,
+    I2CRequest(uint8_t address, uint8_t mem,
                 uint8_t *pData, uint32_t dataLen,
                 enum I2CMessageType type,
                 void (*callback)(uint8_t *data)) :
-            address(address), dir(dir), memAddress(mem),
+            address(address), memAddress(mem),
             type(type),
             callback(callback), dataLen(dataLen) {
         deepCopyDataPointer(pData);
     }
 
     ~I2CRequest() {
-        if (this->dir == WRITE) {
+        if (this->type & (I2C_DIRECT_WRITE | I2C_MEM_WRITE)) {
             delete[] this->pData;
         }
         address = 0;
-        dir = WRITE;
         memAddress = 0;
         pData = nullptr;
         dataLen = 0;
-        type = I2C_DIRECT_TYPE;
+        type = I2C_DIRECT_READ;
         callback = nullptr;
     }
 
 private:
     void deepCopyDataPointer(uint8_t* other) {
-        switch (dir) {
-            case READ:
+        switch (type) {
+            case I2C_DIRECT_READ:
+            case I2C_MEM_READ:
                 this->pData = other;
                 break;
-            case WRITE:
+            case I2C_DIRECT_WRITE:
+            case I2C_MEM_WRITE:
                 this->pData = new uint8_t[dataLen]();
                 for (int i = 0; i < dataLen; ++i) {
                     *(this->pData + i) = *other++;
@@ -116,31 +113,23 @@ private:
      */
     void rqBegin(I2CRequest &rq) override {
         switch (rq.type) {
-            case I2C_DIRECT_TYPE:
-                switch (rq.dir) {
-                    case I2CRequest::READ:
-                        HAL_I2C_Master_Receive_IT(&hI2C, rq.address << 1,
-                                                  rq.pData, rq.dataLen);
-                        break;
-                    case I2CRequest::WRITE:
-                        HAL_I2C_Master_Transmit_IT(&hI2C, rq.address << 1,
-                                                   rq.pData, rq.dataLen);
-                        break;
-                }
+            case I2CRequest::I2C_DIRECT_READ:
+                HAL_I2C_Master_Receive_IT(&hI2C, rq.address << 1,
+                                          rq.pData, rq.dataLen);
                 break;
-            case I2C_MEM_TYPE:
-                switch (rq.dir) {
-                    case I2CRequest::READ:
-                        HAL_I2C_Mem_Read_IT(&hI2C, rq.address << 1,
-                                            rq.memAddress, I2C_MEMADD_SIZE_8BIT,
-                                            rq.pData, rq.dataLen);
-                        break;
-                    case I2CRequest::WRITE:
-                        HAL_I2C_Mem_Write_IT(&hI2C, rq.address << 1,
-                                             rq.memAddress, I2C_MEMADD_SIZE_8BIT,
-                                             rq.pData, rq.dataLen);
-                        break;
-                }
+            case I2CRequest::I2C_DIRECT_WRITE:
+                HAL_I2C_Master_Transmit_IT(&hI2C, rq.address << 1,
+                                           rq.pData, rq.dataLen);
+                break;
+            case I2CRequest::I2C_MEM_READ:
+                HAL_I2C_Mem_Read_IT(&hI2C, rq.address << 1,
+                                    rq.memAddress, I2C_MEMADD_SIZE_8BIT,
+                                    rq.pData, rq.dataLen);
+                break;
+            case I2CRequest::I2C_MEM_WRITE:
+                HAL_I2C_Mem_Write_IT(&hI2C, rq.address << 1,
+                                     rq.memAddress, I2C_MEMADD_SIZE_8BIT,
+                                     rq.pData, rq.dataLen);
                 break;
         }
     }

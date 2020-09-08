@@ -147,11 +147,10 @@ private:
     void setPointer(uint8_t reg) {
         I2CRequest point (
                 address,
-                I2CRequest::WRITE,
                 0,
                 &reg,
                 1,
-                I2C_DIRECT_TYPE,
+                I2CRequest::I2C_DIRECT_WRITE,
                 nullptr);
         HardwareI2C::master()->request(point);
     }
@@ -159,11 +158,10 @@ private:
     void read() {
         I2CRequest meas (
                 address,
-                I2CRequest::READ,
                 0,
                 buffer,
                 2,
-                I2C_DIRECT_TYPE,
+                I2CRequest::I2C_DIRECT_READ,
                 nullptr);
         HardwareI2C::master()->request(meas);
     }
@@ -172,11 +170,10 @@ private:
         uint8_t data[3] = {reg, (uint8_t)(val>>8), (uint8_t)val};
         I2CRequest write (
                 address,
-                I2CRequest::WRITE,
                 0,
                 data,
                 3,
-                I2C_DIRECT_TYPE,
+                I2CRequest::I2C_DIRECT_WRITE,
                 nullptr);
         HardwareI2C::master()->request(write);
     }
