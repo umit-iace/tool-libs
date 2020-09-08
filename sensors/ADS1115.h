@@ -135,7 +135,7 @@ public:
      * @return last measured voltage [V]
      */
     double volts() {
-        double adc = (buffer[0] << 8) + buffer[1];
+        double adc = (int16_t)((buffer[0] << 8) + buffer[1]);
         return adc * uV[eFullScale] * 1e-6;
     }
 
