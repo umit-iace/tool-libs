@@ -5,9 +5,11 @@
 #ifndef EXPERIMENT_H
 #define EXPERIMENT_H
 
-#include "ExperimentModules.h"
-#include "utils/Transport.h"
 #include <cstdarg>
+#include <cstdint>
+
+#include "utils/ExperimentModule.h"
+#include "utils/Transport.h"
 
 /**
  * General class of an experiment used to control the experiment flow at a test rig.
