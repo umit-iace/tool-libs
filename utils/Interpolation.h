@@ -138,11 +138,8 @@ protected:
                 continue;
             }
             double dm = ((this->P[i + 1].y - this->P[i].y) / (this->P[i + 1].x - this->P[i].x));
-
-            dValue = dm * (dx - this->P[i].x) + this->P[i].y;
-            break;
+            return dm * (dx - this->P[i].x) + this->P[i].y;
         }
-        return dValue;
     }
     ///\endcond
 };
