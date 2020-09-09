@@ -12,7 +12,7 @@
 #include "utils/Transport.h"
 
 /**
- * General class of an experiment used to control the experiment flow at a test rig.
+ * General class of an experiment used to control the experiment flow of a test rig.
  */
 class Experiment {
 public:
@@ -25,6 +25,14 @@ public:
         expMod = new ExperimentModule *[numberofModules]();
         expModLen = numberofModules;
         Transport::registerHandler(1, unpackExp);
+    }
+
+    /**
+     * enables automatic shutdown of rig upon missing heartbeat
+     * @param lKeepalive time in ms to wait for heartbeat
+     */
+    void enableHeartbeat(unsigned long lKeepalive) {
+        this->lHeartBeatWait = lKeepalive;
     }
 
     /**
@@ -65,6 +73,7 @@ public:
     }
 
 private:
+    ///\cond false
     inline static Experiment *pExp = nullptr;  ///< static pointer to experiment instance. Needed for interrupt callback
 
     ExperimentModule **expMod = nullptr;
@@ -74,7 +83,8 @@ private:
 
     unsigned long lTime = 0;                    ///< milliseconds since start of experiment
     bool bExperimentActive = false;
-    unsigned long keepaliveTime = 0;
+    unsigned long lHeartBeatWait = 0;           ///< milliseconds to wait for new heartbeat
+    unsigned long lHeartBeatLast = 0;           ///< time of last heartbeat in milliseconds
 
     bool init = false;
 
@@ -85,17 +95,18 @@ private:
         uint8_t iData = 0;
         Transport::unPack(iData);
         if (iData & 2) {
-            pExp->keepaliveTime = pExp->lTime;
+            pExp->lHeartBeatLast = pExp->lTime;
         } else {
             pExp->bExperimentActive = iData & 1;
         }
     }
-
+    ///\endcond
 public:
     /**
      * run experiment state machine
+     * @param lDt time in ms since last call
      */
-    void run() {
+    void run(unsigned long lDt) {
         switch (this->eState) {
             case IDLE:
                 //do stuff
@@ -124,10 +135,10 @@ public:
                 Transport::sendData(this->lTime);
 
                 // update time of experiment
-                this->lTime += EXP_DT;
+                this->lTime += lDt;
 
                 // keepalive signal
-                if (EXP_KEEPALIVE && lTime > keepaliveTime + EXP_KEEPALIVE) {
+                if (lHeartBeatWait && lTime > lHeartBeatLast + lHeartBeatWait) {
                     this->bExperimentActive = false;
                 }
                 // state machine
@@ -138,6 +149,7 @@ public:
             case STOP:
                 // do stuff
                 this->lTime = 0;
+                this->lHeartBeatLast = 0;
                 for (int i = 0; i < expModLen; ++i) {
                     expMod[i]->stop();
                 }
