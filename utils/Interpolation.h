@@ -121,16 +121,20 @@ public:
 protected:
     ///\cond false
     double interpolate(double dx) {
-        if (dx <= this->P[0].x) {
-            return this->P[0].y;
-        }
-        if (dx >= this->P[this->iCount - 1].x) {
-            return this->P[iCount - 1].y;
-        }
-
-        double dValue = 0;
-        for (unsigned int i = 0; i < iCount - 1; ++i) {
-            if (dx > this->P[i + 1].x) {
+        int i = (this->iCount - 1) / 2;
+        int left = 0, right = this->iCount - 1;
+        while (true) {
+            if (left == right) {
+                return P[right].y;
+            }
+            if (dx < P[i].x) {
+                right = i;
+                i = (left + right) / 2;
+                continue;
+            }
+            if (dx >= P[i+1].x) {
+                left = i+1;
+                i = (left + right) / 2;
                 continue;
             }
             double dm = ((this->P[i + 1].y - this->P[i].y) / (this->P[i + 1].x - this->P[i].x));
