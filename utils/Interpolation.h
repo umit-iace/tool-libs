@@ -128,13 +128,17 @@ protected:
             return this->P[iCount - 1].y;
         }
 
+        double dValue = 0;
         for (unsigned int i = 0; i < iCount - 1; ++i) {
             if (dx > this->P[i + 1].x) {
                 continue;
             }
             double dm = ((this->P[i + 1].y - this->P[i].y) / (this->P[i + 1].x - this->P[i].x));
-            return dm * (dx - this->P[i].x) + this->P[i].y;
+
+            dValue = dm * (dx - this->P[i].x) + this->P[i].y;
+            break;
         }
+        return dValue;
     }
     ///\endcond
 };
