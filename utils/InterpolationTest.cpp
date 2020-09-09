@@ -73,6 +73,7 @@ BOOST_AUTO_TEST_CASE( LinearInterpolatorSetDataTest ) {
 BOOST_AUTO_TEST_CASE( LinearInterpolatorChangeDataTest ) {
 
     LinearInterpolator li;
+    BOOST_CHECK_EQUAL(li(1), 0);
 
     double dxN[4] = {1, 2, 3, 4};
     double dyN[4] = {2, 4, 2, 4};
