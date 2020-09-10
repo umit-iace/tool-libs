@@ -5,6 +5,7 @@ General classes
 
 .. toctree::
 
+   DynamicArray_h
    Experiment_h
    ExperimentModule_h
    Interpolation_h

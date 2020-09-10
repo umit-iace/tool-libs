@@ -48,6 +48,8 @@ Automation and Control Engineering. It includes the following components:
 
 * Utils - Generally useful classes
 
+  - ``DynamicArray`` - implements a small part of std:vector
+
   - ``Experiment`` - General class of an experiment used to control the experiment flow at a test rig.
 
   - ``ExperimentModule`` - General class of an experiment module used to describe different functionality of a test rig.
