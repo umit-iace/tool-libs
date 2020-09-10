@@ -24,7 +24,7 @@ public:
      * @param pinB pin number of encoder B pin
      * @param portB port of encoder B pin
      * @param alternateB alternate function of encoder B pin
-     * @param factor all encompassing conversion factor from encoder value
+     * @param dFactor all encompassing conversion factor from encoder value
      * to needed unit\n
      * Examples:
      *  * 4-bit/revolution rotary encoder, position in \c degrees:
