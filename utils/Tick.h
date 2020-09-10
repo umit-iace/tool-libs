@@ -6,6 +6,7 @@
 #define TICK_H
 
 #include <stdint.h>
+#include "utils/DynamicArray.h"
 
 /**
  * Class describing a client to the @ref TickServer.
@@ -29,14 +30,12 @@ private:
 
     static TickServer *server() {
         if (!pThis) {
-            pThis = new TickServer(TICK_MAX_CLIENTS);
+            pThis = new TickServer();
         }
         return pThis;
     }
 
-    TickServer(uint8_t numberofClients) : maxClients(numberofClients) {
-        clients = new Client[numberofClients]();
-    }
+    TickServer() { }
 
 public:
     /**
@@ -46,14 +45,12 @@ public:
      */
     static bool registerClient(TickClient *client, uint32_t ms) {
         auto *This = TickServer::server();
-        if (This->iClients != This->maxClients) {
-            This->clients[This->iClients].client = client;
-            This->clients[This->iClients].ms = ms;
-            This->clients[This->iClients].msLastCall = 0;
-            ++This->iClients;
-            return true;
-        }
-        return false;
+        struct Client caller = {
+                .client = client,
+                .ms = ms,
+                .msLastCall = 0,
+        };
+        return This->clients.push_back(caller);
     }
 
 protected:
@@ -61,9 +58,8 @@ protected:
         TickClient *client;
         uint32_t ms;
         uint32_t msLastCall;
-    } *clients;
-    uint8_t iClients = 0;
-    uint8_t maxClients = 0;
+    };
+    DynamicArray<struct Client> clients;
     uint32_t millis = 0;
 public:
     /**
@@ -75,7 +71,7 @@ public:
     static void msCall(uint32_t dT) {
         auto *This = TickServer::server();
         This->millis += dT;
-        for (int i = 0; i < This->iClients; ++i) {
+        for (int i = 0; i < This->clients.len(); ++i) {
             Client *client = &This->clients[i];
             if (This->millis - client->ms >= client->msLastCall) {
                 client->client->tick();

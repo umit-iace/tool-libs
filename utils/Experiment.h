@@ -5,9 +5,9 @@
 #ifndef EXPERIMENT_H
 #define EXPERIMENT_H
 
-#include <cstdarg>
 #include <cstdint>
 
+#include "utils/DynamicArray.h"
 #include "utils/ExperimentModule.h"
 #include "utils/Transport.h"
 
@@ -17,13 +17,10 @@
 class Experiment {
 public:
     /**
-     * Initialize the experiment with a fixed amount of ExperimentModules
-     * @param numberofModules number of ExperimentModules the experiment will run
+     * Initialize the experiment
      */
-    Experiment(unsigned int numberofModules) {
+    Experiment() {
         pExp = this;
-        expMod = new ExperimentModule *[numberofModules]();
-        expModLen = numberofModules;
         Transport::registerHandler(1, unpackExp);
     }
 
@@ -37,17 +34,10 @@ public:
 
     /**
      * register all ExperimentModules in the order they will run
-     * @param mod first ExperimentModule
-     * @param ... following ExperimentModules
+     * @param mod ExperimentModule
      */
-    void registerModules(ExperimentModule *mod, ...) {
-        expMod[0] = mod;
-        va_list args;
-        va_start(args, mod);
-        for (int i = 1; i < expModLen; ++i) {
-            expMod[i] = (ExperimentModule *) va_arg(args, ExperimentModule * );
-        }
-        va_end(args);
+    void registerModules(ExperimentModule *mod) {
+        expMod.push_back(mod);
     }
 
     /**
@@ -76,8 +66,7 @@ private:
     ///\cond false
     inline static Experiment *pExp = nullptr;  ///< static pointer to experiment instance. Needed for interrupt callback
 
-    ExperimentModule **expMod = nullptr;
-    unsigned int expModLen = 0;
+    DynamicArray<ExperimentModule *>expMod;
 
     enum ExpState eState = IDLE;                ///< current state of experiment
 
@@ -117,7 +106,7 @@ public:
                 break;
             case INIT:
                 init = false;
-                for (int i = 0; i < expModLen; ++i) {
+                for (int i = 0; i < expMod.len(); ++i) {
                     init |= expMod[i]->init();
                 }
                 // state machine
@@ -127,7 +116,7 @@ public:
                 break;
             case RUN:
                 // do stuff
-                for (int i = 0; i < expModLen; ++i) {
+                for (int i = 0; i < expMod.len(); ++i) {
                     expMod[i]->compute(lTime);
                 }
 
@@ -150,7 +139,7 @@ public:
                 // do stuff
                 this->lTime = 0;
                 this->lHeartBeatLast = 0;
-                for (int i = 0; i < expModLen; ++i) {
+                for (int i = 0; i < expMod.len(); ++i) {
                     expMod[i]->stop();
                 }
                 // state machine
