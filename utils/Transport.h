@@ -7,7 +7,6 @@
 
 #include <cstdint>
 
-#include "define.h"
 #include "utils/ExperimentModule.h"
 
 /**
@@ -39,8 +38,9 @@ public:
     /**
      * Constructor, that initialize the min protocol
      */
-    Transport(Connection *conn) : conn(conn) {
+    Transport(Connection *conn, uint8_t maxPayload = 80) : conn(conn) {
         pThis = this;
+        payload = new unsigned char[maxPayload]();
 
         conn->registerFrameHandler([](uint8_t iId, const uint8_t *iPayload) {
                                        pThis->handleFrame(iId, iPayload);
@@ -119,15 +119,14 @@ private:
     }
 
     Connection *conn = nullptr;
-    unsigned char payload[TRANSPORT_MAX_PAYLOAD];
-    const unsigned char *unPackPointer;
+    unsigned char *payload = nullptr;
+    const unsigned char *unPackPointer = nullptr;
     unsigned char cCursor = 0;
     inline static Transport *pThis = nullptr;
     ExperimentModule *expM[64] = {};
 
     void (*frameHandler[64])() = {};
     //\endcond
-
 };
 
 #endif //TRANSPORT_H
