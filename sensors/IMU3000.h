@@ -5,6 +5,7 @@
 #ifndef IMU3000_H
 #define IMU3000_H
 
+#include <cstdint>
 #include "stm/hal.h"
 #include "stm/i2c.h"
 
@@ -88,11 +89,10 @@ private:
     void readGyroData() {
         I2CRequest gyroread (
                 ADDR_GYRO,
-                I2CRequest::READ,
                 0x1D,
                 (uint8_t *)gyroData,
                 6,
-                process,
+                I2CRequest::I2C_MEM_READ,
                 flip3HW);
         HardwareI2C::master()->request(gyroread);
     }
@@ -100,11 +100,10 @@ private:
     void readAccData() {
         I2CRequest accread (
                 ADDR_ACC,
-                I2CRequest::READ,
                 0x32,
                 (uint8_t *)accData,
                 6,
-                process,
+                I2CRequest::I2C_MEM_READ,
                 nullptr);
         HardwareI2C::master()->request(accread);
     }
@@ -154,11 +153,10 @@ private:
     void gyroWriteReg(uint8_t reg, uint8_t val) {
         I2CRequest gyroReq (
                 ADDR_GYRO,
-                I2CRequest::WRITE,
                 reg,
                 &val,
                 1,
-                process,
+                I2CRequest::I2C_MEM_WRITE,
                 nullptr);
         HardwareI2C::master()->request(gyroReq);
     }
@@ -166,28 +164,14 @@ private:
     void accWriteReg(uint8_t reg, uint8_t val) {
         I2CRequest accReq (
                 ADDR_ACC,
-                I2CRequest::WRITE,
                 reg,
                 &val,
                 1,
-                process,
+                I2CRequest::I2C_MEM_WRITE,
                 nullptr);
         HardwareI2C::master()->request(accReq);
     }
 
-    static void process(I2CRequest &rq, I2C_HandleTypeDef *hI2C) {
-        // transfer the data
-        switch (rq.dir) {
-            case I2CRequest::WRITE:
-                HAL_I2C_Mem_Write_IT(hI2C, rq.address << 1, rq.memAddress,
-                        I2C_MEMADD_SIZE_8BIT, rq.pData, rq.dataLen);
-                break;
-            case I2CRequest::READ:
-                HAL_I2C_Mem_Read_IT(hI2C, rq.address << 1, rq.memAddress,
-                        I2C_MEMADD_SIZE_8BIT, rq.pData, rq.dataLen);
-                break;
-        }
-    }
     ///\endcond
 };
 
