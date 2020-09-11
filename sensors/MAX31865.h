@@ -5,8 +5,11 @@
 #ifndef MAX31865_H
 #define MAX31865_H
 
+#include <cmath>
+#include <cstdint>
+
+#include "stm/hal.h"
 #include "stm/spi.h"
-#include "math.h"
 
 /**
  * Implementation of MAX31865 based temperature sensor.

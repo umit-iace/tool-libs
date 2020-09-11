@@ -5,8 +5,10 @@
 #ifndef MAX31855_H
 #define MAX31855_H
 
+#include <cmath>
+#include <cstdint>
+
 #include "stm/spi.h"
-#include "math.h"
 
 class MAX31855 : public ChipSelect {
 public:
