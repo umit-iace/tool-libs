@@ -72,24 +72,34 @@ Automation and Control Engineering. It includes the following components:
 
   - ``Transport`` - Layer class for the min protocol communication between the host and the microcontroller
 
+Usage
+-----
+
+If you're using CMake as your build system just copy the following lines
+into your main ``CMakeLists.txt``::
+
+    include(FetchContent)
+    FetchContent_Declare(tool-libs
+            GIT_REPOSITORY https://github.com/umit-iace/tool-libs
+            GIT_TAG origin/master
+            )
+    FetchContent_MakeAvailable(tool-libs)
+    target_link_libraries(YOURTARGETNAME tool-libs)
+
+Make sure to exchange ``YOURTARGETNAME`` with your actual target name, and
+consider using stable releases instead of following the master branch.
 
 Documentation
 -------------
 
 The documentation for all libs can be found in the **docs** directory. To build the documentation Python 3 and doxygen
-must be installed. To install the needed Python packages run
+must be installed. To install the needed Python packages run::
 
-.. code-block:: bash
+    $ pip install -r docs/requirements.txt
 
-    $ pip install -r requirements.txt
+and to generate the documentation run::
 
-and to generate the documentation run
-
-.. code-block:: bash
-
-    $ make html
-
-in the **docs** directory.
+    $ make -C docs html
 
 Contributing
 ------------
@@ -98,9 +108,6 @@ Every bit of help is appreciated! Whether it's just fixing typos, or adding
 support for different controllers or sensors, we try keeping things in order.
 
 So please keep lists in the documentation (e.g. this file) sorted alphabetically,
-and help keeping the commit history as clean as possible. Consider working in
-feature branches, and make sure to rebase your commits on top of master before
-merging.
+and help keeping the commit history as clean as possible.
 
 Thank you for helping out!
-
