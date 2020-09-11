@@ -1,54 +1,72 @@
 /** @file spi.h
  *
  * Copyright (c) 2019 IACE
+ *
+ **********************************************
+ * When using this, use the following line in your interrupt header
+ * file (e.g. `stm32f7xx_it.h`):
+ *
+ *      extern SPI_HandleTypeDef hHWSPI;
+ *
+ * and put the following interrupt handler in your interrupt implementation
+ * file (e.g. `stm32f7xx_it.c`)
+ *
+ * (**attention**: configure the correct SPI peripheral according to your
+ * defined HW_SPI):
+ *
+ *      void SPI3_IRQHandler(void) {
+ *          HAL_SPI_IRQHandler(&hHWSPI);
+ *      }
+ *
+ **********************************************
  */
+
 #ifndef STM_SPI_H
 #define STM_SPI_H
+
+#include <cstdint>
 
 #include "stm/gpio.h"
 #include "stm/hal.h"
 #include "utils/RequestQueue.h"
-/* *********************************************
- * When using this, use the following line in your interrupt header file (e.g. stm32f7xx_it.h)
- *
-extern SPI_HandleTypeDef hHWSPI;
- *
- * *********************************************
- * and put the following interrupt handler in your interrupt implementation file (e.g. stm32f7xx_it.c)
- * (attention: configure the correct SPI peripheral according to your defined HW_SPI)
- *
-void SPI3_IRQHandler(void) {
-    HAL_SPI_IRQHandler(&hHWSPI);
-}
- *
- */
 
+//\cond false
 extern "C" {
 SPI_HandleTypeDef hHWSPI;
 };
+//\endcond
 
 /**
  * Class abstracting an SPI device.
- * Implement your SPI device with this as a base class, then you can use the \ref HardwareSPI
- * to send/get data over the wire.
+ * Implement your SPI device with this as a base class, then you can use the
+ * HardwareSPI to send/get data over the wire.
  */
 class ChipSelect {
+    //\cond false
     DIO pin;
+    //\endcond
 public:
-    void selectChip(bool sel) {
-        this->pin.set(!sel);
-    }
-
+    /**
+     * @param iCSPIN chip select pin number
+     * @param gpioCSPort chip select pin port
+     */
     ChipSelect(uint32_t iCSPIN, GPIO_TypeDef *gpioCSPort) :
             pin(iCSPIN, gpioCSPort) {
         this->selectChip(false);
     }
 
     /**
+     * activate chip
+     * @param sel true/false
+     */
+    void selectChip(bool sel) {
+        this->pin.set(!sel);
+    }
+
+    /**
      * callback. is called as soon as requested data arrived over wire.
      */
     virtual void callback(void *cbData) { }
-
 };
 
 /**
@@ -75,7 +93,6 @@ public:
     SPIRequest() {};
 
     /**
-     *
      * @param cs
      * @param dir
      * @param tData
