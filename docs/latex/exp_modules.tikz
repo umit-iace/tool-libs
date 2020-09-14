@@ -1,0 +1,37 @@
+% Controlflows
+\tikzstyle{block} = [draw, fill=white, rectangle, minimum height=3em, minimum width=4em]
+\tikzstyle{rblock} = [draw, fill=white, circle, inner sep=0pt,minimum size=1mm]
+\tikzstyle{wobblock} = [fill=white, rectangle, minimum height=3em, minimum width=5em]
+\tikzstyle{nlblock} = [draw, postaction={draw,line width=0.25mm,white}, line width=0.5mm, black, fill=white, rectangle, minimum height=3em, minimum width=5em]
+\tikzstyle{sum} = [draw,circle]
+\tikzstyle{branch} = [circle,inner sep=0pt,minimum size=1mm,fill=black,draw=black]
+\tikzstyle{nvbranch} = [circle,inner sep=0pt,minimum size=1mm,fill=white,draw=white, fill opacity=0, draw opacity=0]
+\tikzstyle{vecBranch} = [circle,inner sep=0pt,minimum size=2mm,fill=black,draw=black]
+\tikzstyle{input} = [coordinate]
+\tikzstyle{output} = [coordinate]
+\tikzstyle{coord} = [coordinate]
+\tikzstyle{pinstyle} = [pin edge={to-,thin,black}]
+\tikzstyle{vecArrow} = [thick, decoration={markings,mark=at position
+   1 with {\arrow[semithick]{open triangle 60}}},
+   double distance=1.4pt, shorten >= 5.5pt,
+   preaction = {decorate},
+   postaction = {draw,line width=1.4pt, white,shorten >= 4.5pt}]
+\tikzstyle{vecWithoutArrow} = [thick,
+   double distance=1.4pt,
+   postaction = {draw,line width=1.4pt, white}]
+\tikzset{
+  Pfeil/.style={thick,shorten >=#1,shorten <=#1,->,>=latex}, % für Peile
+  UPfeil/.style={black,Pfeil=#1,font={\sffamily\itshape}},% für Spannungspfeile
+  IPfeil/.style={black,Pfeil=#1,font={\ttfamily\itshape}} % für Strompfeile
+}
+
+\node [block, minimum width=6em, minimum height=3.5em] (traj) {\begin{tabular}{c}ExpTraj \end{tabular}};
+\node [sum, node distance=1cm, right=of traj] (sum) {};
+\node [block, node distance=1cm, minimum width=6em, minimum height=3.5em, right=of sum] (ctrl) {\begin{tabular}{c}ExpCtrl \end{tabular}};
+\node [block, node distance=1cm, minimum width=6em, minimum height=3.5em, below=of ctrl] (rig) {\begin{tabular}{c}ExpRig \end{tabular}};
+
+\draw[->] (traj) -- node [above] {$w$} (sum);
+\draw[->] (sum) -- node [above] {$e$} (ctrl);
+\draw[->] (ctrl) -- node [right] {$u$} (rig);
+\draw[->] (rig) node [xshift = -2cm,yshift = 0.5cm, left] {y} -| (sum);
+

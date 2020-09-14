@@ -1,0 +1,48 @@
+% Controlflows
+\tikzstyle{block} = [draw, fill=white, rectangle, minimum height=3em, minimum width=4em]
+\tikzstyle{rblock} = [draw, fill=white, circle, inner sep=0pt,minimum size=1mm]
+\tikzstyle{wobblock} = [fill=white, rectangle, minimum height=3em, minimum width=5em]
+\tikzstyle{nlblock} = [draw, postaction={draw,line width=0.25mm,white}, line width=0.5mm, black, fill=white, rectangle, minimum height=3em, minimum width=5em]
+\tikzstyle{sum} = [draw,circle]
+\tikzstyle{branch} = [circle,inner sep=0pt,minimum size=1mm,fill=black,draw=black]
+\tikzstyle{nvbranch} = [circle,inner sep=0pt,minimum size=1mm,fill=white,draw=white, fill opacity=0, draw opacity=0]
+\tikzstyle{vecBranch} = [circle,inner sep=0pt,minimum size=2mm,fill=black,draw=black]
+\tikzstyle{input} = [coordinate]
+\tikzstyle{output} = [coordinate]
+\tikzstyle{coord} = [coordinate]
+\tikzstyle{pinstyle} = [pin edge={to-,thin,black}]
+\tikzstyle{vecArrow} = [thick, decoration={markings,mark=at position
+   1 with {\arrow[semithick]{open triangle 60}}},
+   double distance=1.4pt, shorten >= 5.5pt,
+   preaction = {decorate},
+   postaction = {draw,line width=1.4pt, white,shorten >= 4.5pt}]
+\tikzstyle{vecWithoutArrow} = [thick,
+   double distance=1.4pt,
+   postaction = {draw,line width=1.4pt, white}]
+\tikzset{
+  Pfeil/.style={thick,shorten >=#1,shorten <=#1,->,>=latex}, % für Peile
+  UPfeil/.style={black,Pfeil=#1,font={\sffamily\itshape}},% für Spannungspfeile
+  IPfeil/.style={black,Pfeil=#1,font={\ttfamily\itshape}} % für Strompfeile
+}
+
+% state machine
+\usetikzlibrary{automata}
+\tikzstyle{every state}=[draw=ellipse,text=black]
+
+% variables for spacings 
+\pgfmathsetmacro{\width}{5em}
+\pgfmathsetmacro{\height}{3.5em}
+\pgfmathsetmacro{\nodeDistance}{10em}
+
+% create blocks for state machine
+\node [rblock,  node distance=\nodeDistance, minimum width=6em, minimum height=3.5em] (idle)		      {\begin{tabular}{c} IDLE \end{tabular}};
+\node [rblock,  node distance=\nodeDistance, minimum width=6em, minimum height=3.5em] (init) [right of=idle] {\begin{tabular}{c} INIT \end{tabular}};
+\node [rblock,  node distance=\nodeDistance, minimum width=6em, minimum height=3.5em] (run)  [below of=init] {\begin{tabular}{c} RUN  \end{tabular}};
+\node [rblock,  node distance=\nodeDistance, minimum width=6em, minimum height=3.5em] (stop) [left  of=run ] {\begin{tabular}{c} STOP \end{tabular}};
+
+
+% connect states 
+\path (idle) edge node {\textbf{pyWisp}$\rightarrow$start()} (init)
+      (init) edge node {\textbf{modules}$\rightarrow$init() true} (run)
+      (run) edge node {\begin{tabular}{c}  \textbf{pyWisp}$\rightarrow$stop() \\ \textbf{module}$\rightarrow$stop()\end{tabular}} (stop)
+      (stop) edge node {\textbf{modules}$\rightarrow$stop()} (init);

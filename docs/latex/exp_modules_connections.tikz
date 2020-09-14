@@ -1,0 +1,40 @@
+\usetikzlibrary{positioning,shapes,shadows,arrows}
+
+\tikzstyle{abstract}=[rectangle, draw=black, rounded corners, fill=black!40, drop shadow,
+        text centered, anchor=north, text=white, text width=5cm]
+	\tikzstyle{derived}=[rectangle, draw=black, rounded corners, fill=white, drop shadow,
+        text centered, anchor=north,  text width=5cm]
+\tikzstyle{comment}=[rectangle, draw=black, rounded corners, fill=green, drop shadow,
+        text centered, anchor=north, text=white, text width=5cm]
+\tikzstyle{myarrow}=[->, >=open triangle 90, thick]
+\tikzstyle{line}=[-, thick]
+
+\node (mod) [abstract, rectangle split, rectangle split parts=5]
+        {
+            \textbf{ExperimentModule}
+	    \nodepart{second}double outputs[1]
+	    \nodepart{third}double states[0]
+	    \nodepart{fourth} void compute()
+        };
+\node (traj) [derived, rectangle split, rectangle split parts=2, below=of mod]
+        {
+            \textbf{ExpTraj}
+        };
+\node (ctrl) [derived, rectangle split, rectangle split parts=3, left= of traj]
+        {
+            \textbf{ExpCtrl}
+            \nodepart{second}ExperimentModule *traj;
+            \nodepart{third}ExperimentModule *rig;
+        };
+\node (rig) [derived, rectangle split, rectangle split parts=2, left=of ctrl]
+        {
+            \textbf{ExpRig}
+            \nodepart{second}ExperimentModule *ctrl;
+        };
+
+\draw[myarrow] (mod.south) -| (traj.north);
+\draw[myarrow] (mod.south) -| (rig.north);
+\draw[myarrow] (mod.south) -| (ctrl.north);
+
+%\draw[line] (traj.east) -- (ctrl.west);
+%\draw[line] (ctrl.east) -- (rig.west);
