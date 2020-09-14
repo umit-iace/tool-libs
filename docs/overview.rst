@@ -42,6 +42,7 @@ To create a control loop, `ExpTraj`, `ExpRig` and `ExpController` have to derive
 
 The following diagramm shows an minimal closed loop configuration, containing a trajectory-generator,  PID-controller and a system with one 4-wire fan. 
 Signals are defined as:
+
  - **w** := setpoint for the controller, stored in `ExpTraj.outputs[0]`
  - **e** := w - y, current error of the controller, stored in `ExpCtrl.dError`
  - **u** := pwm signal of the controller, stored in `ExpCtrl.outputs[0]`
