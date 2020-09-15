@@ -162,7 +162,7 @@ called cyclically, with ``dT`` being the number of milliseconds since last run.
    #include "Min.h"
    #include "ExperimentModules.h"
 
-   Experiment *experiment();
+   Experiment *experiment;
 
    // define control timer parameters
    #define EXP_DT                        10          ///< samplerate in [ms]
@@ -173,12 +173,12 @@ called cyclically, with ``dT`` being the number of milliseconds since last run.
 
    // interrupt callback for timer running with defined samplerate 
    void expCallback(TIM_HandleTypeDef *){
-        experiment->run();
+        experiment->run(EXP_DT);
         }
 
    int main() {
        
-       // configure experiment  communication 
+       // configure experiment communication 
        Min MIN;
        Transport transport(&MIN);
 
@@ -193,9 +193,9 @@ called cyclically, with ``dT`` being the number of milliseconds since last run.
 
        // setup experiment 
        experiment = new Experiment();
-       experiment.registerModules(&traj);
-       experiment.registerModules(&ctrl);
-       experiment.registerModules(&rig);
+       experiment->registerModules(&traj);
+       experiment->registerModules(&ctrl);
+       experiment->registerModules(&rig);
 
        // setup control timer with defined samplerate
        HardwareTimer expTim(EXP_TIMER, 42000 - 1, 2 * EXP_DT);
