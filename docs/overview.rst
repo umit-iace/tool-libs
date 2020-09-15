@@ -35,26 +35,123 @@ Every module has two arrays called ``outputs`` and ``states`` of fixed lengths, 
 Minimal example
 ---------------
 
-To create a control loop, `ExpTraj`, `ExpRig` and `ExpController` have to derive from ExperimentModule.
+Let's create a small control loop with a trajectory generator, a controller,
+and the rig we want to control. We'll call these modules ``ExpTraj``,
+``ExpController``, and ``ExpRig``, respectively.
 
-.. tikz::
-   :include: latex/exp_modules_connections.tikz
+The following diagram shows the closed loop configuration of these modules,
+also displaying the necessary connections between them.
 
-
-The following diagramm shows an minimal closed loop configuration, containing a trajectory-generator,  PID-controller and a system with one 4-wire fan. 
 Signals are defined as:
 
- - **w** := setpoint for the controller, stored in `ExpTraj.outputs[0]`
- - **e** := w - y, current error of the controller, stored in `ExpCtrl.dError`
- - **u** := pwm signal of the controller, stored in `ExpCtrl.outputs[0]`
- - **y** := rpm signal of the fan, stored in `ExpRig.states[0]`
+ - **w** := trajectory output
+ - **e** := w - y, current error of the controller
+ - **u** := controller output
+ - **y** := measured rig state
 
 .. tikz::
     :include: latex/exp_modules.tikz
 
-After the Modules are interconnected, the user can simply dereference the ExperimentModule pointer and call either **getStates()** or **getOutputs()**, to get access to the data. 
+Both the trajectory generator and the controller therefore need an **output**,
+while the rig has a **state** (if necessary, the controller could also store
+the error in a **state** variable).
+
+The ExpModules we create have to inherit the abstract ``ExperimentModule``
+class, and implement a number of methods. Most notably the ``compute(..)``
+method which is called cyclically by the controlling :doc:`experiment
+<utils-doc/Experiment_h>`. For interconnections the ``registerModules(..)``
+method is also required.
+.. tikz::
+   :include: latex/exp_modules_connections.tikz
+
+ExpTraj implementation
+~~~~~~~~~~~~~~~~~~~~~~
+.. code-block:: cpp
+
+        #include <cmath>
+        class ExpTraj : ExperimentModule {
+        public:
+                ExpTraj() : ExperimentModule(1, 0) { }
+
+                double compute(uint32_t lTime) override {
+                        // simple sine generator. f = 2Hz
+                        this->outputs[0] = sin(lTime / 1000 * 4 * M_PI);
+                }
+        }
+
+ExpController implementation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. code-block:: cpp
+
+        #include <cstdarg>
+        class ExpController : ExperimentModule {
+        private:
+                // pointers to connected modules
+                ExperimentModule *rig = nullptr, *traj = nullptr;
+        public:
+                ExpController() : ExperimentModule(1, 0) { }
+
+                double compute(uint32_t lTime) override {
+                        double e = traj->getOutput()[0] - rig->getState()[0];
+                        // simple p controller
+                        const double Kp = 10;
+                        this->outputs[0] = this->Kp * e;
+                }
+
+                void registerModules(ExperimentModule *mod, ...) override {
+                        traj = mod;
+                        va_list args;
+                        va_start(args, mod);
+                        rig = (ExperimentModule *)va_arg(args, ExperimentModule *);
+                        va_end(args);
+                }
+        }
+
+ExpRig implementation
+~~~~~~~~~~~~~~~~~~~~~
+.. code-block:: cpp
+
+        class ExpRig : ExperimentModule {
+        private:
+                // pointer to connected module
+                ExperimentModule *ctrl = nullptr
+        public:
+                ExpRig() : ExperimentModule(0, 1) { }
+
+                double compute(uint32_t lTime) override {
+                        // act according to controller
+                        this->act(ctrl->getOutput()[0]);
+                        // measure current state
+                        this->states[0] = this->measurestate();
+                }
+
+                void registerModules(ExperimentModule *mod, ...) override {
+                        ctrl = mod;
+                }
+        }
 
 
+main
+~~~~
+.. code-block:: cpp
+
+       // create experiment modules 
+       ExpTraj traj;
+       ExpRig rig;
+       ExpCtrl ctrl;
+
+       // connect modules 
+       rig.registerModules(&ctrl);
+       ctrl.registerModules(&traj, &rig);
+
+       // setup experiment 
+       Experiment experiment;
+       experiment.registerModules(&traj);
+       experiment.registerModules(&ctrl);
+       experiment.registerModules(&rig);
+
+When all this is set up, you just have to ensure that ``experiment.run(dT)`` is
+called cyclically, with ``dT`` being the number of milliseconds since last run.
 
 .. code-block:: cpp
 
