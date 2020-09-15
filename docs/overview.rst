@@ -8,16 +8,16 @@
 
 Overview
 ========
-This is an collection of libraries used at the UMIT-Tirol Institute of Automation and Control Engineering. It includes different sensor implementations, an abstraction layer for the HAL-libraries and miscellaneous utils, like a RequestQueues and DynamicArrays.
+This is a collection of libraries used at the UMIT-Tirol Institute of Automation and Control Engineering. It includes different sensor implementations, an abstraction layer built on top of the STM-HAL-libraries and miscellaneous utilities, like RequestQueues and DynamicArrays.
 
-The main part is an easy implementation of a experiment process combined with `pyWisp`.
+The main part is a simple implementation of an experiment process designed to be used with `pyWisp <https://github.com/umit-iace/tool-pywisp>`_.
 
 Experiment
 ----------
-Therefore, the experiment process follows a control oriented structure by interconnecting
-different ExperimentModules in a defined framework.
+The :doc:`experiment<utils-doc/Experiment_h>` process follows a control oriented structure by interconnecting
+different :doc:`modules<utils-doc/ExperimentModule_h>` in a defined framework.
 
-Every registered module get's called via the state machine, in the order they were registered, of the experiment. This assures easy control to start, pause or stop the experiment with the pyWisp interface. 
+Every registered module gets called via the experiment's state machine. This assures easy control to start, pause, or stop the experiment with the pyWisp interface. 
 
 
 .. tikz::
@@ -26,13 +26,14 @@ Every registered module get's called via the state machine, in the order they we
 
 Interconnection between ExperimentModules
 ------------------------------------------
-The connection between different ExperimentModules is done after constructing each module, the user can simply call **registerModules(ExperimentModule *mod, ...)** and pass any modules.
+The connection between different ExperimentModules is done after constructing each module, the user can simply call ``module.registerModules(module2, module3, ...)`` and pass any modules.
 
-The user can decide how he want's to store his data. The user has two different double arrays. with a fixed length specified in the constructor to work with. Those arrays are called **outputs** and **states**. This allows to differenciate betweeen internal process variables or input variables and the final output of the module, e.g. the control signal **u**.
+The user can decide how he wants to store his data.
+Every module has two arrays called ``outputs`` and ``states`` of fixed lengths, which have to be specified in the constructor. This allows to differenciate betweeen internal process variables or input variables and the final output of the module.
 
 
-minimal example 
-----------------------
+Minimal example
+---------------
 
 To create a control loop, `ExpTraj`, `ExpRig` and `ExpController` have to derive from ExperimentModule.
 
