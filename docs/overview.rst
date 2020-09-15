@@ -61,6 +61,7 @@ class, and implement a number of methods. Most notably the ``compute(..)``
 method which is called cyclically by the controlling :doc:`experiment
 <utils-doc/Experiment_h>`. For interconnections the ``registerModules(..)``
 method is also required.
+
 .. tikz::
    :include: latex/exp_modules_connections.tikz
 
