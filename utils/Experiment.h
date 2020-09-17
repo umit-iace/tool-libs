@@ -112,6 +112,8 @@ public:
                 // state machine
                 if (!init) {
                     this->eState = RUN;
+                } else if (!this->bExperimentActive) {
+                    this->eState = STOP;
                 }
                 break;
             case RUN:
