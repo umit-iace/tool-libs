@@ -9,6 +9,7 @@ This is a collection of libraries. The library is structured in different parts.
    :maxdepth: 2
    :caption: Content:
 
+   overview
    sensors-doc/sensors-doc
    stm-doc/stm-doc
    utils-doc/utils-doc
