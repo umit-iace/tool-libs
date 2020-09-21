@@ -1,11 +1,3 @@
-.. todo:: say something about the TickServer?
-
-.. todo:: say something about  Transport & Min? 
-
-.. todo:: say something about EXP_KEEPALIVE or enough in detailed utils/Experiment.rst ?
-
-
-
 Overview
 ========
 This is a collection of libraries used at the UMIT-Tirol Institute of Automation and Control Engineering. It includes different sensor implementations, an abstraction layer built on top of the STM-HAL-libraries and miscellaneous utilities, like RequestQueues and DynamicArrays.
@@ -14,11 +6,8 @@ The main part is a simple implementation of an experiment process designed to be
 
 Experiment
 ----------
-The :doc:`experiment<utils-doc/Experiment_h>` process follows a control oriented structure by interconnecting
+The :doc:`experiment<utils-doc/Experiment_h>` (exp) process follows a control oriented structure by interconnecting
 different :doc:`modules<utils-doc/ExperimentModule_h>` in a defined framework.
-
-Every registered module gets called via the experiment's state machine. This assures easy control to start, pause, or stop the experiment with the pyWisp interface. 
-
 
 .. tikz::
     :include: latex/exp_state_machine_blocks.tikz
@@ -37,7 +26,7 @@ Minimal example
 
 Let's create a small control loop with a trajectory generator, a controller,
 and the rig we want to control. We'll call these modules ``ExpTraj``,
-``ExpController``, and ``ExpRig``, respectively.
+``ExpCtrl`` and ``ExpRig`` respectively.
 
 The following diagram shows the closed loop configuration of these modules,
 also displaying the necessary connections between them.
@@ -62,8 +51,6 @@ method which is called cyclically by the controlling :doc:`experiment
 <utils-doc/Experiment_h>`. For interconnections the ``registerModules(..)``
 method is also required.
 
-.. tikz::
-   :include: latex/exp_modules_connections.tikz
 
 ExpTraj implementation
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -80,12 +67,12 @@ ExpTraj implementation
                 }
         }
 
-ExpController implementation
+ExpCtrl implementation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. code-block:: cpp
 
         #include <cstdarg>
-        class ExpController : ExperimentModule {
+        class ExpCtrl : ExperimentModule {
         private:
                 // pointers to connected modules
                 ExperimentModule *rig = nullptr, *traj = nullptr;
@@ -153,62 +140,4 @@ main
 
 When all this is set up, you just have to ensure that ``experiment.run(dT)`` is
 called cyclically, with ``dT`` being the number of milliseconds since last run.
-
-.. code-block:: cpp
-
-   #include "utils/Experiment.h"
-   #include "stm/hal.h"
-   #include "stm/timer.h"
-   #include "stm32f4xx_it.h"
-   #include "Min.h"
-   #include "ExperimentModules.h"
-
-   Experiment *experiment;
-
-   // define control timer parameters
-   #define EXP_DT                        10          ///< samplerate in [ms]
-   #define EXP_TIMER                     TIM7        ///< timer to used
-   #define EXP_TIMER_IRQ                 TIM7_IRQn   ///< interrupt used 
-   #define EXP_TIMER_PRIO                4,4         ///< timer priority 
-
-
-   // interrupt callback for timer running with defined samplerate 
-   void expCallback(TIM_HandleTypeDef *){
-        experiment->run(EXP_DT);
-        }
-
-   int main() {
-       
-       // configure experiment communication 
-       Min MIN;
-       Transport transport(&MIN);
-
-       // create experiment modules 
-       ExpTraj traj;
-       ExpRig rig;
-       ExpCtrl ctrl;
-
-       // connect modules 
-       rig.registerModules(&ctrl);
-       ctrl.registerModules(&traj, &rig);
-
-       // setup experiment 
-       experiment = new Experiment();
-       experiment->registerModules(&traj);
-       experiment->registerModules(&ctrl);
-       experiment->registerModules(&rig);
-
-       // setup control timer with defined samplerate
-       HardwareTimer expTim(EXP_TIMER, 42000 - 1, 2 * EXP_DT);
-       hControlTim = expTim.handle();
-       expTim.configCallback(expCallback, EXP_TIMER_IRQ, EXP_TIMER_PRIO);
-       expTim.start();
-   
-       // if transport protocol with CRC is activated 
-     for (;;) {
-        #ifdef TRANSPORT_PROTOCOL
-           Min::poll();
-        #endif
-     }
-   }
 

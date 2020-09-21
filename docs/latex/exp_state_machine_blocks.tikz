@@ -35,7 +35,13 @@
 
 
 % connect blocks 
-\draw[->] (idle) -- node [above] {\textbf{pyWisp}$\rightarrow$start()} (init);
-\draw[->] (init) -- node [right]  {\textbf{experiment}$\rightarrow$init()} (run);
-\draw[->] (run) -- node [below] {\begin{tabular}{c}  \textbf{pyWisp}$\rightarrow$stop() \\ \textbf{module}$\rightarrow$stop()\end{tabular}} (stop);
-\draw[->] (stop) -- node [right] {\textbf{experiment}$\rightarrow$stop()} (idle);
+\draw[->] (idle) -- node [above] {\small\textbf{pyWisp}$\rightarrow$start()} (init);
+\draw[->] (init) -- node [right]  {\small\textbf{exp}$\rightarrow$module\textbf{X}$\rightarrow$init()} (run);
+\draw[->] (run) -- node [below] {
+\small\begin{tabular}{c} 
+	\textbf{pyWisp}$\rightarrow$stop() \\
+	\textbf{exp}$\rightarrow$checkHeartbeat() \\
+	module\textbf{X}$\rightarrow$stop() 
+	\end{tabular}
+} (stop);
+\draw[->] (stop) -- node [right] {\small\textbf{exp}$\rightarrow$module\textbf{X}$\rightarrow$stop()} (idle);
