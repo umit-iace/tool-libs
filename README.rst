@@ -2,8 +2,8 @@
 tool-libs
 =========
 
-This is a collection of libraries used at the UMIT-Tirol Institute of
-Automation and Control Engineering. It includes the following components:
+This is a collection of libraries used at the Institute of Automation and Control Engineering (IACE) at the UMIT-TIROL. 
+It includes the following components:
 
 * Sensors - Classes implementing specific sensors used in our test rigs
 
