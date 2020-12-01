@@ -28,7 +28,7 @@ public:
     HardwareUART(uint32_t iRXPin, GPIO_TypeDef *gpioRXPort, uint8_t iRXAlternate,
                  uint32_t iTXPin, GPIO_TypeDef *gpioTXPort, uint8_t iTXAlternate,
                  USART_TypeDef *dUsart, uint32_t iBaudRate, UART_HandleTypeDef *hUart) :
-                    dUsart(dUsart), iBaudRate(iBaudRate), hUart(hUart) {
+                    hUart(hUart), dUsart(dUsart), iBaudRate(iBaudRate) {
         AFIO(iRXPin, gpioRXPort, iRXAlternate);
         AFIO(iTXPin, gpioTXPort, iTXAlternate);
 

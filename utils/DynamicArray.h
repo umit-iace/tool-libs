@@ -35,7 +35,7 @@ public:
      * destructor also calls destructors on remaining objects in array
      */
     ~DynamicArray() {
-        for (int i = 0; i < size; ++i) {
+        for (unsigned int i = 0; i < size; ++i) {
             storage[i].~T();
         }
         free(storage);

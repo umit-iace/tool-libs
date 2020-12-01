@@ -106,7 +106,7 @@ public:
                 break;
             case INIT:
                 init = false;
-                for (int i = 0; i < expMod.len(); ++i) {
+                for (unsigned int i = 0; i < expMod.len(); ++i) {
                     init |= expMod[i]->init();
                 }
                 // state machine
@@ -118,7 +118,7 @@ public:
                 break;
             case RUN:
                 // do stuff
-                for (int i = 0; i < expMod.len(); ++i) {
+                for (unsigned int i = 0; i < expMod.len(); ++i) {
                     expMod[i]->compute(lTime);
                 }
 
@@ -141,7 +141,7 @@ public:
                 // do stuff
                 this->lTime = 0;
                 this->lHeartBeatLast = 0;
-                for (int i = 0; i < expMod.len(); ++i) {
+                for (unsigned int i = 0; i < expMod.len(); ++i) {
                     expMod[i]->stop();
                 }
                 // state machine

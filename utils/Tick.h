@@ -71,7 +71,7 @@ public:
     static void msCall(uint32_t dT) {
         auto *This = TickServer::server();
         This->millis += dT;
-        for (int i = 0; i < This->clients.len(); ++i) {
+        for (unsigned int i = 0; i < This->clients.len(); ++i) {
             Client *client = &This->clients[i];
             if (This->millis - client->ms >= client->msLastCall) {
                 client->client->tick();
