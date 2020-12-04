@@ -5,11 +5,11 @@
 #ifndef STM_HAL_H
 #define STM_HAL_H
 
-#ifdef STM32F407xx
+#ifdef STM32F4
 	#include "stm32f4xx_hal.h"
 #endif
 
-#if defined(STM32F767xx) || defined(STM32F746xx)
+#ifdef STM32F7
 	#include "stm32f7xx_hal.h"
 #endif
 
