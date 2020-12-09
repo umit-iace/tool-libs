@@ -134,7 +134,7 @@ private:
     void deepCopyData(uint8_t *other) {
         if (other) {
             tData = new uint8_t[dataLen]();
-            for (int i = 0; i < dataLen; ++i) {
+            for (unsigned int i = 0; i < dataLen; ++i) {
                 this->tData[i] = other[i];
             }
         }
@@ -272,7 +272,7 @@ private:
  * @param src   source buffer
  * @param len   number of structs to copy
  */
-static void bitwisecopy(uint8_t *dest, size_t numbits, size_t szof, uint8_t *src, size_t len) {
+static void bitwisecopy(uint8_t *dest, size_t numbits, size_t szof, const uint8_t *src, size_t len) {
     uint32_t srcI = 0;
     for (size_t n = 0; n < len; ++n) {
         uint32_t destI = numbits;
@@ -281,7 +281,7 @@ static void bitwisecopy(uint8_t *dest, size_t numbits, size_t szof, uint8_t *src
             --destI;
 
             *(dest + destI / 8) &= ~(1U << destI % 8);
-            *(dest + destI / 8) |= ((*(src + srcI / 8) >> 7 - srcI % 8) & 0x1U) << destI % 8;
+            *(dest + destI / 8) |= ((*(src + srcI / 8) >> (7 - srcI % 8)) & 0x1U) << destI % 8;
 
             ++srcI;
         } while (destI > 0);
