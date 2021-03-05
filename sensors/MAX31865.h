@@ -62,7 +62,7 @@ public:
      * configures sensor for auto conversion with 50Hz filter
      */
     MAX31865(uint32_t pin, GPIO_TypeDef *port, enum Type numWires, double Rref, double Rnom)
-            : ChipSelect(pin, port), Rref(Rref), Rnom(Rnom) {
+            : ChipSelect(pin, port), Rnom(Rnom), Rref(Rref) {
         this->setConfig(1 << 7 | // bias
                         1 << 6 | // auto conversion
                         numWires << 4 |
@@ -150,6 +150,9 @@ public:
                 break;
             case CONFIGREQ:
                 // maybe do something
+                break;
+            case NOREQ:
+                // intentionally empty
                 break;
         }
     }

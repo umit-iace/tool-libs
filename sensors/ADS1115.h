@@ -100,8 +100,8 @@ public:
      */
     ADS1115(uint8_t address = 0b1001000, enum range fs = FS6144,
             enum dataRate dr = SPS64, enum mux mx = AIN0):
-                address(address),
-                eFullScale(fs), eDataRate(dr), eMux(mx) {
+                eFullScale(fs), eDataRate(dr),
+                eMux(mx), address(address) {
         updateConfig();
     }
 

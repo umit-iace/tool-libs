@@ -49,8 +49,8 @@ public:
                 enum I2CMessageType type,
                 void (*callback)(uint8_t *data)) :
             address(address), memAddress(mem),
-            type(type),
-            callback(callback), dataLen(dataLen) {
+            dataLen(dataLen), type(type),
+            callback(callback) {
         deepCopyDataPointer(pData);
     }
 
@@ -76,7 +76,7 @@ private:
             case I2C_DIRECT_WRITE:
             case I2C_MEM_WRITE:
                 this->pData = new uint8_t[dataLen]();
-                for (int i = 0; i < dataLen; ++i) {
+                for (unsigned int i = 0; i < dataLen; ++i) {
                     *(this->pData + i) = *other++;
                 }
                 break;
