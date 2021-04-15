@@ -62,7 +62,7 @@ public:
      * configures sensor for auto conversion with 50Hz filter
      */
     MAX31865(uint32_t pin, GPIO_TypeDef *port, enum Type numWires, double Rref, double Rnom)
-            : ChipSelect(pin, port), Rref(Rref), Rnom(Rnom) {
+            : ChipSelect(pin, port), Rnom(Rnom), Rref(Rref) {
         this->setConfig(1 << 7 | // bias
                         1 << 6 | // auto conversion
                         numWires << 4 |
@@ -151,6 +151,9 @@ public:
             case CONFIGREQ:
                 // maybe do something
                 break;
+            case NOREQ:
+                // intentionally empty
+                break;
         }
     }
     ///\endcond
@@ -175,7 +178,7 @@ public:
      * @param thr threshold
      */
     void setLThr(uint16_t thr) {
-        uint8_t data[3] = {WRITE | REG_LOW_FAULT_THRESHOLD,
+        static uint8_t data[3] = {WRITE | REG_LOW_FAULT_THRESHOLD,
                     (uint8_t)(thr >> 8), (uint8_t)thr};
 
         HardwareSPI::master()->request(SPIRequest(this, SPIRequest::MOSI, data, nullptr,
@@ -187,7 +190,7 @@ public:
      * @param thr threshold
      */
     void setHThr(uint16_t thr) {
-        uint8_t data[3] = {WRITE | REG_HIGH_FAULT_THRESHOLD,
+        static uint8_t data[3] = {WRITE | REG_HIGH_FAULT_THRESHOLD,
                     (uint8_t)(thr >> 8), (uint8_t)thr};
 
         HardwareSPI::master()->request(SPIRequest(this, SPIRequest::MOSI, data, nullptr,
@@ -230,19 +233,19 @@ private:
 
     void setConfig(uint8_t val) {
         config = val;
-        uint8_t data[2] = {WRITE | REG_CONFIG, config};
+        static uint8_t data[2] = {WRITE | REG_CONFIG, config};
         SPIRequest r = {this, SPIRequest::MOSI, data, nullptr, 2, (void*)CONFIGREQ};
         HardwareSPI::master()->request(r);
     }
 
     void getTempData() {
-        uint8_t tx[3] = {READ | REG_RTD, 0, 0};
+        static uint8_t tx[3] = {READ | REG_RTD, 0, 0};
         SPIRequest r = {this, SPIRequest::BOTH, tx, sensorData, sizeof tx, (void*)TEMPREQ};
         HardwareSPI::master()->request(r);
     }
 
     void getStatusData() {
-        uint8_t tx[2] = {READ | REG_STATUS, 0};
+        static uint8_t tx[2] = {READ | REG_STATUS, 0};
         SPIRequest r = {this, SPIRequest::BOTH, tx, statusData, sizeof tx, (void*)STATUSREQ};
         HardwareSPI::master()->request(r);
     }

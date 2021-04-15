@@ -104,13 +104,10 @@ public:
             uint32_t dataLen, void *cbData) :
             cs(cs), dir(dir), tData(tData), rData(rData),
             dataLen(dataLen), cbData(cbData) {
-        deepCopyData(tData);
     }
 
     ~SPIRequest() {
-        if (tData) {
-            delete[] tData;
-        }
+        tData = nullptr;
         cs = nullptr;
         dir = MOSI;
         tData = nullptr;
@@ -126,18 +123,7 @@ public:
         rData = other.rData;
         dataLen = other.dataLen;
         cbData = other.cbData;
-        deepCopyData(other.tData);
         return *this;
-    }
-
-private:
-    void deepCopyData(uint8_t *other) {
-        if (other) {
-            tData = new uint8_t[dataLen]();
-            for (unsigned int i = 0; i < dataLen; ++i) {
-                this->tData[i] = other[i];
-            }
-        }
     }
 };
 
