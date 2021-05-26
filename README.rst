@@ -9,7 +9,9 @@ It includes the following components:
 
   - ``ADS1115`` - external analog to digital voltage converter
 
-  - ``AS1545`` - hall effect based angular position measurement
+  - ``AS5145`` - hall effect based angular position measurement (SPI)
+  
+  - ``AS5048b`` - hall effect based angular position measurement (I2C)
 
   - ``IMU3000`` - inertial measurement unit 3 ax Gyro + 3 ax Accelerometer
 
