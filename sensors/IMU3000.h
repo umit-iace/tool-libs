@@ -15,164 +15,189 @@
 ///\endcond
 
 class IMU3000 {
-public:
-    /**
-     * possible ranges for accelerometer
-     */
-    enum acc_range {
-        ACC_2G = 0,
-        ACC_4G = 1,
-        ACC_8G = 2,
-        ACC_16G = 3
+    class Gyro : I2CDevice {
+    public:
+        /**
+         * get angular velocity in rad/s
+         * @return pointer to 3 doubles x,y,z
+         */
+        double *get() {
+            return angvel;
+        }
+
+        /**
+         * possible ranges for gyro
+         *
+         * measured in degrees/sec.
+         */
+        enum range {
+            RANGE_250 = 0,
+            RANGE_500 = 1,
+            RANGE_1000 = 2,
+            RANGE_2000 = 3,
+        };
+
+        /**
+         * configure Gyro settings
+         * @param range full scale range
+         * @param filt digital low pass filter
+         * @param div sample rate divider
+         */
+        void setConf(enum range range, uint8_t filt, uint8_t div) {
+            this->factor = 131. / (1 << range);
+
+            this->writeReg(0x16, range << 3 | filt);
+            this->writeReg(0x15, div); // gyro sample rate
+            this->writeReg(0x3E, 1); // clk sel
+            this->writeReg(0x3D, 1); // rst gyro
+        }
+
+        /**
+         * start async read of gyro data from sensor
+         */
+        void measure() {
+            HardwareI2C::master()->request(new I2CRequest (
+                    this,
+                    0x1D,
+                    (uint8_t *)this->raw,
+                    6,
+                    I2CRequest::I2C_MEM_READ,
+                    (void *)true)
+            );
+        }
+
+        /**
+         * @param gr gyroscope range
+         * @param gfilt digital low pass filter
+         * @param gdiv sample rate divider
+         */
+        Gyro(enum range gr, uint8_t gfilt, uint8_t gdiv) : I2CDevice(ADDR_GYRO) {
+            setConf(gr, gfilt, gdiv);
+        }
+
+    protected:
+        int16_t raw[3] = {};
+        double angvel[3] = {};
+        double factor = 1;
+
+        void writeReg(uint8_t reg, uint8_t val) {
+            HardwareI2C::master()->request(new I2CRequest(
+                    this,
+                    reg,
+                    &val,
+                    1,
+                    I2CRequest::I2C_MEM_WRITE,
+                    nullptr)
+            );
+        }
+
+        void callback(void *cbData) override {
+            for (int i = 0; i < 3; ++i) {
+                // calculate angle velocities from data with flipped endianness
+                angvel[i] = (int16_t)(raw[i] << 8 | raw[i] >> 8) / factor * M_PI / 180;
+            }
+        }
     };
 
-    /**
-     * possible ranges for gyro
-     *
-     * measured in degrees/sec.
-     */
-    enum gyro_range {
-        GYRO_250 = 0,
-        GYRO_500 = 1,
-        GYRO_1000 = 2,
-        GYRO_2000 = 3
+    class Acc : I2CDevice {
+    public:
+        /**
+         * get acceleration values in m/s^2
+         * @return pointer to 3 doubles x,y,z
+         */
+        double *get() {
+            return accel;
+        }
+
+        /**
+         * possible ranges for accelerometer
+         */
+        enum range {
+            RANGE_2G = 0,
+            RANGE_4G = 1,
+            RANGE_8G = 2,
+            RANGE_16G = 3,
+        };
+
+        /**
+         * set the range and correct factor for accelerometer
+         * @param ar accelerometer range
+         * @param fullres boolean to enable full range
+         */
+        void setConf(enum range ar, bool fullres) {
+            if (fullres) {
+                factor = 0.004 * 9.81;
+            } else {
+                factor = (2 << ar) * 9.81 / 1024.;
+            }
+            this->writeReg(0x31, fullres << 3 | ar);
+        }
+
+        /**
+         * start async read of acceleration data from sensor
+         */
+        void measure() {
+            HardwareI2C::master()->request(new I2CRequest(
+                    this,
+                    0x32,
+                    (uint8_t *)this->raw,
+                    6,
+                    I2CRequest::I2C_MEM_READ,
+                    (void *)true)
+            );
+        }
+
+        /**
+         * @param ar accelerometer range
+         * @param afr bool full range
+         */
+        Acc(enum range ar, bool afr) : I2CDevice(ADDR_ACC) {
+            this->setConf(ar, afr);
+            // enable acceleration measurements
+            this->writeReg(0x2D, 1 << 3);
+        }
+
+    protected:
+        int16_t raw[3] = {};
+        double accel[3] = {};
+        double factor = 1;
+
+        void writeReg(uint8_t reg, uint8_t val) {
+            HardwareI2C::master()->request(new I2CRequest(
+                    this,
+                    reg,
+                    &val,
+                    1,
+                    I2CRequest::I2C_MEM_WRITE,
+                    nullptr)
+            );
+        }
+
+        void callback(void *cbData) override {
+            for (int i = 0; i < 3; ++i) {
+                accel[i] = raw[i] * factor;
+            }
+        }
     };
+
+public:
+    Acc acc;
+    Gyro gyro;
 
     /**
      * initialize the accelerometer and the gyro
      */
-    IMU3000(enum acc_range ar=ACC_16G, bool afr=true,
-            enum gyro_range gr=GYRO_250, uint8_t gfilt=1, uint8_t gdiv=4) {
-        setAccRange(ar, afr);
-        accWriteReg(0x2D, 1 << 3); // enable acceleration measurements
-        setGyroConf(gr, gfilt, gdiv);
-    }
+    IMU3000(enum Acc::range ar=Acc::RANGE_16G, bool afr=true,
+            enum Gyro::range gr=Gyro::RANGE_250, uint8_t gfilt=1, uint8_t gdiv=4) :
+                acc(ar, afr), gyro(gr, gfilt, gdiv) { }
 
     /**
      * start async read of acceleration and gyro data from sensor
      */
     void measure() {
-        readAccData();
-        readGyroData();
+        acc.measure();
+        gyro.measure();
     }
-
-    /**
-     * get angular velocity in rad/s
-     * @return pointer to 3 doubles x,y,z
-     */
-    double *getGyro() {
-        for (int i = 0; i < 3; ++i) {
-            gyro[i] = gyroData[i] / gyroFactor * 3.14159265358979 / 180;
-        }
-        return gyro;
-    }
-
-    /**
-     * get acceleration values in m/s^2
-     * @return pointer to 3 doubles x,y,z
-     */
-    double *getAcc() {
-        for (int i = 0; i < 3; ++i) {
-            accel[i] = accData[i] * accelFactor;
-        }
-        return accel;
-    }
-
-private:
-    ///\cond false
-    int16_t gyroData[3] = {};
-    int16_t accData[3] = {};
-
-    double accel[3] = {}, gyro[3] = {};
-    double accelFactor = 0, gyroFactor = 0;
-
-    void readGyroData() {
-        I2CRequest gyroread (
-                ADDR_GYRO,
-                0x1D,
-                (uint8_t *)gyroData,
-                6,
-                I2CRequest::I2C_MEM_READ,
-                flip3HW);
-        HardwareI2C::master()->request(gyroread);
-    }
-
-    void readAccData() {
-        I2CRequest accread (
-                ADDR_ACC,
-                0x32,
-                (uint8_t *)accData,
-                6,
-                I2CRequest::I2C_MEM_READ,
-                nullptr);
-        HardwareI2C::master()->request(accread);
-    }
-
-    /**
-     * flip endianness of 3 uint16_t in a row
-     *
-     * needed for gyro data.
-     * @param data
-     */
-    static void flip3HW(uint8_t *data) {
-        for (int i = 0; i < 3; ++i) {
-            ((int16_t *)data)[i] = data[2*i] << 8 | data[2*i+1];
-        }
-    }
-
-
-    /**
-     * set the range and correct factor for accelerometer
-     * @param range value of acc_range
-     * @param fullres boolean to enable full range
-     */
-    void setAccRange(enum acc_range range, bool fullres) {
-        if (fullres) {
-            accelFactor = 0.004 * 9.81;
-        } else {
-            accelFactor = (2 << range) * 9.81 / 1024.;
-        }
-        accWriteReg(0x31, fullres << 3 | range);
-    }
-
-    /**
-     * configure Gyro settings
-     * @param range full scale range
-     * @param filt digital low pass filter
-     * @param div sample rate divider
-     */
-    void setGyroConf(enum gyro_range range, uint8_t filt, uint8_t div) {
-        gyroFactor = 131. / (1 << range);
-
-        gyroWriteReg(0x16, range << 3 | filt);
-        gyroWriteReg(0x15, div); // gyro sample rate
-        gyroWriteReg(0x3E, 1); // clk sel
-        gyroWriteReg(0x3D, 1); // rst gyro
-    }
-
-    void gyroWriteReg(uint8_t reg, uint8_t val) {
-        I2CRequest gyroReq (
-                ADDR_GYRO,
-                reg,
-                &val,
-                1,
-                I2CRequest::I2C_MEM_WRITE,
-                nullptr);
-        HardwareI2C::master()->request(gyroReq);
-    }
-
-    void accWriteReg(uint8_t reg, uint8_t val) {
-        I2CRequest accReq (
-                ADDR_ACC,
-                reg,
-                &val,
-                1,
-                I2CRequest::I2C_MEM_WRITE,
-                nullptr);
-        HardwareI2C::master()->request(accReq);
-    }
-
-    ///\endcond
 };
 
 #endif //IMU3000_H
