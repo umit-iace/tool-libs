@@ -13,6 +13,32 @@ extern "C" {
 I2C_HandleTypeDef hHWI2C;
 };
 
+/**
+ * generic I2C device wrapper.
+ *
+ * Implement I2C devices with this as a base class to make use of the
+ * asynchronous HardwareI2C bus.
+ *
+ * @note currently only implements 7bit addressing
+ */
+class I2CDevice {
+public:
+    /// unshifted 7bit I2C device address
+    const uint8_t addr;
+
+    /**
+     * @param addr unshifted I2C device address
+     */
+    I2CDevice(uint8_t addr) : addr(addr) { }
+
+    /**
+     * callback. is called as soon as requested data arrived over wire.
+     *
+     * @param cbData this can be used to identify the request causing
+     * the callback. This can be anything, pointer is _not_ followed.
+     */
+    virtual void callback(void *cbData) { }
+};
 
 /**
  * struct defining an I2C request.
@@ -20,37 +46,47 @@ I2C_HandleTypeDef hHWI2C;
  */
 class I2CRequest {
 public:
-    uint8_t address;     ///< 7bit address of device
+    I2CDevice *dev;     ///< pointer to the calling \ref I2CDevice instance
     uint8_t memAddress;  ///< memory address
     uint8_t *pData;     ///< pointer to data
     uint32_t dataLen;   ///< number of bytes to transfer
+    /// type of message
     enum I2CMessageType {
         I2C_DIRECT_READ = 1 << 0,
         I2C_DIRECT_WRITE = 1 << 1,
         I2C_MEM_READ = 1 << 2,
         I2C_MEM_WRITE = 1 << 3,
     } type;
-    void (*callback)(uint8_t *data);
+    void *cbData;       ///< data to use in callback. pointer is _not_ followed
 
     I2CRequest() = default;
 
     I2CRequest &operator=(const I2CRequest &other) {
-        address = other.address;
+        dev = other.dev;
         memAddress = other.memAddress;
         dataLen = other.dataLen;
         type = other.type;
-        callback = other.callback;
+        cbData = other.cbData;
         deepCopyDataPointer(other.pData);
         return *this;
     }
 
-    I2CRequest(uint8_t address, uint8_t mem,
+    /**
+     *
+     * @param dev pointer to the calling \ref I2CDevice instance
+     * @param mem memory address. only used for `I2C_MEM_*` type requests
+     * @param pData pointer to data
+     * @param dataLen number of bytes to transfer
+     * @param type type of message
+     * @param cbData data to use in callback. pointer is _not_ followed
+     */
+    I2CRequest(I2CDevice *dev, uint8_t mem,
                 uint8_t *pData, uint32_t dataLen,
                 enum I2CMessageType type,
-                void (*callback)(uint8_t *data)) :
-            address(address), memAddress(mem),
+                void *cbData) :
+            dev(dev), memAddress(mem),
             dataLen(dataLen), type(type),
-            callback(callback) {
+            cbData(cbData) {
         deepCopyDataPointer(pData);
     }
 
@@ -58,17 +94,17 @@ public:
         if (this->type & (I2C_DIRECT_WRITE | I2C_MEM_WRITE)) {
             delete[] this->pData;
         }
-        address = 0;
+        dev = 0;
         memAddress = 0;
         pData = nullptr;
         dataLen = 0;
         type = I2C_DIRECT_READ;
-        callback = nullptr;
+        cbData = nullptr;
     }
 
 private:
     void deepCopyDataPointer(uint8_t* other) {
-        switch (type) {
+        switch (this->type) {
             case I2C_DIRECT_READ:
             case I2C_MEM_READ:
                 this->pData = other;
@@ -77,7 +113,7 @@ private:
             case I2C_MEM_WRITE:
                 this->pData = new uint8_t[dataLen]();
                 for (unsigned int i = 0; i < dataLen; ++i) {
-                    *(this->pData + i) = *other++;
+                    this->pData[i] = other[i];
                 }
                 break;
         }
@@ -114,20 +150,20 @@ private:
     void rqBegin(I2CRequest &rq) override {
         switch (rq.type) {
             case I2CRequest::I2C_DIRECT_READ:
-                HAL_I2C_Master_Receive_IT(&hI2C, rq.address << 1,
+                HAL_I2C_Master_Receive_IT(&hI2C, rq.dev->addr << 1,
                                           rq.pData, rq.dataLen);
                 break;
             case I2CRequest::I2C_DIRECT_WRITE:
-                HAL_I2C_Master_Transmit_IT(&hI2C, rq.address << 1,
+                HAL_I2C_Master_Transmit_IT(&hI2C, rq.dev->addr << 1,
                                            rq.pData, rq.dataLen);
                 break;
             case I2CRequest::I2C_MEM_READ:
-                HAL_I2C_Mem_Read_IT(&hI2C, rq.address << 1,
+                HAL_I2C_Mem_Read_IT(&hI2C, rq.dev->addr << 1,
                                     rq.memAddress, I2C_MEMADD_SIZE_8BIT,
                                     rq.pData, rq.dataLen);
                 break;
             case I2CRequest::I2C_MEM_WRITE:
-                HAL_I2C_Mem_Write_IT(&hI2C, rq.address << 1,
+                HAL_I2C_Mem_Write_IT(&hI2C, rq.dev->addr << 1,
                                      rq.memAddress, I2C_MEMADD_SIZE_8BIT,
                                      rq.pData, rq.dataLen);
                 break;
@@ -138,17 +174,18 @@ private:
      * timeout
      */
     void rqTimeout(I2CRequest &rq) override {
-        HAL_I2C_Master_Abort_IT(&hI2C, rq.address << 1);
+        HAL_I2C_Master_Abort_IT(&hI2C, rq.dev->addr << 1);
         rqEnd();
     }
+
     /**
      * complete the data transfer, signal request completion
      * @param hi2c
      */
     static void transferComplete(I2C_HandleTypeDef *hi2c) {
         auto r = pThis->rqCurrent();
-        if (r.callback) {
-            r.callback(r.pData);
+        if (r.cbData) {
+            r.dev->callback(r.cbData);
         }
         // signal request complete
         pThis->rqEnd();
