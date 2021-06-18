@@ -10,7 +10,7 @@
 /**
  * Class describing a chain of AS5145 Hall sensors
  */
-class HallSensor : public ChipSelect {
+class AS5145 : ChipSelect {
 private:
     ///\cond false
     // sensor data struct. lsb to msb order.
@@ -37,7 +37,7 @@ public:
      * @param port GPIO port of chip select line
      * @param n     number of sensors attached to daisy-chain
      */
-    HallSensor(uint32_t pin, GPIO_TypeDef *port, int n) : ChipSelect(pin, port),
+    AS5145(uint32_t pin, GPIO_TypeDef *port, int n) : ChipSelect(pin, port),
             BUFLEN((n * NUMBITS) / 8UL + (n * NUMBITS % 8 ? 1 : 0)) // calculate bytes needed for n sensors
             {
         buffer = new uint8_t[BUFLEN]();
@@ -57,8 +57,14 @@ public:
      * request measurement of sensor data
      */
     void sense() {
-        SPIRequest r = {this, SPIRequest::MISO, nullptr, buffer, BUFLEN, (void *)true};
-        HardwareSPI::master()->request(r);
+        HardwareSPI::master()->request(new SPIRequest(
+                this,
+                SPIRequest::MISO,
+                nullptr,
+                buffer,
+                BUFLEN,
+                (void *)true)
+        );
     }
 
     ///\cond false
