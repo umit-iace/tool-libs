@@ -10,7 +10,7 @@
 
 #include "stm/spi.h"
 
-class MAX31855 : public ChipSelect {
+class MAX31855 : ChipSelect {
 public:
     /**
      * Constructor
@@ -41,8 +41,14 @@ public:
      * request measurement of sensor data
      */
     void sense() {
-        SPIRequest r = {this, SPIRequest::MISO, nullptr, buffer, sizeof(buffer), (void*)true};
-        HardwareSPI::master()->request(r);
+        HardwareSPI::master()->request(new SPIRequest(
+                this,
+                SPIRequest::MISO,
+                nullptr,
+                buffer,
+                sizeof(buffer),
+                (void*)true)
+        );
     }
 
     ///\cond false
