@@ -187,7 +187,7 @@ private:
         if (r.cbData) {
             r.dev->callback(r.cbData);
         }
-        // signal request complete
+        // signal request completion
         pThis->rqEnd();
     }
 
