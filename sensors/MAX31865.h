@@ -25,7 +25,7 @@
  * https://analog.com/media/en/technical-documentation/application-notes/AN709_0.pdf
  * for details
  */
-class MAX31865 : public ChipSelect {
+class MAX31865 : ChipSelect {
 public:
     /// Sensor Type
     enum Type {
@@ -68,7 +68,7 @@ public:
                         numWires << 4 |
                         1 << 1 | // clear faults
                         1 << 0 // 50Hz filter
-                        );
+        );
         this->setLThr(0);
         this->setHThr(0xffff);
     }
@@ -116,7 +116,7 @@ public:
      * callback when async read is finished
      */
     void callback(void *userData) override {
-        enum callbackUserData reqType = *(enum callbackUserData*)&userData;
+        auto reqType = (enum callbackUserData &)userData;
         uint16_t rtd;
         switch (reqType) {
             case ALLDATAREQ:
@@ -181,7 +181,7 @@ public:
         static uint8_t data[3] = {WRITE | REG_LOW_FAULT_THRESHOLD,
                     (uint8_t)(thr >> 8), (uint8_t)thr};
 
-        HardwareSPI::master()->request(SPIRequest(this, SPIRequest::MOSI, data, nullptr,
+        HardwareSPI::master()->request(new SPIRequest(this, SPIRequest::MOSI, data, nullptr,
                     3, (void*)NOREQ));
     }
 
@@ -193,7 +193,7 @@ public:
         static uint8_t data[3] = {WRITE | REG_HIGH_FAULT_THRESHOLD,
                     (uint8_t)(thr >> 8), (uint8_t)thr};
 
-        HardwareSPI::master()->request(SPIRequest(this, SPIRequest::MOSI, data, nullptr,
+        HardwareSPI::master()->request(new SPIRequest(this, SPIRequest::MOSI, data, nullptr,
                     3, (void*)NOREQ));
     }
 
@@ -232,29 +232,52 @@ private:
     };
 
     void setConfig(uint8_t val) {
-        config = val;
-        static uint8_t data[2] = {WRITE | REG_CONFIG, config};
-        SPIRequest r = {this, SPIRequest::MOSI, data, nullptr, 2, (void*)CONFIGREQ};
-        HardwareSPI::master()->request(r);
+        this->config = val;
+        uint8_t data[2] = {WRITE | REG_CONFIG, config};
+        HardwareSPI::master()->request(new SPIRequest(
+                this,
+                SPIRequest::MOSI,
+                data,
+                nullptr,
+                2,
+                (void *) CONFIGREQ)
+        );
     }
 
     void getTempData() {
-        static uint8_t tx[3] = {READ | REG_RTD, 0, 0};
-        SPIRequest r = {this, SPIRequest::BOTH, tx, sensorData, sizeof tx, (void*)TEMPREQ};
-        HardwareSPI::master()->request(r);
+        uint8_t tx[3] = {READ | REG_RTD, 0, 0};
+        HardwareSPI::master()->request(new SPIRequest(
+                this,
+                SPIRequest::BOTH,
+                tx,
+                sensorData,
+                sizeof tx,
+                (void *) TEMPREQ)
+        );
     }
 
     void getStatusData() {
-        static uint8_t tx[2] = {READ | REG_STATUS, 0};
-        SPIRequest r = {this, SPIRequest::BOTH, tx, statusData, sizeof tx, (void*)STATUSREQ};
-        HardwareSPI::master()->request(r);
+        uint8_t tx[2] = {READ | REG_STATUS, 0};
+        HardwareSPI::master()->request(new SPIRequest(
+                this,
+                SPIRequest::BOTH,
+                tx,
+                statusData,
+                sizeof tx,
+                (void *) STATUSREQ)
+        );
     }
 
     void getAllData() {
         allData[0] = READ | REG_CONFIG;
-        SPIRequest r = {this, SPIRequest::BOTH, allData, allData,
-            9, (void*)ALLDATAREQ};
-        HardwareSPI::master()->request(r);
+        HardwareSPI::master()->request(new SPIRequest(
+                this,
+                SPIRequest::BOTH,
+                allData,
+                allData,
+                9,
+                (void *) ALLDATAREQ)
+        );
     }
     ///\endcond
 };
