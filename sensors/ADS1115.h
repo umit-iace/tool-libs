@@ -21,7 +21,7 @@
  * http://www.ti.com/lit/ds/symlink/ads1115.pdf
  * for details
  */
-class ADS1115 {
+class ADS1115 : I2CDevice {
 private:
     ///\cond false
     enum {
@@ -85,9 +85,9 @@ public:
     ///\cond false
     // single conversion mode
     bool single = false;
-    bool cMod = 0;
-    bool cPol = 0;
-    bool cLat = 0;
+    bool cMod = false;
+    bool cPol = false;
+    bool cLat = false;
     uint8_t cQue = 0;
     ///\endcond
 
@@ -100,8 +100,8 @@ public:
      */
     ADS1115(uint8_t address = 0b1001000, enum range fs = FS6144,
             enum dataRate dr = SPS64, enum mux mx = AIN0):
-                eFullScale(fs), eDataRate(dr),
-                eMux(mx), address(address) {
+                I2CDevice(address), eFullScale(fs),
+                eDataRate(dr), eMux(mx) {
         updateConfig();
     }
 
@@ -141,42 +141,42 @@ public:
 
 private:
     ///\cond false
-    uint8_t address;
     uint8_t buffer[2] = {};
 
     void setPointer(uint8_t reg) {
-        I2CRequest point (
-                address,
+        HardwareI2C::master()->request(new I2CRequest(
+                this,
                 0,
                 &reg,
                 1,
                 I2CRequest::I2C_DIRECT_WRITE,
-                nullptr);
-        HardwareI2C::master()->request(point);
+                nullptr)
+        );
     }
 
     void read() {
-        I2CRequest meas (
-                address,
+        HardwareI2C::master()->request(new I2CRequest(
+                this,
                 0,
                 buffer,
                 2,
                 I2CRequest::I2C_DIRECT_READ,
-                nullptr);
-        HardwareI2C::master()->request(meas);
+                nullptr)
+        );
     }
 
     void write(uint8_t reg, uint16_t val) {
-        uint8_t data[3] = {reg, (uint8_t)(val>>8), (uint8_t)val};
-        I2CRequest write (
-                address,
+        uint8_t data[3] = {reg, (uint8_t) (val >> 8), (uint8_t) val};
+        HardwareI2C::master()->request(new I2CRequest(
+                this,
                 0,
                 data,
                 3,
                 I2CRequest::I2C_DIRECT_WRITE,
-                nullptr);
-        HardwareI2C::master()->request(write);
+                nullptr)
+        );
     }
     ///\endcond
 };
+
 #endif //ADS1115_H
