@@ -13,7 +13,7 @@ add_executable(QueueTest RequestQueueTest.cpp)
 target_compile_definitions(QueueTest PUBLIC BOOST_TEST_DYN_LINK)
 target_include_directories(QueueTest PUBLIC ${Boost_INCLUDE_DIRS})
 target_link_libraries(QueueTest ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
-add_test(NAME singleRequestTest COMMAND QueueTest)
+add_test(NAME QueueTest COMMAND QueueTest)
 
 add_executable(MATest MovingAverageTest.cpp)
 target_compile_definitions(MATest PUBLIC BOOST_TEST_DYN_LINK)

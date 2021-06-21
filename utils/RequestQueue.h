@@ -10,17 +10,16 @@
  * making things happen asynchronously
  *
  * in case your specific Request class uses dynamically allocated memory,
- * make sure its copy operator and destructor work correctly.
+ * make sure its destructor correctly frees it.
  *
  * if you use the exists(Request) functionality, the `==` operator needs to
  * be correctly defined as well.
  *
- *
  * in order to use this queueing system, inherit it, and make sure to
- * implement the virtual methods according to your hardware, and expected
+ * implement the virtual methods according to your hardware and expected
  * behavior.
  *
- * When processing of a request is finished, you must call `end`
+ * When processing of a request is finished, you must call @ref rqEnd
  * in order to progress the queue!
  */
 template<typename Request>
@@ -32,13 +31,13 @@ public:
      * override this to get the needed behavior
      *
      * useful functions to get there:
-     *   * rqAdd
-     *   * rqExists
-     *   * rqPoll
-     * @param r Request to add to queue
+     *   * @ref rqAdd
+     *   * @ref rqExists
+     *   * @ref rqPoll
+     * @param r Request pointer to add to queue
      * @return 0 if successful
      */
-    virtual short request(Request r) {
+    virtual short request(Request *r) {
         short ret = rqAdd(r);
         rqPoll();
         return ret;
@@ -47,7 +46,7 @@ public:
 private:
     const unsigned int QUEUELENGTH;
     const unsigned int TIMEOUT;
-    Request *queue = nullptr;
+    Request **queue = nullptr;
     unsigned long *timeOf = nullptr;
     unsigned int todo = 0;
     unsigned int iInIndex = 0;
@@ -64,11 +63,14 @@ protected:
      */
     RequestQueue(unsigned int length, unsigned int timeout) :
             QUEUELENGTH(length), TIMEOUT(timeout) {
-        queue = new Request[length]();
+        queue = new Request*[length]();
         timeOf = new unsigned long[length]();
     }
 
     ~RequestQueue() {
+        for (unsigned int i = 0; i < QUEUELENGTH; ++i) {
+            delete queue[i];
+        }
         delete[] queue;
         delete[] timeOf;
     }
@@ -78,7 +80,7 @@ protected:
      * @param r Request to add
      * @return 0 if successful, -1 otherwise
      */
-    short rqAdd(Request &r) {
+    short rqAdd(Request *r) {
         if (bFull) {
             return -1;
         }
@@ -93,6 +95,8 @@ protected:
 
     /**
      * check if some action needs to be taken, and take it
+     *
+     * needs to be called regularly. E.g. in @ref request
      */
     void rqPoll() {
         if (TIMEOUT && bActive && getTime() - timeOf[iOutIndex] > TIMEOUT) {
@@ -111,9 +115,9 @@ protected:
      * @param r request to look for
      * @return true if request is in queue
      */
-    bool rqExists(Request &r) {
+    bool rqExists(Request *r) {
         for (auto index = iOutIndex; index != iInIndex; inc(index)) {
-            if (r == queue[index]) {
+            if (*r == *queue[index]) {
                 return true;
             }
         }
@@ -123,37 +127,39 @@ protected:
     /**
      * get request which is being handled
      */
-    Request &rqCurrent() {
+    Request *rqCurrent() {
         return queue[iOutIndex];
     }
 
     /**
-     * start callback to application.
+     * application start callback .
      *
      * start processing the current request
      */
-    virtual void rqBegin(Request &r) = 0;
+    virtual void rqBegin(Request *r) = 0;
 
     /**
-     * timeout callback to application.
+     * application timeout callback.
      *
      * this may be a good place to consider aborting the current request
      *
-     * if the request should be taken out of the queue, call end()
-     * in this method. otherwise the request will be restarted.
+     * if the request should be taken out of the queue, call @ref rqEnd
+     * in this method. otherwise @ref rqBegin will be called again with this
+     * request.
      */
-    virtual void rqTimeout(Request &r) = 0;
+    virtual void rqTimeout(Request *r) = 0;
 
     /**
      * end processing of the current request
      *
      * call this function in the application when processing the
      * request is done.\n
-     * removes processed request from list, moves on to the next.
+     * frees and removes processed request from list, moves on to the next.
      */
     void rqEnd() {
         // remove request
-        queue[iOutIndex].~Request();
+        delete queue[iOutIndex];
+        queue[iOutIndex] = nullptr;
         timeOf[iOutIndex] = 0;
         todo--;
 

@@ -88,11 +88,6 @@ public:
     void *cbData;     ///< data to use in callback
 
     /**
-     * Standard constructor
-     */
-    SPIRequest() {};
-
-    /**
      * @param cs
      * @param dir
      * @param tData
@@ -114,16 +109,6 @@ public:
         rData = nullptr;
         dataLen = 0;
         cbData = nullptr;
-    }
-
-    SPIRequest &operator=(const SPIRequest &other) {
-        cs = other.cs;
-        dir = other.dir;
-        tData = other.tData;
-        rData = other.rData;
-        dataLen = other.dataLen;
-        cbData = other.cbData;
-        return *this;
     }
 };
 
@@ -147,20 +132,20 @@ public:
      * processes a request in the queue.
      * @param rq
      */
-    void rqBegin(SPIRequest &rq) override {
+    void rqBegin(SPIRequest *rq) override {
         // activate the chip
-        rq.cs->selectChip(true);
+        rq->cs->selectChip(true);
 
         // transfer the data
-        switch (rq.dir) {
+        switch (rq->dir) {
         case SPIRequest::MOSI:
-            HAL_SPI_Transmit_IT(&this->hSPI, rq.tData, rq.dataLen);
+            HAL_SPI_Transmit_IT(&this->hSPI, rq->tData, rq->dataLen);
             break;
         case SPIRequest::MISO:
-            HAL_SPI_Receive_IT(&this->hSPI, rq.rData, rq.dataLen);
+            HAL_SPI_Receive_IT(&this->hSPI, rq->rData, rq->dataLen);
             break;
         case SPIRequest::BOTH:
-            HAL_SPI_TransmitReceive_IT(&this->hSPI, rq.tData, rq.rData, rq.dataLen);
+            HAL_SPI_TransmitReceive_IT(&this->hSPI, rq->tData, rq->rData, rq->dataLen);
             break;
         }
     }
@@ -170,9 +155,9 @@ public:
      *
      * timeout -> abort
      */
-     void rqTimeout(SPIRequest &rq) override {
+     void rqTimeout(SPIRequest *rq) override {
          HAL_SPI_Abort_IT(&this->hSPI);
-         rq.cs->selectChip(false);
+         rq->cs->selectChip(false);
          rqEnd();
      }
 
@@ -182,12 +167,12 @@ private:
      * @param hspi
      */
     static void transferComplete(SPI_HandleTypeDef *hspi) {
-        auto &r = pThis->rqCurrent();
+        auto r = pThis->rqCurrent();
         // deactivate chip
-        r.cs->selectChip(false);
+        r->cs->selectChip(false);
         // signal data arrival
-        if (r.cbData) {
-            r.cs->callback(r.cbData);
+        if (r->cbData) {
+            r->cs->callback(r->cbData);
         }
         // signal request complete
         pThis->rqEnd();
@@ -275,4 +260,3 @@ static void bitwisecopy(uint8_t *dest, size_t numbits, size_t szof, const uint8_
 }
 
 #endif //STM_SPI_H
-

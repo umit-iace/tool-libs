@@ -61,9 +61,9 @@ class TestFifo: public RequestQueue<TestRequest> {
 public:
     TestFifo(unsigned int l): RequestQueue(l, 2) {}
 
-    void rqBegin(TestRequest &r) override {
+    void rqBegin(TestRequest *r) override {
         if (!bStop) {
-            r.doit();
+            r->doit();
             printf("done.\n");
             rqEnd();
         } else {
@@ -71,8 +71,8 @@ public:
         }
     }
 
-    void rqTimeout(TestRequest &r) override {
-        printf("aborted pin: %d\n", r.pin);
+    void rqTimeout(TestRequest *r) override {
+        printf("aborted pin: %d\n", r->pin);
     }
 
     unsigned long getTime() override {
@@ -101,7 +101,7 @@ BOOST_AUTO_TEST_CASE( emptyRequestTest ) {
     TestFifo fifo(fifosize);
 
     for (int i = 5; i < 5+testsize; ++i) {
-        auto R = TestRequest(i, 0x11f7a345+i);
+        auto R = new TestRequest(i, 0x11f7a345+i);
         fifo.request(R);
     }
     BOOST_CHECK_EQUAL(TestRequest::list[0], 5);
@@ -119,7 +119,7 @@ BOOST_AUTO_TEST_CASE(overfullTest) {
     TestFifo fifo(fifosize);
     fifo.stop();
     for (int i = 5; i < 5 + testsize; ++i) {
-        auto R = TestRequest(i, 0x11f7a345+i);
+        auto R = new TestRequest(i, 0x11f7a345+i);
         BOOST_CHECK_EQUAL(fifo.request(R), i-5 < fifosize ? 0 : -1);
     }
     // make sure request times out
@@ -128,11 +128,10 @@ BOOST_AUTO_TEST_CASE(overfullTest) {
     BOOST_CHECK_EQUAL(TestRequest::list[0], 0);
     BOOST_CHECK_EQUAL(TestRequest::list[testsize - 1], 0);
     fifo.start();
-    auto r = TestRequest(121, 0xbabeface);
-    BOOST_CHECK_EQUAL(fifo.request(r), -1);
+    BOOST_CHECK_EQUAL(fifo.request(new TestRequest(121, 0xbabeface)), -1);
     BOOST_CHECK_EQUAL(TestRequest::list[0], 5);
     BOOST_CHECK_EQUAL(TestRequest::list[fifosize - 1], fifosize-1+5);
-    BOOST_CHECK_EQUAL(fifo.request(r), 0);
+    BOOST_CHECK_EQUAL(fifo.request(new TestRequest(121, 0xbabeface)), 0);
     BOOST_CHECK_EQUAL(TestRequest::list[fifosize], 121);
 }
 
@@ -141,16 +140,17 @@ BOOST_AUTO_TEST_CASE(findRequestTest) {
     printf("\n\nfindRequestTest\n\n");
     TestRequest::reset();
     TestFifo fifo(2);
-    auto R = TestRequest(0, 0x11f7a345);
+    auto R = new TestRequest(0, 0x11f7a345);
+    auto R1 = new TestRequest(1, 0x11f7a345);
+    auto R2 = new TestRequest(2, 0x11f7a345);
     fifo.request(R);
     BOOST_CHECK_EQUAL(fifo.rqExists(R), false);
     fifo.stop();
-    BOOST_CHECK_EQUAL(fifo.request(R), 0);
+    BOOST_CHECK_EQUAL(fifo.request(R1), 0);
     fifo.start();
     fifo.getTime();
     fifo.getTime(); // make sure queue aborts on next poll()
-    BOOST_CHECK_EQUAL(fifo.rqExists(R), true);
-    fifo.request(R);
-    BOOST_CHECK_EQUAL(fifo.rqExists(R), false);
+    BOOST_CHECK_EQUAL(fifo.rqExists(R1), true);
+    fifo.request(R2);
+    BOOST_CHECK_EQUAL(fifo.rqExists(R2), false);
 }
-
