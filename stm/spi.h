@@ -246,16 +246,14 @@ private:
 static void bitwisecopy(uint8_t *dest, size_t numbits, size_t szof, const uint8_t *src, size_t len) {
     uint32_t srcI = 0;
     for (size_t n = 0; n < len; ++n) {
-        uint32_t destI = numbits;
         dest += n?szof:0;
-        do {
-            --destI;
+        for (int destI = numbits - 1; destI >= 0; --destI, ++srcI) {
+            dest[destI / 8] &= ~(1U << destI % 8);
+            dest[destI / 8] |= ((src[srcI / 8] >> (7 - srcI % 8)) & 0x1U) << destI % 8;
+        }
+    }
+}
 
-            *(dest + destI / 8) &= ~(1U << destI % 8);
-            *(dest + destI / 8) |= ((*(src + srcI / 8) >> (7 - srcI % 8)) & 0x1U) << destI % 8;
-
-            ++srcI;
-        } while (destI > 0);
     }
 }
 
