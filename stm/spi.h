@@ -254,6 +254,17 @@ static void bitwisecopy(uint8_t *dest, size_t numbits, size_t szof, const uint8_
     }
 }
 
+/**
+ * helper function for changing endianness of a buffer
+ * @param buffer address of buffer
+ * @param len length of buffer
+ */
+static void flip(uint8_t *buffer, size_t len) {
+    uint8_t tmp;
+    for (size_t i = 0; i < len / 2; ++i) {
+        tmp = buffer[i];
+        buffer[i] = buffer[len - 1 - i];
+        buffer[len - 1 - i] = tmp;
     }
 }
 
