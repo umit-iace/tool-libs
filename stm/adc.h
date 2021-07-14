@@ -78,7 +78,7 @@ protected:
         while(HAL_ADC_Start_DMA(this->hTDAdc, this->iBuffer, 1) == HAL_OK);
     }
 
-    void startAdc(void) {
+    void startMeasurement(void) {
         HAL_ADC_Start(this->hTDAdc);
     }
 
