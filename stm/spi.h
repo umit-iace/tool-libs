@@ -66,7 +66,7 @@ public:
     /**
      * callback. is called as soon as requested data arrived over wire.
      */
-    virtual void callback(void *cbData) { }
+    virtual void callback(void *cbData) {}
 };
 
 /**
@@ -101,7 +101,7 @@ public:
      * @param cbData
      */
     SPIRequest(ChipSelect *cs, enum eDir dir, uint8_t *tData, uint8_t *rData,
-            uint32_t dataLen, void *cbData) :
+               uint32_t dataLen, void *cbData) :
             cs(cs), dir(dir), tData(tData), rData(rData),
             dataLen(dataLen), cbData(cbData) {
     }
@@ -153,15 +153,15 @@ public:
 
         // transfer the data
         switch (rq.dir) {
-        case SPIRequest::MOSI:
-            HAL_SPI_Transmit_IT(&this->hSPI, rq.tData, rq.dataLen);
-            break;
-        case SPIRequest::MISO:
-            HAL_SPI_Receive_IT(&this->hSPI, rq.rData, rq.dataLen);
-            break;
-        case SPIRequest::BOTH:
-            HAL_SPI_TransmitReceive_IT(&this->hSPI, rq.tData, rq.rData, rq.dataLen);
-            break;
+            case SPIRequest::MOSI:
+                HAL_SPI_Transmit_IT(&this->hSPI, rq.tData, rq.dataLen);
+                break;
+            case SPIRequest::MISO:
+                HAL_SPI_Receive_IT(&this->hSPI, rq.rData, rq.dataLen);
+                break;
+            case SPIRequest::BOTH:
+                HAL_SPI_TransmitReceive_IT(&this->hSPI, rq.tData, rq.rData, rq.dataLen);
+                break;
         }
     }
 
@@ -170,11 +170,11 @@ public:
      *
      * timeout -> abort
      */
-     void rqTimeout(SPIRequest &rq) override {
-         HAL_SPI_Abort_IT(&this->hSPI);
-         rq.cs->selectChip(false);
-         rqEnd();
-     }
+    void rqTimeout(SPIRequest &rq) override {
+        HAL_SPI_Abort_IT(&this->hSPI);
+        rq.cs->selectChip(false);
+        rqEnd();
+    }
 
 private:
     /**
@@ -207,17 +207,18 @@ private:
      */
     HardwareSPI() : RequestQueue(50, HW_SPI_TIMEOUT) {
         AFIO(HW_SPI_MISO_PIN, HW_SPI_MISO_PORT, HW_SPI_MISO_ALTERNATE,
-            GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
+             GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
         AFIO(HW_SPI_MOSI_PIN, HW_SPI_MOSI_PORT, HW_SPI_MOSI_ALTERNATE,
-            GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
+             GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
         AFIO(HW_SPI_SCK_PIN, HW_SPI_SCK_PORT, HW_SPI_SCK_ALTERNATE,
-            GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
-#if !defined(HW_SPI) || !defined(HW_SPI_BAUD_PRESCALER) ||\
+             GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
+#if !defined(HW_SPI) || !defined(HW_SPI_BAUD_PRESCALER) || \
     !defined(HW_SPI_CLK_POLARITY) || !defined(HW_SPI_CLK_PHASE)
 #error "you have not set all necessary configuration defines!"
 #endif
         this->config(HW_SPI, HW_SPI_BAUD_PRESCALER,
-                HW_SPI_CLK_POLARITY, HW_SPI_CLK_PHASE);
+                     HW_SPI_CLK_POLARITY, HW_SPI_MODE,
+                     HW_SPI_CLK_PHASE, HW_SPI_DATASIZE, HW_SPI_NSS);
     }
 
     //\cond false
@@ -225,20 +226,21 @@ private:
     SPI_HandleTypeDef &hSPI = hHWSPI;
 
     void config(SPI_TypeDef *dSPI, uint32_t iBaudPresc,
-            uint32_t iClkPol, uint32_t iClkPhase) {
+                uint32_t iMode,
+                uint32_t iClkPol, uint32_t iClkPhase,
+                uint32_t iDataSize, uint32_t iNSS) {
         hSPI.Instance = dSPI;
-        hSPI.Init.Mode = SPI_MODE_MASTER;
+        hSPI.Init.Mode = iMode;
         hSPI.Init.Direction = SPI_DIRECTION_2LINES;
-        hSPI.Init.DataSize = SPI_DATASIZE_8BIT;
+        hSPI.Init.DataSize = iDataSize;
         hSPI.Init.CLKPolarity = iClkPol;
         hSPI.Init.CLKPhase = iClkPhase;
-        hSPI.Init.NSS = SPI_NSS_SOFT;
+        hSPI.Init.NSS = iNSS;
         hSPI.Init.BaudRatePrescaler = iBaudPresc;
         hSPI.Init.FirstBit = SPI_FIRSTBIT_MSB;
         hSPI.Init.TIMode = SPI_TIMODE_DISABLE;
         hSPI.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-        hSPI.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
-        while(HAL_SPI_Init(&hSPI) != HAL_OK);
+        while (HAL_SPI_Init(&hSPI) != HAL_OK);
 
         HAL_SPI_RegisterCallback(&hSPI, HAL_SPI_TX_COMPLETE_CB_ID, transferComplete);
         HAL_SPI_RegisterCallback(&hSPI, HAL_SPI_RX_COMPLETE_CB_ID, transferComplete);
@@ -262,7 +264,7 @@ static void bitwisecopy(uint8_t *dest, size_t numbits, size_t szof, const uint8_
     uint32_t srcI = 0;
     for (size_t n = 0; n < len; ++n) {
         uint32_t destI = numbits;
-        dest += n?szof:0;
+        dest += n ? szof : 0;
         do {
             --destI;
 
