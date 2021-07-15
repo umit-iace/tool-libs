@@ -153,18 +153,27 @@ private:
         pThis->rqEnd();
     }
 
+public:
     HardwareI2C(uint32_t iSdaPin, GPIO_TypeDef *iSdaPort, uint32_t iSdaAlternate,
                 uint32_t iSclPin, GPIO_TypeDef *iSclPort, uint32_t iSclAlternate,
-                I2C_TypeDef *i2c, uint32_t iBaud, uint32_t iAddr) : RequestQueue(50, HW_I2C_TIMEOUT) {
+                I2C_TypeDef *i2c, uint32_t iBaud, uint32_t iAddr, uint32_t iTimeOut,
+                I2C_HandleTypeDef *hI2C,
+                IRQn_Type iI2cErrorInterrupt, uint32_t iI2cErrorPrePrio, uint32_t iI2cErrorSubPrio,
+                IRQn_Type iI2cEventInterrupt, uint32_t iI2cEventPrePrio, uint32_t iI2cEventSubPrio)
+            : RequestQueue(50, iTimeOut), hI2C(hI2C) {
         AFIO(iSdaPin, iSdaPort, iSdaAlternate, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH, GPIO_MODE_AF_OD);
         AFIO(iSclPin, iSclPort, iSclAlternate, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH, GPIO_MODE_AF_OD);
-        this->config(i2c, iBaud, iAddr);
+        this->config(i2c, iBaud, iAddr,
+                     iI2cErrorInterrupt, iI2cErrorPrePrio, iI2cErrorSubPrio,
+                     iI2cEventInterrupt, iI2cEventPrePrio, iI2cEventSubPrio);
     }
 
-    void config(I2C_TypeDef *i2c, uint32_t iBaud, uint32_t iAddr) {
+    void config(I2C_TypeDef *i2c, uint32_t iBaud, uint32_t iAddr,
+                IRQn_Type iI2cErrorInterrupt, uint32_t iI2cErrorPrePrio, uint32_t iI2cErrorSubPrio,
+                IRQn_Type iI2cEventInterrupt, uint32_t iI2cEventPrePrio, uint32_t iI2cEventSubPrio) {
         *this->hI2C = {};
         this->hI2C->Instance = i2c;
-#if defined(STM32F407xx)
+#if defined(STM32F407xx) || defined(STM32F401xC)
         this->hI2C->Init.ClockSpeed = iBaud;
         this->hI2C->Init.DutyCycle = I2C_DUTYCYCLE_2;
 #elif defined(STM32F767xx)
@@ -197,6 +206,7 @@ private:
         HAL_NVIC_EnableIRQ(iI2cEventInterrupt);
     }
 
+private:
     //\cond false
     inline static HardwareI2C *pThis = nullptr;
     I2C_HandleTypeDef *hI2C;
