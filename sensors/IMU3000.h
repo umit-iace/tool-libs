@@ -41,8 +41,8 @@ public:
     /**
      * initialize the accelerometer and the gyro
      */
-    IMU3000(enum acc_range ar=ACC_16G, bool afr=true,
-            enum gyro_range gr=GYRO_250, uint8_t gfilt=1, uint8_t gdiv=4) {
+    IMU3000(HardwareI2C *hwI2c, enum acc_range ar=ACC_16G, bool afr=true,
+            enum gyro_range gr=GYRO_250, uint8_t gfilt=1, uint8_t gdiv=4): hwI2c(hwI2c) {
         setAccRange(ar, afr);
         accWriteReg(0x2D, 1 << 3); // enable acceleration measurements
         setGyroConf(gr, gfilt, gdiv);
@@ -82,6 +82,7 @@ private:
     ///\cond false
     int16_t gyroData[3] = {};
     int16_t accData[3] = {};
+    HardwareI2C *hwI2c;
 
     double accel[3] = {}, gyro[3] = {};
     double accelFactor = 0, gyroFactor = 0;
@@ -94,7 +95,7 @@ private:
                 6,
                 I2CRequest::I2C_MEM_READ,
                 flip3HW);
-        HardwareI2C::master()->request(gyroread);
+        this->hwI2c->request(gyroread);
     }
 
     void readAccData() {
@@ -105,7 +106,7 @@ private:
                 6,
                 I2CRequest::I2C_MEM_READ,
                 nullptr);
-        HardwareI2C::master()->request(accread);
+        this->hwI2c->request(accread);
     }
 
     /**
@@ -158,7 +159,7 @@ private:
                 1,
                 I2CRequest::I2C_MEM_WRITE,
                 nullptr);
-        HardwareI2C::master()->request(gyroReq);
+        this->hwI2c->request(gyroReq);
     }
 
     void accWriteReg(uint8_t reg, uint8_t val) {
@@ -169,7 +170,7 @@ private:
                 1,
                 I2CRequest::I2C_MEM_WRITE,
                 nullptr);
-        HardwareI2C::master()->request(accReq);
+        this->hwI2c->request(accReq);
     }
 
     ///\endcond

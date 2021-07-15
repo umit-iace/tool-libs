@@ -98,10 +98,10 @@ public:
      * @param dr data rate / conversion speed
      * @param mx initial multiplexer setting
      */
-    ADS1115(uint8_t address = 0b1001000, enum range fs = FS6144,
+    ADS1115(HardwareI2C *hwI2c, uint8_t address = 0b1001000, enum range fs = FS6144,
             enum dataRate dr = SPS64, enum mux mx = AIN0):
                 eFullScale(fs), eDataRate(dr),
-                eMux(mx), address(address) {
+                eMux(mx), address(address), hwI2c(hwI2c) {
         updateConfig();
     }
 
@@ -143,6 +143,7 @@ private:
     ///\cond false
     uint8_t address;
     uint8_t buffer[2] = {};
+    HardwareI2C *hwI2c;
 
     void setPointer(uint8_t reg) {
         I2CRequest point (
@@ -152,7 +153,7 @@ private:
                 1,
                 I2CRequest::I2C_DIRECT_WRITE,
                 nullptr);
-        HardwareI2C::master()->request(point);
+        this->hwI2c->request(point);
     }
 
     void read() {
@@ -163,7 +164,7 @@ private:
                 2,
                 I2CRequest::I2C_DIRECT_READ,
                 nullptr);
-        HardwareI2C::master()->request(meas);
+        this->hwI2c->request(meas);
     }
 
     void write(uint8_t reg, uint16_t val) {
@@ -175,7 +176,7 @@ private:
                 3,
                 I2CRequest::I2C_DIRECT_WRITE,
                 nullptr);
-        HardwareI2C::master()->request(write);
+        this->hwI2c->request(write);
     }
     ///\endcond
 };
