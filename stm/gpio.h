@@ -18,8 +18,8 @@ private:
     ///\endcond
 public:
     DIO(uint32_t pin, GPIO_TypeDef *port,
-            uint32_t mode = GPIO_MODE_OUTPUT_PP,
-            uint32_t pull = GPIO_NOPULL) {
+        uint32_t mode = GPIO_MODE_OUTPUT_PP,
+        uint32_t pull = GPIO_NOPULL) {
         this->iPin = pin;
         this->port = port;
         GPIO_InitTypeDef GPIO_InitStruct = {};
@@ -60,9 +60,9 @@ public:
 class AFIO {
 public:
     AFIO(uint32_t pin, GPIO_TypeDef *port, uint32_t alternate,
-            uint32_t pull = GPIO_NOPULL,
-            uint32_t speed = GPIO_SPEED_FREQ_LOW,
-            uint32_t mode = GPIO_MODE_AF_PP) {
+         uint32_t pull = GPIO_NOPULL,
+         uint32_t speed = GPIO_SPEED_FREQ_LOW,
+         uint32_t mode = GPIO_MODE_AF_PP) {
         GPIO_InitTypeDef GPIO_InitStruct = {};
         GPIO_InitStruct.Pin = pin;
         GPIO_InitStruct.Mode = mode;

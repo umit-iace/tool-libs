@@ -30,11 +30,7 @@
 #include "stm/hal.h"
 #include "utils/RequestQueue.h"
 
-//\cond false
-extern "C" {
-SPI_HandleTypeDef hHWSPI;
-};
-//\endcond
+class HardwareSPI;
 
 /**
  * Class abstracting an SPI device.
@@ -42,16 +38,19 @@ SPI_HandleTypeDef hHWSPI;
  * HardwareSPI to send/get data over the wire.
  */
 class ChipSelect {
+protected:
     //\cond false
     DIO pin;
+    HardwareSPI *hwSPI;
     //\endcond
 public:
     /**
      * @param iCSPIN chip select pin number
      * @param gpioCSPort chip select pin port
      */
-    ChipSelect(uint32_t iCSPIN, GPIO_TypeDef *gpioCSPort) :
-            pin(iCSPIN, gpioCSPort) {
+    ChipSelect(uint32_t iCSPIN, GPIO_TypeDef *gpioCSPort,
+               HardwareSPI *hwSPI) :
+            pin(iCSPIN, gpioCSPort), hwSPI(hwSPI) {
         this->selectChip(false);
     }
 
@@ -129,7 +128,6 @@ public:
 
 /**
  * @brief Template class for hardware based SPI derivations
- * @todo make it possible to use more than one HardwareSPI at the same time
  */
 class HardwareSPI : public RequestQueue<SPIRequest> {
 public:
@@ -154,13 +152,13 @@ public:
         // transfer the data
         switch (rq.dir) {
             case SPIRequest::MOSI:
-                HAL_SPI_Transmit_IT(&this->hSPI, rq.tData, rq.dataLen);
+                HAL_SPI_Transmit_IT(this->hSPI, rq.tData, rq.dataLen);
                 break;
             case SPIRequest::MISO:
-                HAL_SPI_Receive_IT(&this->hSPI, rq.rData, rq.dataLen);
+                HAL_SPI_Receive_IT(this->hSPI, rq.rData, rq.dataLen);
                 break;
             case SPIRequest::BOTH:
-                HAL_SPI_TransmitReceive_IT(&this->hSPI, rq.tData, rq.rData, rq.dataLen);
+                HAL_SPI_TransmitReceive_IT(this->hSPI, rq.tData, rq.rData, rq.dataLen);
                 break;
         }
     }
@@ -171,7 +169,7 @@ public:
      * timeout -> abort
      */
     void rqTimeout(SPIRequest &rq) override {
-        HAL_SPI_Abort_IT(&this->hSPI);
+        HAL_SPI_Abort_IT(this->hSPI);
         rq.cs->selectChip(false);
         rqEnd();
     }
@@ -194,60 +192,60 @@ private:
     }
 
 public:
-    static HardwareSPI *master() {
-        if (!pThis) {
-            pThis = new HardwareSPI();
-        }
-        return pThis;
-    }
-
-private:
     /**
      * Initialize the MISO, MOSI, and CLK pins and configure SPI instance
      */
-    HardwareSPI() : RequestQueue(50, HW_SPI_TIMEOUT) {
-        AFIO(HW_SPI_MISO_PIN, HW_SPI_MISO_PORT, HW_SPI_MISO_ALTERNATE,
-             GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
-        AFIO(HW_SPI_MOSI_PIN, HW_SPI_MOSI_PORT, HW_SPI_MOSI_ALTERNATE,
-             GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
-        AFIO(HW_SPI_SCK_PIN, HW_SPI_SCK_PORT, HW_SPI_SCK_ALTERNATE,
-             GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
-#if !defined(HW_SPI) || !defined(HW_SPI_BAUD_PRESCALER) || \
-    !defined(HW_SPI_CLK_POLARITY) || !defined(HW_SPI_CLK_PHASE)
-#error "you have not set all necessary configuration defines!"
-#endif
-        this->config(HW_SPI, HW_SPI_BAUD_PRESCALER,
-                     HW_SPI_CLK_POLARITY, HW_SPI_MODE,
-                     HW_SPI_CLK_PHASE, HW_SPI_DATASIZE, HW_SPI_NSS);
+    HardwareSPI(SPI_TypeDef *dSPI, uint32_t iBaudPresc,
+                uint32_t iMosiPin, GPIO_TypeDef *iMosiPort, uint32_t iMosiAlternate,
+                uint32_t iMisoPin, GPIO_TypeDef *iMisoPort, uint32_t iMisoAlternate,
+                uint32_t iSckPin, GPIO_TypeDef *iSckPort, uint32_t iSckAlternate,
+                IRQn_Type iSpiInterrupt, uint32_t iSpiPrePrio, uint32_t iSpiSubPrio,
+                uint32_t iMode,
+                uint32_t iClkPol, uint32_t iClkPhase,
+                uint32_t iDataSize, uint32_t iNSS,
+                SPI_HandleTypeDef *hSPI,
+                uint32_t iSpiTimeOut)
+            : RequestQueue(50, iSpiTimeOut), hSPI(hSPI) {
+        AFIO(iMisoPin, iMisoPort, iMisoAlternate, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
+        AFIO(iMosiPin, iMosiPort, iMosiAlternate, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
+        AFIO(iSckPin, iSckPort, iSckAlternate, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
+
+        this->config(dSPI, iBaudPresc,
+                     iSpiInterrupt, iSpiPrePrio, iSpiSubPrio,
+                     iMode, iClkPol,
+                     iClkPhase, iDataSize, iNSS);
     }
 
+private:
     //\cond false
     inline static HardwareSPI *pThis = nullptr;
-    SPI_HandleTypeDef &hSPI = hHWSPI;
+    SPI_HandleTypeDef *hSPI;
 
     void config(SPI_TypeDef *dSPI, uint32_t iBaudPresc,
+                IRQn_Type iSpiInterrupt, uint32_t iSpiPrePrio, uint32_t iSpiSubPrio,
                 uint32_t iMode,
                 uint32_t iClkPol, uint32_t iClkPhase,
                 uint32_t iDataSize, uint32_t iNSS) {
-        hSPI.Instance = dSPI;
-        hSPI.Init.Mode = iMode;
-        hSPI.Init.Direction = SPI_DIRECTION_2LINES;
-        hSPI.Init.DataSize = iDataSize;
-        hSPI.Init.CLKPolarity = iClkPol;
-        hSPI.Init.CLKPhase = iClkPhase;
-        hSPI.Init.NSS = iNSS;
-        hSPI.Init.BaudRatePrescaler = iBaudPresc;
-        hSPI.Init.FirstBit = SPI_FIRSTBIT_MSB;
-        hSPI.Init.TIMode = SPI_TIMODE_DISABLE;
-        hSPI.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-        while (HAL_SPI_Init(&hSPI) != HAL_OK);
+        *this->hSPI = {};
+        this->hSPI->Instance = dSPI;
+        this->hSPI->Init.Mode = iMode;
+        this->hSPI->Init.Direction = SPI_DIRECTION_2LINES;
+        this->hSPI->Init.DataSize = iDataSize;
+        this->hSPI->Init.CLKPolarity = iClkPol;
+        this->hSPI->Init.CLKPhase = iClkPhase;
+        this->hSPI->Init.NSS = iNSS;
+        this->hSPI->Init.BaudRatePrescaler = iBaudPresc;
+        this->hSPI->Init.FirstBit = SPI_FIRSTBIT_MSB;
+        this->hSPI->Init.TIMode = SPI_TIMODE_DISABLE;
+        this->hSPI->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+        while (HAL_SPI_Init(this->hSPI) != HAL_OK);
 
-        HAL_SPI_RegisterCallback(&hSPI, HAL_SPI_TX_COMPLETE_CB_ID, transferComplete);
-        HAL_SPI_RegisterCallback(&hSPI, HAL_SPI_RX_COMPLETE_CB_ID, transferComplete);
-        HAL_SPI_RegisterCallback(&hSPI, HAL_SPI_TX_RX_COMPLETE_CB_ID, transferComplete);
+        HAL_SPI_RegisterCallback(this->hSPI, HAL_SPI_TX_COMPLETE_CB_ID, transferComplete);
+        HAL_SPI_RegisterCallback(this->hSPI, HAL_SPI_RX_COMPLETE_CB_ID, transferComplete);
+        HAL_SPI_RegisterCallback(this->hSPI, HAL_SPI_TX_RX_COMPLETE_CB_ID, transferComplete);
 
-        HAL_NVIC_SetPriority(SPI_IT_IRQn, SPI_IT_PRIO);
-        HAL_NVIC_EnableIRQ(SPI_IT_IRQn);
+        HAL_NVIC_SetPriority(iSpiInterrupt, iSpiPrePrio, iSpiSubPrio);
+        HAL_NVIC_EnableIRQ(iSpiInterrupt);
     }
     //\endcond
 };

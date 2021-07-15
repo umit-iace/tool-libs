@@ -14,8 +14,8 @@
 class HardwareADC {
 public:
     HardwareADC(uint8_t iBufferCount,
-                ADC_HandleTypeDef *hAdc, DMA_HandleTypeDef *hAdcDMA) :
-                iBufferCount(iBufferCount), hTDAdc(hAdc), hTDAdcDMA(hAdcDMA) {
+                ADC_HandleTypeDef *hAdc, DMA_HandleTypeDef *hAdcDMA)
+                : iBufferCount(iBufferCount), hTDAdc(hAdc), hTDAdcDMA(hAdcDMA) {
         iBuffer = new uint32_t[this->iBufferCount];
     }
 
@@ -53,7 +53,8 @@ protected:
         while (HAL_ADC_Init(this->hTDAdc) != HAL_OK);
     }
 
-    void configDMA(DMA_Stream_TypeDef *dDMA, uint32_t iDMAChannel) {
+    void configDMA(DMA_Stream_TypeDef *dDMA, uint32_t iDMAChannel,
+                   IRQn_Type iAdcDmaInterrupt, uint32_t iAdcDmaPrePrio, uint32_t iAdcDmaSubPrio) {
         *this->hTDAdcDMA = {};
         this->hTDAdcDMA->Instance = dDMA;
         this->hTDAdcDMA->Init.Channel = iDMAChannel;
@@ -71,14 +72,14 @@ protected:
 
         HAL_ADC_RegisterCallback(this->hTDAdc, HAL_ADC_CONVERSION_COMPLETE_CB_ID, conversionComplete);
 
-        HAL_NVIC_SetPriority(ADC_DMA_INTERRUPT, ADC_DMA_PRIO);
-        HAL_NVIC_EnableIRQ(ADC_DMA_INTERRUPT);
+        HAL_NVIC_SetPriority(iAdcDmaInterrupt, iAdcDmaPrePrio, iAdcDmaSubPrio);
+        HAL_NVIC_EnableIRQ(iAdcDmaInterrupt);
 
         /// start
         while(HAL_ADC_Start_DMA(this->hTDAdc, this->iBuffer, 1) == HAL_OK);
     }
 
-    void startMeasurement(void) {
+    void startMeasurement(void) const {
         HAL_ADC_Start(this->hTDAdc);
     }
 
