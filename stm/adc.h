@@ -15,7 +15,8 @@ class HardwareADC {
 public:
     HardwareADC(uint8_t iBufferCount,
                 ADC_HandleTypeDef *hAdc, DMA_HandleTypeDef *hAdcDMA)
-                : iBufferCount(iBufferCount), hTDAdc(hAdc), hTDAdcDMA(hAdcDMA) {
+                : hTDAdc(hAdc), hTDAdcDMA(hAdcDMA), iBufferCount(iBufferCount) {
+        pThis = this;
         iBuffer = new uint32_t[this->iBufferCount];
     }
 
@@ -27,19 +28,19 @@ public:
 protected:
     virtual void adcCallback(ADC_HandleTypeDef *hTDAdc) { }
 
-    void configChannel(uint32_t iChannel, uint8_t iRank) {
+    void configChannel(uint32_t iChannel, uint8_t iRank) const {
         ADC_ChannelConfTypeDef sConfig = {};
         sConfig.Channel = iChannel;
         sConfig.Rank = iRank;
         sConfig.SamplingTime = ADC_SAMPLETIME;
-        while (HAL_ADC_ConfigChannel(this->hTDAdc, &sConfig) == HAL_OK);
+        while (HAL_ADC_ConfigChannel(this->hTDAdc, &sConfig) != HAL_OK);
     }
     uint32_t *iBuffer;
 
-    void configADC(ADC_TypeDef *dADC) {
+    void configADC(ADC_TypeDef *dADC) const {
         *this->hTDAdc = {};
         this->hTDAdc->Instance = dADC;
-        this->hTDAdc->Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV8;
+        this->hTDAdc->Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
         this->hTDAdc->Init.Resolution = ADC_RESOLUTION_12B;
         this->hTDAdc->Init.ScanConvMode = ENABLE;
         this->hTDAdc->Init.ContinuousConvMode = DISABLE;
@@ -66,7 +67,7 @@ protected:
         this->hTDAdcDMA->Init.Mode = DMA_CIRCULAR;
         this->hTDAdcDMA->Init.Priority = DMA_PRIORITY_LOW;
         this->hTDAdcDMA->Init.FIFOMode = DMA_FIFOMODE_DISABLE;
-        while(HAL_DMA_Init(this->hTDAdcDMA) == HAL_OK);
+        while(HAL_DMA_Init(this->hTDAdcDMA) != HAL_OK);
 
         __HAL_LINKDMA(this->hTDAdc, DMA_Handle, *this->hTDAdcDMA);
 
@@ -76,10 +77,10 @@ protected:
         HAL_NVIC_EnableIRQ(iAdcDmaInterrupt);
 
         /// start
-        while(HAL_ADC_Start_DMA(this->hTDAdc, this->iBuffer, 1) == HAL_OK);
+        while(HAL_ADC_Start_DMA(this->hTDAdc, this->iBuffer, this->hTDAdc->Init.NbrOfConversion) != HAL_OK);
     }
 
-    void startMeasurement(void) const {
+    void startMeasurement() const {
         HAL_ADC_Start(this->hTDAdc);
     }
 
