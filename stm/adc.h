@@ -14,10 +14,13 @@
 class HardwareADC {
 public:
     HardwareADC(uint8_t iBufferCount,
-                ADC_HandleTypeDef *hAdc, DMA_HandleTypeDef *hAdcDMA)
-                : hTDAdc(hAdc), hTDAdcDMA(hAdcDMA), iBufferCount(iBufferCount) {
+                ADC_HandleTypeDef *hAdc, DMA_HandleTypeDef *hDMA)
+                : hTDAdc(hAdc), hTDAdcDMA(hDMA), iBufferCount(iBufferCount) {
         pThis = this;
-        iBuffer = new uint32_t[this->iBufferCount];
+        iBuffer = new uint32_t[iBufferCount];
+        for(uint8_t i = 0; i < iBufferCount; ++i) {
+            iBuffer[i] = 0;
+        }
     }
 
     //\cond false
@@ -26,7 +29,7 @@ public:
     //\endcond
 
 protected:
-    virtual void adcCallback(ADC_HandleTypeDef *hTDAdc) { }
+    virtual void adcCallback(ADC_HandleTypeDef *hAdc) {}
 
     void configChannel(uint32_t iChannel, uint8_t iRank) const {
         ADC_ChannelConfTypeDef sConfig = {};
@@ -35,7 +38,6 @@ protected:
         sConfig.SamplingTime = ADC_SAMPLETIME;
         while (HAL_ADC_ConfigChannel(this->hTDAdc, &sConfig) != HAL_OK);
     }
-    uint32_t *iBuffer;
 
     void configADC(ADC_TypeDef *dADC) const {
         *this->hTDAdc = {};
@@ -45,7 +47,7 @@ protected:
         this->hTDAdc->Init.ScanConvMode = ENABLE;
         this->hTDAdc->Init.ContinuousConvMode = DISABLE;
         this->hTDAdc->Init.DiscontinuousConvMode = DISABLE;
-        this->hTDAdc->Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
+        this->hTDAdc->Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
         this->hTDAdc->Init.ExternalTrigConv = ADC_SOFTWARE_START;
         this->hTDAdc->Init.DataAlign = ADC_DATAALIGN_RIGHT;
         this->hTDAdc->Init.NbrOfConversion = this->iBufferCount;
@@ -61,11 +63,11 @@ protected:
         this->hTDAdcDMA->Init.Channel = iDMAChannel;
         this->hTDAdcDMA->Init.Direction = DMA_PERIPH_TO_MEMORY;
         this->hTDAdcDMA->Init.PeriphInc = DMA_PINC_DISABLE;
-        this->hTDAdcDMA->Init.MemInc = DMA_MINC_DISABLE;
+        this->hTDAdcDMA->Init.MemInc = DMA_MINC_ENABLE;
         this->hTDAdcDMA->Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
         this->hTDAdcDMA->Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
         this->hTDAdcDMA->Init.Mode = DMA_CIRCULAR;
-        this->hTDAdcDMA->Init.Priority = DMA_PRIORITY_LOW;
+        this->hTDAdcDMA->Init.Priority = DMA_PRIORITY_MEDIUM;
         this->hTDAdcDMA->Init.FIFOMode = DMA_FIFOMODE_DISABLE;
         while(HAL_DMA_Init(this->hTDAdcDMA) != HAL_OK);
 
@@ -77,12 +79,14 @@ protected:
         HAL_NVIC_EnableIRQ(iAdcDmaInterrupt);
 
         /// start
-        while(HAL_ADC_Start_DMA(this->hTDAdc, this->iBuffer, this->hTDAdc->Init.NbrOfConversion) != HAL_OK);
+        while(HAL_ADC_Start_DMA(this->hTDAdc, this->iBuffer, this->iBufferCount) != HAL_OK);
     }
 
     void startMeasurement() const {
         HAL_ADC_Start(this->hTDAdc);
     }
+
+    uint32_t* iBuffer;
 
 private:
     uint8_t iBufferCount = 0;
