@@ -133,24 +133,48 @@ private:
 
     uint32_t iBaudRate;
 
-    uint8_t UART_rxBuffer[12] = {0};
+    uint8_t UART_rxChars[10];
+    uint8_t UART_rxDataBuffer[100];
+    int UART_rxLength = 0;
 
 
 
     /* UART2 Interrupt Service Routine */
-    void USART2_IRQHandler(void)
-    {
-        HAL_UART_IRQHandler(this->hUart);
-    }
+    //void USART2_IRQHandler(void)
+    //{
+    //    HAL_UART_IRQHandler(this->hUart);
+    //}
+
+
 
     /* This callback is called by the HAL_UART_IRQHandler when the given number of bytes are received */
-    void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+    void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
     {
-        //if (huart->Instance == this->dUsart)
+
+        HAL_UART_Receive_IT(this->hUart, UART_rxChars, 4);
+
+        //if (UartHandle->Instance == this->dUsart)
         //{
-            HAL_UART_Receive_IT(huart, UART_rxBuffer, 12);
+        /*
+            if(UART_rxChar == '\r')
+            {
+                UART_rxDataBuffer[UART_rxLength++]='\r';
+                HAL_UART_Transmit(this->hUart, UART_rxDataBuffer, UART_rxLength, 100);
+            }
+            else
+            {
+                UART_rxDataBuffer[UART_rxLength++] = UART_rxChar;
+            }
+            HAL_UART_Receive_IT(this->hUart, &UART_rxChar, 1);
+            */
         //}
     }
+
+    //void HAL_UART_ErrorCallback(UART_HandleTypeDef *UartHandle)
+    //{
+    //    /* Initialization Error */
+    //    uint32_t ercde = UartHandle->ErrorCode;
+    //}
 
 
     void config() {
@@ -163,13 +187,18 @@ private:
         this->hUart->Init.Mode = UART_MODE_TX_RX;
         this->hUart->Init.HwFlowCtl = UART_HWCONTROL_NONE;
         this->hUart->Init.OverSampling = UART_OVERSAMPLING_16;
+        this->hUart->Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+        this->hUart->AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
         while (HAL_UART_Init(this->hUart) != HAL_OK);
 
-        // Peripheral interrupt init
+        //__HAL_UART_ENABLE_IT(this->hUart, UART_IT_RXNE);
+
+        /* USART2 interrupt Init */
         HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
         HAL_NVIC_EnableIRQ(USART2_IRQn);
 
-        HAL_UART_Receive_IT(this->hUart, UART_rxBuffer, 12);
+        HAL_UART_Receive_IT(this->hUart, UART_rxChars, 4);
+
 
     };
     //\endcond
