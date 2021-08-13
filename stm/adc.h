@@ -31,11 +31,11 @@ public:
 protected:
     virtual void adcCallback(ADC_HandleTypeDef *hAdc) {}
 
-    void configChannel(uint32_t iChannel, uint8_t iRank) const {
+    void configChannel(uint32_t iChannel, uint8_t iRank, uint32_t iSamplingTime) const {
         ADC_ChannelConfTypeDef sConfig = {};
         sConfig.Channel = iChannel;
         sConfig.Rank = iRank;
-        sConfig.SamplingTime = ADC_SAMPLETIME;
+        sConfig.SamplingTime = iSamplingTime;
         while (HAL_ADC_ConfigChannel(this->hTDAdc, &sConfig) != HAL_OK);
     }
 
