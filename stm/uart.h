@@ -1,5 +1,5 @@
 //
-// Created by florian on 03.08.2021.
+// Created by UMIT IACE on 26.08.2021.
 //
 
 #ifndef RIG_UART_H
@@ -105,16 +105,21 @@ public:
      * @param dUsart definition of used UART
      * @param iBaudRate baud rate
      * @param hUart uart handle
-     */
-    HardwareUART(uint32_t iRXPin, GPIO_TypeDef *gpioRXPort, uint8_t iRXAlternate,
+     * @param DMAHandle dma handle, set to nullptr when dma is not used
+     * @param DMAChannel dma channel
+     */HardwareUART(uint32_t iRXPin, GPIO_TypeDef *gpioRXPort, uint8_t iRXAlternate,
                  uint32_t iTXPin, GPIO_TypeDef *gpioTXPort, uint8_t iTXAlternate,
-                 USART_TypeDef *dUsart, uint32_t iBaudRate, UART_HandleTypeDef *hUart) :
-                 RequestQueue(50, 100), hUart(hUart), dUsart(dUsart), iBaudRate(iBaudRate) {
-        AFIO(iRXPin, gpioRXPort, iRXAlternate, GPIO_PULLUP);
-        AFIO(iTXPin, gpioTXPort, iTXAlternate, GPIO_PULLUP);
+                 USART_TypeDef *dUsart, uint32_t iBaudRate, UART_HandleTypeDef *hUart,
+                 DMA_Stream_TypeDef *DMAHandle, uint32_t DMAChannel) :
+                 RequestQueue(50, 100), hUart(hUart), dUsart(dUsart), iBaudRate(iBaudRate)  {
+        AFIO(iRXPin, gpioRXPort, iRXAlternate, GPIO_NOPULL);
+        AFIO(iTXPin, gpioTXPort, iTXAlternate, GPIO_NOPULL);
 
+        this->DMAChannel = DMAChannel;
+        this->DMAHandle = DMAHandle;
         this->config();
     }
+
 
     //\cond false
     UART_HandleTypeDef *hUart;
@@ -124,6 +129,9 @@ private:
     //\cond false
     USART_TypeDef *dUsart;
     uint32_t iBaudRate;
+    DMA_Stream_TypeDef *DMAHandle;
+    uint32_t DMAChannel;
+    DMA_HandleTypeDef hdma_usart_tx;
 
     void config() {
         *this->hUart = {};
@@ -138,6 +146,25 @@ private:
         this->hUart->Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
         this->hUart->AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
         while (HAL_UART_Init(this->hUart) != HAL_OK);
+
+        if (DMAHandle != nullptr)
+        {
+            hdma_usart_tx.Instance = DMAHandle;
+            hdma_usart_tx.Init.Channel = DMAChannel;
+            hdma_usart_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
+            hdma_usart_tx.Init.PeriphInc = DMA_PINC_DISABLE;
+            hdma_usart_tx.Init.MemInc = DMA_MINC_ENABLE;
+            hdma_usart_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+            hdma_usart_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+            hdma_usart_tx.Init.Mode = DMA_NORMAL;
+            hdma_usart_tx.Init.Priority = DMA_PRIORITY_LOW;
+            hdma_usart_tx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+            while(HAL_DMA_Init(&hdma_usart_tx) != HAL_OK);
+            __HAL_LINKDMA(this->hUart,hdmatx,hdma_usart_tx);
+        }
+
+
+
     };
     //\endcond
 };
