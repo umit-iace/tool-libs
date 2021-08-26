@@ -121,7 +121,7 @@ public:
 
 private:
     //\cond false
-    USART_TypeDef *dUsart
+    USART_TypeDef *dUsart;
     uint32_t iBaudRate;
 
     void config() {
