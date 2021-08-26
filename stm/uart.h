@@ -2,8 +2,8 @@
 // Created by florian on 03.08.2021.
 //
 
-#ifndef RIG_UART2_H
-#define RIG_UART2_H
+#ifndef RIG_UART_H
+#define RIG_UART_H
 
 
 
@@ -12,8 +12,6 @@
 #include "stm/gpio.h"
 #include "stm/hal.h"
 #include "utils/RequestQueue.h"
-
-
 
 /**
  * struct defining a UART request.
@@ -60,16 +58,11 @@ public:
 };
 
 
-
-
-
 /**
  * @brief Template class for hardware based UART derivations
  */
-class HardwareUART2 : public RequestQueue<UARTRequest> {
+class HardwareUART : public RequestQueue<UARTRequest> {
 public:
-
-
     /**
          * override virtual RequestQueue function
          * @return current time in ms
@@ -87,6 +80,7 @@ public:
     void rqBegin(UARTRequest &rq) override {
         // transfer the data
         HAL_UART_Transmit(this->hUart, rq.tData, rq.dataLen, 100);
+        rqEnd();
     }
 
     /**
@@ -98,8 +92,6 @@ public:
         HAL_UART_Abort(this->hUart);
         rqEnd();
     }
-
-
 
     /**
      * Constructor, that initialize the RX and TX pins and configure UART instance
@@ -113,10 +105,10 @@ public:
      * @param iBaudRate baud rate
      * @param hUart uart handle
      */
-    HardwareUART2(uint32_t iRXPin, GPIO_TypeDef *gpioRXPort, uint8_t iRXAlternate,
+    HardwareUART(uint32_t iRXPin, GPIO_TypeDef *gpioRXPort, uint8_t iRXAlternate,
                  uint32_t iTXPin, GPIO_TypeDef *gpioTXPort, uint8_t iTXAlternate,
                  USART_TypeDef *dUsart, uint32_t iBaudRate, UART_HandleTypeDef *hUart) :
-                 RequestQueue(50, 100), hUart(hUart), dUsart(dUsart), iBaudRate(iBaudRate)  {
+                 RequestQueue(50, 100), hUart(hUart), dUsart(dUsart), iBaudRate(iBaudRate) {
         AFIO(iRXPin, gpioRXPort, iRXAlternate, GPIO_PULLUP);
         AFIO(iTXPin, gpioTXPort, iTXAlternate, GPIO_PULLUP);
 
@@ -129,53 +121,8 @@ public:
 
 private:
     //\cond false
-    USART_TypeDef *dUsart;
-
+    USART_TypeDef *dUsart
     uint32_t iBaudRate;
-
-    uint8_t UART_rxChars[10];
-    uint8_t UART_rxDataBuffer[100];
-    int UART_rxLength = 0;
-
-
-
-    /* UART2 Interrupt Service Routine */
-    //void USART2_IRQHandler(void)
-    //{
-    //    HAL_UART_IRQHandler(this->hUart);
-    //}
-
-
-
-    /* This callback is called by the HAL_UART_IRQHandler when the given number of bytes are received */
-    void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
-    {
-
-        HAL_UART_Receive_IT(this->hUart, UART_rxChars, 4);
-
-        //if (UartHandle->Instance == this->dUsart)
-        //{
-        /*
-            if(UART_rxChar == '\r')
-            {
-                UART_rxDataBuffer[UART_rxLength++]='\r';
-                HAL_UART_Transmit(this->hUart, UART_rxDataBuffer, UART_rxLength, 100);
-            }
-            else
-            {
-                UART_rxDataBuffer[UART_rxLength++] = UART_rxChar;
-            }
-            HAL_UART_Receive_IT(this->hUart, &UART_rxChar, 1);
-            */
-        //}
-    }
-
-    //void HAL_UART_ErrorCallback(UART_HandleTypeDef *UartHandle)
-    //{
-    //    /* Initialization Error */
-    //    uint32_t ercde = UartHandle->ErrorCode;
-    //}
-
 
     void config() {
         *this->hUart = {};
@@ -190,20 +137,8 @@ private:
         this->hUart->Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
         this->hUart->AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
         while (HAL_UART_Init(this->hUart) != HAL_OK);
-
-        //__HAL_UART_ENABLE_IT(this->hUart, UART_IT_RXNE);
-
-        /* USART2 interrupt Init */
-        HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
-        HAL_NVIC_EnableIRQ(USART2_IRQn);
-
-        HAL_UART_Receive_IT(this->hUart, UART_rxChars, 4);
-
-
     };
     //\endcond
 };
 
-
-
-#endif //RIG_UART2_H
+#endif //RIG_UART_H
