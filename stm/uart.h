@@ -79,8 +79,9 @@ public:
      */
     void rqBegin(UARTRequest &rq) override {
         // transfer the data
-        HAL_UART_Transmit(this->hUart, rq.tData, rq.dataLen, 100);
-        rqEnd();
+        // HAL_UART_Transmit(this->hUart, rq.tData, rq.dataLen, 100);
+        // rqEnd();
+        HAL_UART_Transmit_DMA(this->hUart, rq.tData, rq.dataLen);
     }
 
     /**
