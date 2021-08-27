@@ -130,6 +130,7 @@ public:
             case TEMPREQ:
                 rtd = (sensorData[1] << 8) | sensorData[2];
                 if (rtd & 1) { // fault
+                    clearFaults();
                     dTemp = NAN;
                     dTempLin = NAN;
                 } else {
