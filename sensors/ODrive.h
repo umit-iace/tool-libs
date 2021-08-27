@@ -32,6 +32,8 @@ public:
      * Set motor speed by actuator number (M0 and M1) and the angular velocity in revolutions per minute.
      */
     void setSpeed(Actuator actuator, uint32_t revPerMin) {
+        uint8_t UARTbuffer[64];
+        sprintf((char*)UARTbuffer, "v %d %.2f\r\n", actuator, revPerMin);
         UARTRequest *urq = new UARTRequest(UARTbuffer, nullptr, strlen((char*)UARTbuffer), nullptr);
         instance->request(*urq);
     }
