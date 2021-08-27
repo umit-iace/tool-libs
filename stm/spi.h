@@ -252,13 +252,13 @@ private:
 /**
  * helper function for copying data bit by bit into a struct
  * @param dest  struct address
- * @param numbits lenght of struct in bits
- * @param szof  sizeof struct
  * @param src   source buffer
+ * @param numbits length of struct in bits
  * @param len   number of structs to copy
  */
-static void bitwisecopy(uint8_t *dest, size_t numbits, size_t szof, const uint8_t *src, size_t len) {
+static void bitwisecopy(uint8_t *dest, const uint8_t *src, size_t numbits, size_t len) {
     uint32_t srcI = 0;
+    size_t szof = (numbits + 7) / 8;
     for (size_t n = 0; n < len; ++n) {
         dest += n?szof:0;
         for (int destI = numbits - 1; destI >= 0; --destI, ++srcI) {
