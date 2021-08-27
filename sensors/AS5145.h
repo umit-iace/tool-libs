@@ -14,15 +14,18 @@ class AS5145 : ChipSelect {
 private:
     ///\cond false
     // sensor data struct. lsb to msb order.
-    struct __packed SensorData {
-        uint8_t EVEN:1;
-        uint8_t DEC:1;
-        uint8_t INC:1;
-        uint8_t LIN:1;
-        uint8_t COF:1;
-        uint8_t OCF:1;
-        uint16_t POS:12;
-        uint8_t :1;
+    union SensorData {
+        struct __packed  {
+            uint8_t EVEN: 1;
+            uint8_t DEC: 1;
+            uint8_t INC: 1;
+            uint8_t LIN: 1;
+            uint8_t COF: 1;
+            uint8_t OCF: 1;
+            uint16_t POS: 12;
+            uint8_t : 1;
+        };
+        uint32_t u32;
     } *sensor = nullptr;
     const unsigned short NUMBITS = 19;  // number of bits in sensor data struct
     uint8_t *buffer = nullptr;          // temporary data buffer
@@ -74,7 +77,13 @@ public:
      * copy data from buffer into struct.
      */
     void callback(void *cbData) override {
-        bitwisecopy((uint8_t *)sensor, NUMBITS, sizeof(*sensor), buffer, num);
+        flip(buffer, BUFLEN);
+
+        for (int i = 0; i < num; ++i) {
+            uint8_t off = (i+1)*NUMBITS;
+            sensor[i].u32 = *(uint32_t *)&buffer[BUFLEN-1 - off/8] >> (8 - off%8);
+        }
+//        bitwisecopy((uint8_t *)sensor, NUMBITS, sizeof(*sensor), buffer, num);
     }
     ///\endcond
 };
