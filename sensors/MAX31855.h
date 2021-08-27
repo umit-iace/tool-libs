@@ -58,7 +58,8 @@ public:
      * copy data from buffer into struct.
      */
     void callback(void *cbData) override {
-        bitwisecopy((uint8_t *)&sensorData, 32, sizeof(sensorData), buffer, 1);
+        flip(buffer, sizeof buffer);
+        sensorData = (struct sensor &)buffer;
         if (!sensorData.FAULT) {
             sTemp = sensorData.TEMP * 0.25;
             iTemp =  sensorData.INTERNAL * 0.0625;
@@ -71,7 +72,7 @@ public:
 
 private:
     ///\cond false
-    struct __packed {
+    struct sensor {
         uint8_t OC:1;                               ///< \b error: open circuit
         uint8_t SCG:1;                              ///< \b error: short to GND
         uint8_t SCV:1;                              ///< \b error: short to VCC
