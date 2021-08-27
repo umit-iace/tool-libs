@@ -30,6 +30,20 @@
 #include "stm/hal.h"
 #include "utils/RequestQueue.h"
 
+#if defined(HW_SPI_MODE_0)
+#define HW_SPI_CLK_POLARITY SPI_POLARITY_LOW
+#define HW_SPI_CLK_PHASE SPI_PHASE_1EDGE
+#elif defined(HW_SPI_MODE_1)
+#define HW_SPI_CLK_POLARITY SPI_POLARITY_LOW
+#define HW_SPI_CLK_PHASE SPI_PHASE_2EDGE
+#elif defined(HW_SPI_MODE_2)
+#define HW_SPI_CLK_POLARITY SPI_POLARITY_HIGH
+#define HW_SPI_CLK_PHASE SPI_PHASE_1EDGE
+#elif defined(HW_SPI_MODE_3)
+#define HW_SPI_CLK_POLARITY SPI_POLARITY_HIGH
+#define HW_SPI_CLK_PHASE SPI_PHASE_2EDGE
+#endif
+
 //\cond false
 extern "C" {
 SPI_HandleTypeDef hHWSPI;
