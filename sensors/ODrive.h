@@ -1,6 +1,11 @@
 /** @file ODrive.h
  *
  * Copyright (c) 2021 IACE
+ * ------------------------------------
+ * Implements parts of the ODrive ASCII Protocol
+ * Details here: https://docs.odriverobotics.com/ascii-protocol
+ * The underlying UART Driver is referenced in the constructor
+ * ------------------------------------
  */
 
 #ifndef RIG_ODRIVE_H
