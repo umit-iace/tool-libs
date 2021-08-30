@@ -8,6 +8,7 @@
 #include "stm/gpio.h"
 #include "stm/hal.h"
 #include "utils/RequestQueue.h"
+#include <stm32f7xx_hal_i2c.h>
 
 /**
  * struct defining an I2C request.
@@ -193,17 +194,17 @@ public:
         this->hI2C->Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
         while (HAL_I2C_Init(this->hI2C) != HAL_OK);
 
-        HAL_I2C_RegisterCallback(this->hI2C, HAL_I2C_MEM_TX_COMPLETE_CB_ID, transferComplete);
-        HAL_I2C_RegisterCallback(this->hI2C, HAL_I2C_MEM_RX_COMPLETE_CB_ID, transferComplete);
-        HAL_I2C_RegisterCallback(this->hI2C, HAL_I2C_MASTER_TX_COMPLETE_CB_ID, transferComplete);
-        HAL_I2C_RegisterCallback(this->hI2C, HAL_I2C_MASTER_RX_COMPLETE_CB_ID, transferComplete);
+        // HAL_I2C_RegisterCallback(this->hI2C, HAL_I2C_MEM_TX_COMPLETE_CB_ID, transferComplete);
+        // HAL_I2C_RegisterCallback(this->hI2C, HAL_I2C_MEM_RX_COMPLETE_CB_ID, transferComplete);
+        // HAL_I2C_RegisterCallback(this->hI2C, HAL_I2C_MASTER_TX_COMPLETE_CB_ID, transferComplete);
+        // HAL_I2C_RegisterCallback(this->hI2C, HAL_I2C_MASTER_RX_COMPLETE_CB_ID, transferComplete);
 
-        HAL_I2C_RegisterCallback(this->hI2C, HAL_I2C_ERROR_CB_ID, errorCallback);
+        // HAL_I2C_RegisterCallback(this->hI2C, HAL_I2C_ERROR_CB_ID, errorCallback);
 
-        HAL_NVIC_SetPriority(iI2cErrorInterrupt, iI2cErrorPrePrio, iI2cErrorSubPrio);
-        HAL_NVIC_EnableIRQ(iI2cErrorInterrupt);
-        HAL_NVIC_SetPriority(iI2cEventInterrupt, iI2cEventPrePrio, iI2cEventSubPrio);
-        HAL_NVIC_EnableIRQ(iI2cEventInterrupt);
+        // HAL_NVIC_SetPriority(iI2cErrorInterrupt, iI2cErrorPrePrio, iI2cErrorSubPrio);
+        // HAL_NVIC_EnableIRQ(iI2cErrorInterrupt);
+        // HAL_NVIC_SetPriority(iI2cEventInterrupt, iI2cEventPrePrio, iI2cEventSubPrio);
+        // HAL_NVIC_EnableIRQ(iI2cEventInterrupt);
     }
 
 private:

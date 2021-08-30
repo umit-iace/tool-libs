@@ -21,46 +21,52 @@ public:
     /**
      * initialize the sensor
      */
-    AS5048B(bool A0, bool A1) {
-        address = AS5048B_ADDR || ((A0 ? 1 : 0) << 0) || ((A1 ? 1 : 0) << 1)
+    AS5048B(HardwareI2C *i2cinstance, bool A0, bool A1) {
+        address = AS5048B_ADDR || ((A0 ? 1 : 0) << 0) || ((A1 ? 1 : 0) << 1);
+        instance = i2cinstance;
     }
 
     /**
      * start async read of angle
      */
     void measure() {
-		
-		readAngleData();
-		readAngleData();
-		
-		uint8_t upperbyte = upperData[0];
-		uint8_t lowerbyte = lowerData[0];
-		
-		// this code is based on an arduino library for the AS5048B: https://github.com/sosandroid/AMS_AS5048B
-		// the datasheet of AS5048B mentions other bit patterns, but this seems to work fine, don't know why
-		uint16_t rawangle = ((uint16_t)upperbyte << 6);
-		rawangle += (lowerbyte & 0x3F);
+        readUpperAngleData();
+        readLowerAngleData();
+    }
 
-		// the length of rawangle is 8+6 bit, so a total of 16384 in decimal
-		angle = ((float)rawangle / 16384) * 360;
+    /**
+     * get angular position values in degrees
+     * @return value in rotational degrees
+     */
+    double getAngle() {
+        uint8_t upperbyte = upperData[0];
+        uint8_t lowerbyte = lowerData[0];
 
-		if ((Angle_lastangle - angle) > 180)
-		{
-			// positive wrap around
-			Angle_wraps +=1;
-		}
-		else if ((Angle_lastangle - angle) < -180)
-		{
-			// negative wrap around
-			Angle_wraps -=1;
-		}
-		else
-		{
-			// no wrap occurance
-		}
-		Angle_current = Angle_wraps * 360 + angle;
-		Angle_lastangle = angle;
-		
+        // this code is based on an arduino library for the AS5048B: https://github.com/sosandroid/AMS_AS5048B
+        // the datasheet of AS5048B mentions other bit patterns, but this seems to work fine, don't know why
+        uint16_t rawangle = ((uint16_t)upperbyte << 6);
+        rawangle += (lowerbyte & 0x3F);
+
+        // the length of rawangle is 8+6 bit, so a total of 16384 in decimal
+        float angle = ((float)rawangle / 16384) * 360;
+
+        if ((Angle_lastangle - angle) > 180)
+        {
+            // positive wrap around
+            Angle_wraps +=1;
+        }
+        else if ((Angle_lastangle - angle) < -180)
+        {
+            // negative wrap around
+            Angle_wraps -=1;
+        }
+        else
+        {
+            // no wrap occurance
+        }
+        Angle_current = Angle_wraps * 360 + angle;
+        Angle_lastangle = angle;
+        return Angle_current;
     }
 
 
@@ -68,6 +74,8 @@ private:
     ///\cond false
 	
 	uint8_t address = AS5048B_ADDR;
+
+    HardwareI2C *instance;
 	
     uint8_t upperData[2] = {};
     uint8_t lowerData[2] = {};
@@ -84,7 +92,7 @@ private:
                 1,
                 I2CRequest::I2C_MEM_READ,
                 nullptr);
-        HardwareI2C::master()->request(angleread);
+        instance->request(angleread);
     }
 
     void readLowerAngleData() {
@@ -95,7 +103,7 @@ private:
                 1,
                 I2CRequest::I2C_MEM_READ,
                 nullptr);
-        HardwareI2C::master()->request(angleread);
+        instance->request(angleread);
     }
 
 
