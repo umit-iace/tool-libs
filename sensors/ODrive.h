@@ -43,6 +43,16 @@ public:
         instance->request(*urq);
     }
     
+    /**
+     * Get current motor speed by actuator number (M0 and M1) in revolutions per minute.
+     */
+    float getActualSpeed(Actuator actuator) {
+        uint8_t UARTbuffer[64];
+        sprintf((char*)UARTbuffer, "f %d\r\n", actuator);
+        UARTRequest *urq = new UARTRequest(UARTbuffer, nullptr, strlen((char*)UARTbuffer), nullptr);
+        instance->request(*urq);
+    }
+    
 private:
     
     HardwareUART *instance = nullptr;

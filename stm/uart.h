@@ -25,6 +25,8 @@ public:
     uint32_t dataLen;   ///< number of bytes to transfer
     void *cbData;     ///< data to use in callback
 
+    void (*callback)(uint8_t *data);
+
     /**
      * Standard constructor
      */
@@ -37,8 +39,9 @@ public:
      * @param dataLen
      * @param cbData
      */
-    UARTRequest(uint8_t *tData, uint8_t *rData, uint32_t dataLen, void *cbData) :
+    UARTRequest(uint8_t *tData, uint8_t *rData, uint32_t dataLen, void *cbData, void (*callback)(uint8_t *data) = nullptr) :
     tData(tData), rData(rData), dataLen(dataLen), cbData(cbData) {
+        this->callback = callback;
     }
 
     ~UARTRequest() {
@@ -78,9 +81,6 @@ public:
      * @param rq
      */
     void rqBegin(UARTRequest &rq) override {
-        // transfer the data
-        // HAL_UART_Transmit(this->hUart, rq.tData, rq.dataLen, 100);
-        // rqEnd();
         HAL_UART_Transmit_DMA(this->hUart, rq.tData, rq.dataLen);
     }
 
@@ -93,6 +93,30 @@ public:
         HAL_UART_Abort(this->hUart);
         rqEnd();
     }
+
+
+    /**
+    * complete the data transfer, signal request completion
+    * @param hi2c
+    */
+    static void transferComplete(UART_HandleTypeDef *huart) {
+        auto r = pThis->rqCurrent();
+        if (r.callback) {
+            r.callback(r.rData);
+        }
+        // signal request complete
+        pThis->rqEnd();
+    }
+
+    /**
+     * error callback.
+     *
+     * abort current request.
+     */
+    static void errorCallback(UART_HandleTypeDef *hI2C) {
+        pThis->rqEnd();
+    }
+
 
     /**
      * Constructor, that initialize the RX and TX pins and configure UART instance
@@ -118,10 +142,12 @@ public:
         this->DMAChannel = DMAChannel;
         this->DMAHandle = DMAHandle;
         this->config();
+        pThis = this;
     }
 
 
     //\cond false
+    inline static HardwareUART *pThis = nullptr;
     UART_HandleTypeDef *hUart;
     //\endcond
 
@@ -132,6 +158,28 @@ private:
     DMA_Stream_TypeDef *DMAHandle;
     uint32_t DMAChannel;
     DMA_HandleTypeDef hdma_usart_tx;
+
+
+
+    void DMA1_Stream6_IRQHandler(void)
+    {
+        HAL_DMA_IRQHandler(&hdma_usart_tx);
+    }
+
+    void USART2_IRQHandler(void)
+    {
+        HAL_UART_IRQHandler(this->hUart);
+    }
+
+    void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+    {
+        HAL_GPIO_TogglePin(GPIOG, GPIO_PIN_3);
+    }
+
+    void HAL_UART_TxHalfCpltCallback(UART_HandleTypeDef *huart)
+    {
+        HAL_GPIO_TogglePin(GPIOG, GPIO_PIN_3);
+    }
 
     void config() {
         *this->hUart = {};
@@ -147,6 +195,9 @@ private:
         this->hUart->AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
         while (HAL_UART_Init(this->hUart) != HAL_OK);
 
+        HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
+        HAL_NVIC_EnableIRQ(USART2_IRQn);
+
         if (DMAHandle != nullptr)
         {
             hdma_usart_tx.Instance = DMAHandle;
@@ -161,7 +212,15 @@ private:
             hdma_usart_tx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
             while(HAL_DMA_Init(&hdma_usart_tx) != HAL_OK);
             __HAL_LINKDMA(this->hUart,hdmatx,hdma_usart_tx);
+            // HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 0, 0);
+            // HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
         }
+
+        // HAL_UART_RegisterCallback(this->hUart, HAL_UART_TX_COMPLETE_CB_ID, transferComplete);
+        // HAL_UART_RegisterCallback(this->hUart, HAL_UART_TX_HALFCOMPLETE_CB_ID, transferComplete);
+        // HAL_UART_RegisterCallback(this->hUart, HAL_UART_RX_COMPLETE_CB_ID, transferComplete);
+        // HAL_UART_RegisterCallback(this->hUart, HAL_UART_ERROR_CB_ID, errorCallback);
+
 
 
 
