@@ -12,6 +12,8 @@
 #define RIG_ODRIVE_H
 
 #include "stm/uart.h"
+#include <cstdio>
+#include <cstring>
 
 class ODrive {
     
