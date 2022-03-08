@@ -2,7 +2,7 @@
 tool-libs
 =========
 
-This is a collection of libraries used at the Institute of Automation and Control Engineering (IACE) at the UMIT-TIROL. 
+This is a collection of libraries used at the Institute of Automation and Control Engineering (IACE) at the UMIT-TIROL.
 It includes the following components:
 
 * Sensors - Classes implementing specific sensors used in our test rigs
@@ -12,6 +12,8 @@ It includes the following components:
   - ``AS1545`` - hall effect based angular position measurement
 
   - ``IMU3000`` - inertial measurement unit 3 ax Gyro + 3 ax Accelerometer
+
+  - ``BMI160`` - 6axis IMU
 
   - ``MAX31855`` - temperature measurement using the MAX31855 with thermocouples
 
