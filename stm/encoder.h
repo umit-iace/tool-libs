@@ -8,6 +8,7 @@
 
 #include "stm/gpio.h"
 #include "stm/hal.h"
+#include "stm/timer.h"
 
 class Encoder {
 public:
@@ -35,13 +36,9 @@ public:
      *    a 6cm radius wheel:
      *    \verbatim factor = 1 / pow(2, 10) * M_PI * 0.06; \endverbatim
      */
-    Encoder(TIM_TypeDef *Tim,
-            uint32_t pinA, GPIO_TypeDef *portA, uint8_t alternateA,
-            uint32_t pinB, GPIO_TypeDef *portB, uint8_t alternateB,
-            double dFactor)
-            : dFactor(dFactor), tim(HardwareTimer(Tim, 0, 0xffff)) {
-        AFIO(pinA, portA, alternateA);
-        AFIO(pinB, portB, alternateB);
+    Encoder(TIM_TypeDef *Tim, double dFactor) :
+            tim(HardwareTimer(Tim, 0, 0xffff)),
+            dFactor(dFactor) {
 
         TIM_HandleTypeDef *htim = tim.handle();
         TIM_Encoder_InitTypeDef sConfig = {};
@@ -109,6 +106,7 @@ public:
         __HAL_TIM_SET_COUNTER(tim.handle(), 0);
         iLastVal = 0;
         dPosition = 0;
+        dSpeed = 0;
     }
 
 private:
