@@ -16,12 +16,13 @@ struct BMI160 : I2CDevice {
     struct Axes {
         double x, y, z;
     };
+    RequestQueue<I2CRequest> *bus;
 
-    BMI160(enum ADDR addr=DEFAULT) : I2CDevice(addr) {
+    BMI160(RequestQueue<I2CRequest> *bus, enum ADDR addr=DEFAULT) : I2CDevice(addr), bus(bus) {
         writeReg(0x7e, 0x11);   // enable accelerometer
         writeReg(0x7e, 0x15);   // enable gyroscope
         uint8_t reg = 0x0c;     // set read pointer to gyro data
-        HardwareI2C::master()->request(new I2CRequest(
+        bus->request(new I2CRequest(
                 this,
                 0,
                 &reg,
@@ -35,7 +36,7 @@ struct BMI160 : I2CDevice {
      * start async read-out of sensor data
      */
     void measure() {
-        HardwareI2C::master()->request(new I2CRequest(
+        bus->request(new I2CRequest(
                 this,
                 0,
                 (uint8_t *) this->raw,
@@ -51,7 +52,7 @@ struct BMI160 : I2CDevice {
     double factor_a{9.81 / 16384}, factor_g{3.14 / 180 / 16.4};
 
     void writeReg(uint8_t reg, uint8_t val) {
-        HardwareI2C::master()->request(new I2CRequest(
+        bus->request(new I2CRequest(
                 this,
                 reg,
                 &val,
