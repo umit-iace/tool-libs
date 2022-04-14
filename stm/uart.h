@@ -5,7 +5,6 @@
 #ifndef STM_UART_H
 #define STM_UART_H
 
-#include "stm/gpio.h"
 #include "stm/hal.h"
 
 /**
@@ -14,50 +13,28 @@
 class HardwareUART {
 public:
     /**
-     * Constructor, that initialize the RX and TX pins and configure UART instance
-     * @param iRXPin RX pin address
-     * @param gpioRXPort definition of RX port
-     * @param iRXAlternate address of alternate RX pin functionality
-     * @param iTXPin TX pin address
-     * @param gpioTXPort definition of TX port
-     * @param iTXAlternate address of alternate TX pin functionality
+     * Initialize the peripheral
+     *
+     * make sure to also initialize the corresponding rx/tx AFIO pins
+     *
      * @param dUsart definition of used UART
      * @param iBaudRate baud rate
-     * @param hUart uart handle
      */
-    HardwareUART(uint32_t iRXPin, GPIO_TypeDef *gpioRXPort, uint8_t iRXAlternate,
-                 uint32_t iTXPin, GPIO_TypeDef *gpioTXPort, uint8_t iTXAlternate,
-                 USART_TypeDef *dUsart, uint32_t iBaudRate, UART_HandleTypeDef *hUart) :
-                    hUart(hUart), dUsart(dUsart), iBaudRate(iBaudRate) {
-        AFIO(iRXPin, gpioRXPort, iRXAlternate);
-        AFIO(iTXPin, gpioTXPort, iTXAlternate);
-
-        this->config();
+    HardwareUART(USART_TypeDef *dUsart, uint32_t iBaudRate) {
+        handle.Instance = dUsart;
+        handle.Init = {
+                .BaudRate = iBaudRate,
+                .WordLength = UART_WORDLENGTH_8B,
+                .StopBits = UART_STOPBITS_1,
+                .Parity = UART_PARITY_NONE,
+                .Mode = UART_MODE_TX_RX,
+                .HwFlowCtl = UART_HWCONTROL_NONE,
+                .OverSampling = UART_OVERSAMPLING_16,
+        };
+        while (HAL_UART_Init(&handle) != HAL_OK);
     }
 
-    //\cond false
-    UART_HandleTypeDef *hUart;
-    //\endcond
-
-private:
-    //\cond false
-    USART_TypeDef *dUsart;
-
-    uint32_t iBaudRate;
-
-    void config() {
-        *this->hUart = {};
-        this->hUart->Instance = this->dUsart;
-        this->hUart->Init.BaudRate = this->iBaudRate;
-        this->hUart->Init.WordLength = UART_WORDLENGTH_8B;
-        this->hUart->Init.StopBits = UART_STOPBITS_1;
-        this->hUart->Init.Parity = UART_PARITY_NONE;
-        this->hUart->Init.Mode = UART_MODE_TX_RX;
-        this->hUart->Init.HwFlowCtl = UART_HWCONTROL_NONE;
-        this->hUart->Init.OverSampling = UART_OVERSAMPLING_16;
-        while (HAL_UART_Init(this->hUart) != HAL_OK);
-    };
-    //\endcond
+    UART_HandleTypeDef handle{};
 };
 
 #endif //STM_UART_H
