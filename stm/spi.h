@@ -30,6 +30,20 @@
 #include "stm/hal.h"
 #include "utils/RequestQueue.h"
 
+#if defined(HW_SPI_MODE_0)
+#define HW_SPI_CLK_POLARITY SPI_POLARITY_LOW
+#define HW_SPI_CLK_PHASE SPI_PHASE_1EDGE
+#elif defined(HW_SPI_MODE_1)
+#define HW_SPI_CLK_POLARITY SPI_POLARITY_LOW
+#define HW_SPI_CLK_PHASE SPI_PHASE_2EDGE
+#elif defined(HW_SPI_MODE_2)
+#define HW_SPI_CLK_POLARITY SPI_POLARITY_HIGH
+#define HW_SPI_CLK_PHASE SPI_PHASE_1EDGE
+#elif defined(HW_SPI_MODE_3)
+#define HW_SPI_CLK_POLARITY SPI_POLARITY_HIGH
+#define HW_SPI_CLK_PHASE SPI_PHASE_2EDGE
+#endif
+
 //\cond false
 extern "C" {
 SPI_HandleTypeDef hHWSPI;
@@ -88,11 +102,6 @@ public:
     void *cbData;     ///< data to use in callback
 
     /**
-     * Standard constructor
-     */
-    SPIRequest() {};
-
-    /**
      * @param cs
      * @param dir
      * @param tData
@@ -114,16 +123,6 @@ public:
         rData = nullptr;
         dataLen = 0;
         cbData = nullptr;
-    }
-
-    SPIRequest &operator=(const SPIRequest &other) {
-        cs = other.cs;
-        dir = other.dir;
-        tData = other.tData;
-        rData = other.rData;
-        dataLen = other.dataLen;
-        cbData = other.cbData;
-        return *this;
     }
 };
 
@@ -147,20 +146,20 @@ public:
      * processes a request in the queue.
      * @param rq
      */
-    void rqBegin(SPIRequest &rq) override {
+    void rqBegin(SPIRequest *rq) override {
         // activate the chip
-        rq.cs->selectChip(true);
+        rq->cs->selectChip(true);
 
         // transfer the data
-        switch (rq.dir) {
+        switch (rq->dir) {
         case SPIRequest::MOSI:
-            HAL_SPI_Transmit_IT(&this->hSPI, rq.tData, rq.dataLen);
+            HAL_SPI_Transmit_IT(&this->hSPI, rq->tData, rq->dataLen);
             break;
         case SPIRequest::MISO:
-            HAL_SPI_Receive_IT(&this->hSPI, rq.rData, rq.dataLen);
+            HAL_SPI_Receive_IT(&this->hSPI, rq->rData, rq->dataLen);
             break;
         case SPIRequest::BOTH:
-            HAL_SPI_TransmitReceive_IT(&this->hSPI, rq.tData, rq.rData, rq.dataLen);
+            HAL_SPI_TransmitReceive_IT(&this->hSPI, rq->tData, rq->rData, rq->dataLen);
             break;
         }
     }
@@ -170,9 +169,9 @@ public:
      *
      * timeout -> abort
      */
-     void rqTimeout(SPIRequest &rq) override {
+     void rqTimeout(SPIRequest *rq) override {
          HAL_SPI_Abort_IT(&this->hSPI);
-         rq.cs->selectChip(false);
+         rq->cs->selectChip(false);
          rqEnd();
      }
 
@@ -182,12 +181,12 @@ private:
      * @param hspi
      */
     static void transferComplete(SPI_HandleTypeDef *hspi) {
-        auto &r = pThis->rqCurrent();
+        auto r = pThis->rqCurrent();
         // deactivate chip
-        r.cs->selectChip(false);
+        r->cs->selectChip(false);
         // signal data arrival
-        if (r.cbData) {
-            r.cs->callback(r.cbData);
+        if (r->cbData) {
+            r->cs->callback(r->cbData);
         }
         // signal request complete
         pThis->rqEnd();
@@ -253,26 +252,34 @@ private:
 /**
  * helper function for copying data bit by bit into a struct
  * @param dest  struct address
- * @param numbits lenght of struct in bits
- * @param szof  sizeof struct
  * @param src   source buffer
+ * @param numbits length of struct in bits
  * @param len   number of structs to copy
  */
-static void bitwisecopy(uint8_t *dest, size_t numbits, size_t szof, const uint8_t *src, size_t len) {
+static void bitwisecopy(uint8_t *dest, const uint8_t *src, size_t numbits, size_t len) {
     uint32_t srcI = 0;
+    size_t szof = (numbits + 7) / 8;
     for (size_t n = 0; n < len; ++n) {
-        uint32_t destI = numbits;
         dest += n?szof:0;
-        do {
-            --destI;
+        for (int destI = numbits - 1; destI >= 0; --destI, ++srcI) {
+            dest[destI / 8] &= ~(1U << destI % 8);
+            dest[destI / 8] |= ((src[srcI / 8] >> (7 - srcI % 8)) & 0x1U) << destI % 8;
+        }
+    }
+}
 
-            *(dest + destI / 8) &= ~(1U << destI % 8);
-            *(dest + destI / 8) |= ((*(src + srcI / 8) >> (7 - srcI % 8)) & 0x1U) << destI % 8;
-
-            ++srcI;
-        } while (destI > 0);
+/**
+ * helper function for changing endianness of a buffer
+ * @param buffer address of buffer
+ * @param len length of buffer
+ */
+static void flip(uint8_t *buffer, size_t len) {
+    uint8_t tmp;
+    for (size_t i = 0; i < len / 2; ++i) {
+        tmp = buffer[i];
+        buffer[i] = buffer[len - 1 - i];
+        buffer[len - 1 - i] = tmp;
     }
 }
 
 #endif //STM_SPI_H
-

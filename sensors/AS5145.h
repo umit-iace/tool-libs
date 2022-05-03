@@ -10,19 +10,22 @@
 /**
  * Class describing a chain of AS5145 Hall sensors
  */
-class HallSensor : public ChipSelect {
+class AS5145 : ChipSelect {
 private:
     ///\cond false
     // sensor data struct. lsb to msb order.
-    struct __packed SensorData {
-        uint8_t EVEN:1;
-        uint8_t DEC:1;
-        uint8_t INC:1;
-        uint8_t LIN:1;
-        uint8_t COF:1;
-        uint8_t OCF:1;
-        uint16_t POS:12;
-        uint8_t :1;
+    union SensorData {
+        struct __packed  {
+            uint8_t EVEN: 1;
+            uint8_t DEC: 1;
+            uint8_t INC: 1;
+            uint8_t LIN: 1;
+            uint8_t COF: 1;
+            uint8_t OCF: 1;
+            uint16_t POS: 12;
+            uint8_t : 1;
+        };
+        uint32_t u32;
     } *sensor = nullptr;
     const unsigned short NUMBITS = 19;  // number of bits in sensor data struct
     uint8_t *buffer = nullptr;          // temporary data buffer
@@ -37,7 +40,7 @@ public:
      * @param port GPIO port of chip select line
      * @param n     number of sensors attached to daisy-chain
      */
-    HallSensor(uint32_t pin, GPIO_TypeDef *port, int n) : ChipSelect(pin, port),
+    AS5145(uint32_t pin, GPIO_TypeDef *port, int n) : ChipSelect(pin, port),
             BUFLEN((n * NUMBITS) / 8UL + (n * NUMBITS % 8 ? 1 : 0)) // calculate bytes needed for n sensors
             {
         buffer = new uint8_t[BUFLEN]();
@@ -57,8 +60,14 @@ public:
      * request measurement of sensor data
      */
     void sense() {
-        SPIRequest r = {this, SPIRequest::MISO, nullptr, buffer, BUFLEN, (void *)true};
-        HardwareSPI::master()->request(r);
+        HardwareSPI::master()->request(new SPIRequest(
+                this,
+                SPIRequest::MISO,
+                nullptr,
+                buffer,
+                BUFLEN,
+                (void *)true)
+        );
     }
 
     ///\cond false
@@ -68,7 +77,13 @@ public:
      * copy data from buffer into struct.
      */
     void callback(void *cbData) override {
-        bitwisecopy((uint8_t *)sensor, NUMBITS, sizeof(*sensor), buffer, num);
+        flip(buffer, BUFLEN);
+
+        for (int i = 0; i < num; ++i) {
+            uint8_t off = (i+1)*NUMBITS;
+            sensor[i].u32 = *(uint32_t *)&buffer[BUFLEN-1 - off/8] >> (8 - off%8);
+        }
+//        bitwisecopy((uint8_t *)sensor, NUMBITS, sizeof(*sensor), buffer, num);
     }
     ///\endcond
 };

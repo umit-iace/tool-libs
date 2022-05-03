@@ -48,10 +48,8 @@ public:
      * @param pre priority
      * @param sub priority
      */
-    void configCallback(void (*callback)(TIM_HandleTypeDef *), IRQn_Type irq, uint32_t pre, uint32_t sub) {
+    void configCallback(void (*callback)(TIM_HandleTypeDef *)) {
         HAL_TIM_RegisterCallback(&hTim, HAL_TIM_PERIOD_ELAPSED_CB_ID, callback);
-        HAL_NVIC_SetPriority(irq, pre, sub);
-        HAL_NVIC_EnableIRQ(irq);
     }
 
     /**
