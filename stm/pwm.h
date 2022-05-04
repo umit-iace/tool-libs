@@ -6,6 +6,7 @@
 #define STM_PWM_H
 
 #include "stm/hal.h"
+#include "stm/timer.h"
 
 /**
  * @brief Template class for hardware based PWM outputs
@@ -17,19 +18,27 @@ public:
      * @param perc [0..1]
      */
     void pwm(double perc) {
-        __HAL_TIM_SET_COMPARE(hTim, channel, perc * period);
+        ticks(perc * period);
     }
+
+    /**
+     * set pwm as value of timer ticks
+     * @param ticks
+     */
+     void ticks(uint32_t ticks) {
+         __HAL_TIM_SET_COMPARE(hTim, channel, ticks);
+     }
 
     /**
      * Initialize Timer Channel
      *
      * make sure to initialize the corresponding AFIO pin
      *
-     * @param hTim handle of configured HardwareTimer
+     * @param tim pointer to HardwareTimer
      * @param chan timer channel number (TIM_CHANNEL_x)
      */
-    HardwarePWM(TIM_HandleTypeDef *hTim, uint32_t chan) :
-            hTim(hTim), channel(chan), period(hTim->Init.Period) {
+    HardwarePWM(HardwareTimer *tim, uint32_t chan) :
+            hTim(tim->handle()), channel(chan), period(hTim->Init.Period) {
         // pwm config of timer
         while (HAL_TIM_PWM_Init(hTim) != HAL_OK);
 
