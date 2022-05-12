@@ -44,12 +44,6 @@
 #define HW_SPI_CLK_PHASE SPI_PHASE_2EDGE
 #endif
 
-//\cond false
-extern "C" {
-SPI_HandleTypeDef hHWSPI;
-};
-//\endcond
-
 /**
  * Class abstracting an SPI device.
  * Implement your SPI device with this as a base class, then you can use the
@@ -153,13 +147,13 @@ public:
         // transfer the data
         switch (rq->dir) {
         case SPIRequest::MOSI:
-            HAL_SPI_Transmit_IT(&this->hSPI, rq->tData, rq->dataLen);
+            HAL_SPI_Transmit_IT(&handle, rq->tData, rq->dataLen);
             break;
         case SPIRequest::MISO:
-            HAL_SPI_Receive_IT(&this->hSPI, rq->rData, rq->dataLen);
+            HAL_SPI_Receive_IT(&handle, rq->rData, rq->dataLen);
             break;
         case SPIRequest::BOTH:
-            HAL_SPI_TransmitReceive_IT(&this->hSPI, rq->tData, rq->rData, rq->dataLen);
+            HAL_SPI_TransmitReceive_IT(&handle, rq->tData, rq->rData, rq->dataLen);
             break;
         }
     }
@@ -170,7 +164,7 @@ public:
      * timeout -> abort
      */
      void rqTimeout(SPIRequest *rq) override {
-         HAL_SPI_Abort_IT(&this->hSPI);
+         HAL_SPI_Abort_IT(&handle);
          rq->cs->selectChip(false);
          rqEnd();
      }
@@ -193,59 +187,45 @@ private:
     }
 
 public:
-    static HardwareSPI *master() {
-        if (!pThis) {
-            pThis = new HardwareSPI();
-        }
-        return pThis;
-    }
+    struct Config {
+        SPI_TypeDef *spi;
+        uint32_t presc;
+        uint32_t pol;
+        uint32_t pha;
+        uint8_t timeout;
+        AFIO miso, mosi, sck;
+    };
+    HardwareSPI(
+            Config conf
+            ) : RequestQueue(50, conf.timeout) {
+        handle = {
+            .Instance = conf.spi,
+            .Init = {
+                .Mode = SPI_MODE_MASTER,
+                .Direction = SPI_DIRECTION_2LINES,
+                .DataSize = SPI_DATASIZE_8BIT,
+                .CLKPolarity = conf.pol,
+                .CLKPhase = conf.pha,
+                .NSS = SPI_NSS_SOFT,
+                .BaudRatePrescaler = conf.presc,
+                .FirstBit = SPI_FIRSTBIT_MSB,
+                .TIMode = SPI_TIMODE_DISABLE,
+                .CRCCalculation = SPI_CRCCALCULATION_DISABLE,
+                .NSSPMode = SPI_NSS_PULSE_DISABLE,
+            },
+        };
+        while(HAL_SPI_Init(&handle) != HAL_OK);
 
-private:
-    /**
-     * Initialize the MISO, MOSI, and CLK pins and configure SPI instance
-     */
-    HardwareSPI() : RequestQueue(50, HW_SPI_TIMEOUT) {
-        AFIO(HW_SPI_MISO_PIN, HW_SPI_MISO_PORT, HW_SPI_MISO_ALTERNATE,
-            GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
-        AFIO(HW_SPI_MOSI_PIN, HW_SPI_MOSI_PORT, HW_SPI_MOSI_ALTERNATE,
-            GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
-        AFIO(HW_SPI_SCK_PIN, HW_SPI_SCK_PORT, HW_SPI_SCK_ALTERNATE,
-            GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
-#if !defined(HW_SPI) || !defined(HW_SPI_BAUD_PRESCALER) ||\
-    !defined(HW_SPI_CLK_POLARITY) || !defined(HW_SPI_CLK_PHASE)
-#error "you have not set all necessary configuration defines!"
-#endif
-        this->config(HW_SPI, HW_SPI_BAUD_PRESCALER,
-                HW_SPI_CLK_POLARITY, HW_SPI_CLK_PHASE);
+        HAL_SPI_RegisterCallback(&handle, HAL_SPI_TX_COMPLETE_CB_ID, transferComplete);
+        HAL_SPI_RegisterCallback(&handle, HAL_SPI_RX_COMPLETE_CB_ID, transferComplete);
+        HAL_SPI_RegisterCallback(&handle, HAL_SPI_TX_RX_COMPLETE_CB_ID, transferComplete);
+
+        pThis = this;
     }
 
     //\cond false
     inline static HardwareSPI *pThis = nullptr;
-    SPI_HandleTypeDef &hSPI = hHWSPI;
-
-    void config(SPI_TypeDef *dSPI, uint32_t iBaudPresc,
-            uint32_t iClkPol, uint32_t iClkPhase) {
-        hSPI.Instance = dSPI;
-        hSPI.Init.Mode = SPI_MODE_MASTER;
-        hSPI.Init.Direction = SPI_DIRECTION_2LINES;
-        hSPI.Init.DataSize = SPI_DATASIZE_8BIT;
-        hSPI.Init.CLKPolarity = iClkPol;
-        hSPI.Init.CLKPhase = iClkPhase;
-        hSPI.Init.NSS = SPI_NSS_SOFT;
-        hSPI.Init.BaudRatePrescaler = iBaudPresc;
-        hSPI.Init.FirstBit = SPI_FIRSTBIT_MSB;
-        hSPI.Init.TIMode = SPI_TIMODE_DISABLE;
-        hSPI.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-        hSPI.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
-        while(HAL_SPI_Init(&hSPI) != HAL_OK);
-
-        HAL_SPI_RegisterCallback(&hSPI, HAL_SPI_TX_COMPLETE_CB_ID, transferComplete);
-        HAL_SPI_RegisterCallback(&hSPI, HAL_SPI_RX_COMPLETE_CB_ID, transferComplete);
-        HAL_SPI_RegisterCallback(&hSPI, HAL_SPI_TX_RX_COMPLETE_CB_ID, transferComplete);
-
-        HAL_NVIC_SetPriority(SPI_IT_IRQn, SPI_IT_PRIO);
-        HAL_NVIC_EnableIRQ(SPI_IT_IRQn);
-    }
+    SPI_HandleTypeDef handle{};
     //\endcond
 };
 
