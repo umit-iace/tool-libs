@@ -2,23 +2,6 @@
  *
  * Copyright (c) 2019 IACE
  *
- **********************************************
- * When using this, use the following line in your interrupt header
- * file (e.g. `stm32f7xx_it.h`):
- *
- *      extern SPI_HandleTypeDef hHWSPI;
- *
- * and put the following interrupt handler in your interrupt implementation
- * file (e.g. `stm32f7xx_it.c`)
- *
- * (**attention**: configure the correct SPI peripheral according to your
- * defined HW_SPI):
- *
- *      void SPI3_IRQHandler(void) {
- *          HAL_SPI_IRQHandler(&hHWSPI);
- *      }
- *
- **********************************************
  */
 
 #ifndef STM_SPI_H
@@ -54,12 +37,8 @@ class ChipSelect {
     DIO pin;
     //\endcond
 public:
-    /**
-     * @param iCSPIN chip select pin number
-     * @param gpioCSPort chip select pin port
-     */
-    ChipSelect(uint32_t iCSPIN, GPIO_TypeDef *gpioCSPort) :
-            pin(iCSPIN, gpioCSPort) {
+    ChipSelect(DIO cs) :
+            pin(cs) {
         this->selectChip(false);
     }
 
@@ -81,8 +60,7 @@ public:
  * struct defining an SPI request.
  * use this when requesting data from the \ref HardwareSPI
  */
-class SPIRequest {
-public:
+struct SPIRequest {
     ChipSelect *cs;     ///< pointer the \ref ChipSelect instance requesting data
     /// direction the data should travel
     enum eDir {
@@ -94,30 +72,6 @@ public:
     uint8_t *rData;     ///< pointer to receive buffer
     uint32_t dataLen;   ///< number of bytes to transfer
     void *cbData;     ///< data to use in callback
-
-    /**
-     * @param cs
-     * @param dir
-     * @param tData
-     * @param rData
-     * @param dataLen
-     * @param cbData
-     */
-    SPIRequest(ChipSelect *cs, enum eDir dir, uint8_t *tData, uint8_t *rData,
-            uint32_t dataLen, void *cbData) :
-            cs(cs), dir(dir), tData(tData), rData(rData),
-            dataLen(dataLen), cbData(cbData) {
-    }
-
-    ~SPIRequest() {
-        tData = nullptr;
-        cs = nullptr;
-        dir = MOSI;
-        tData = nullptr;
-        rData = nullptr;
-        dataLen = 0;
-        cbData = nullptr;
-    }
 };
 
 /**
