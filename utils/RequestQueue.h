@@ -82,6 +82,7 @@ protected:
      */
     short rqAdd(Request *r) {
         if (bFull) {
+            delete r;
             return -1;
         }
         queue[iInIndex] = r;
