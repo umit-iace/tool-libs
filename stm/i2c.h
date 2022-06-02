@@ -180,15 +180,21 @@ private:
     //\endcond
 
 public:
-    HardwareI2C(I2C_TypeDef *i2c, uint32_t baud, uint32_t timeout) :
-            RequestQueue(50, timeout)
+    struct Conf {
+        I2C_TypeDef *i2c;
+        AFIO sda, scl;
+        uint32_t baud;
+        uint32_t timeout;
+    };
+    HardwareI2C(Conf conf) :
+            RequestQueue(50, conf.timeout)
     {
-        handle.Instance = i2c;
+        handle.Instance = conf.i2c;
         handle.Init = {
-#if defined(STM32F407xx)
-            .ClockSpeed = baud,
+#if defined(STM32F4)
+            .ClockSpeed = conf.baud,
             .DutyCycle = I2C_DUTYCYCLE_2,
-#elif defined(STM32F767xx)
+#elif defined(STM32F7)
             // shoot me now
             // hardcoded to 400kHz if i2cclk 216MHz
             .Timing = 0x7 << 28 | // presc
