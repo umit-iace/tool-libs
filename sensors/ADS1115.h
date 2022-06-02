@@ -39,6 +39,8 @@ private:
         15.625,
         7.8125
     };
+
+    RequestQueue<I2CRequest> *bus = nullptr;
     ///\endcond
 public:
     /// full scale range options
@@ -93,13 +95,16 @@ public:
 
     /**
      * configure and start voltage conversions
+     * @param bus I2C request queue
      * @param address 7bit I2C address of ADS1115 device
      * @param fs full scale range on inputs
      * @param dr data rate / conversion speed
      * @param mx initial multiplexer setting
      */
-    ADS1115(uint8_t address = 0b1001000, enum range fs = FS6144,
+    ADS1115(RequestQueue<I2CRequest> *bus,
+            uint8_t address = 0b1001000, enum range fs = FS6144,
             enum dataRate dr = SPS64, enum mux mx = AIN0):
+                bus(bus),
                 I2CDevice(address), eFullScale(fs),
                 eDataRate(dr), eMux(mx) {
         updateConfig();
@@ -144,7 +149,7 @@ private:
     uint8_t buffer[2] = {};
 
     void setPointer(uint8_t reg) {
-        HardwareI2C::master()->request(new I2CRequest(
+        bus->request(new I2CRequest(
                 this,
                 0,
                 &reg,
@@ -155,7 +160,7 @@ private:
     }
 
     void read() {
-        HardwareI2C::master()->request(new I2CRequest(
+        bus->request(new I2CRequest(
                 this,
                 0,
                 buffer,
@@ -167,7 +172,7 @@ private:
 
     void write(uint8_t reg, uint16_t val) {
         uint8_t data[3] = {reg, (uint8_t) (val >> 8), (uint8_t) val};
-        HardwareI2C::master()->request(new I2CRequest(
+        bus->request(new I2CRequest(
                 this,
                 0,
                 data,
