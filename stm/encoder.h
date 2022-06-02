@@ -18,14 +18,10 @@ public:
      * make sure the pins for the encoder are on
      * channels 1 and 2 of the used timer.
      *
-     * @param Tim Microcontroller Timer Peripheral (e.g. TIM2)
-     * @param pinA pin number of encoder A pin
-     * @param portA port of encoder A pin
-     * @param alternateA alternate function of encoder A pin
-     * @param pinB pin number of encoder B pin
-     * @param portB port of encoder B pin
-     * @param alternateB alternate function of encoder B pin
-     * @param dFactor all encompassing conversion factor from encoder value
+     * @param tim Microcontroller Timer Peripheral (e.g. TIM2)
+     * @param a Alternate Function initialized pin A
+     * @param b Alternate Function initialized pin B
+     * @param factor all encompassing conversion factor from encoder value
      * to needed unit\n
      * Examples:
      *  * 4-bit/revolution rotary encoder, position in \c degrees:
@@ -36,9 +32,14 @@ public:
      *    a 6cm radius wheel:
      *    \verbatim factor = 1 / pow(2, 10) * M_PI * 0.06; \endverbatim
      */
-    Encoder(TIM_TypeDef *Tim, double dFactor) :
-            tim(HardwareTimer(Tim, 0, 0xffff)),
-            dFactor(dFactor) {
+    struct Conf {
+        TIM_TypeDef *tim;
+        AFIO a, b;
+        double factor;
+    };
+    Encoder(Conf conf) :
+            tim(HardwareTimer(conf.tim, 0, 0xffff)),
+            dFactor(conf.factor) {
 
         TIM_HandleTypeDef *htim = tim.handle();
         TIM_Encoder_InitTypeDef sConfig = {};
