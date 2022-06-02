@@ -13,20 +13,6 @@
 #include "stm/hal.h"
 #include "utils/RequestQueue.h"
 
-#if defined(HW_SPI_MODE_0)
-#define HW_SPI_CLK_POLARITY SPI_POLARITY_LOW
-#define HW_SPI_CLK_PHASE SPI_PHASE_1EDGE
-#elif defined(HW_SPI_MODE_1)
-#define HW_SPI_CLK_POLARITY SPI_POLARITY_LOW
-#define HW_SPI_CLK_PHASE SPI_PHASE_2EDGE
-#elif defined(HW_SPI_MODE_2)
-#define HW_SPI_CLK_POLARITY SPI_POLARITY_HIGH
-#define HW_SPI_CLK_PHASE SPI_PHASE_1EDGE
-#elif defined(HW_SPI_MODE_3)
-#define HW_SPI_CLK_POLARITY SPI_POLARITY_HIGH
-#define HW_SPI_CLK_PHASE SPI_PHASE_2EDGE
-#endif
-
 /**
  * Class abstracting an SPI device.
  * Implement your SPI device with this as a base class, then you can use the
@@ -144,8 +130,7 @@ public:
     struct Config {
         SPI_TypeDef *spi;
         uint32_t presc;
-        uint32_t pol;
-        uint32_t pha;
+        uint8_t mode;
         uint8_t timeout;
         AFIO miso, mosi, sck;
     };
@@ -158,8 +143,6 @@ public:
                 .Mode = SPI_MODE_MASTER,
                 .Direction = SPI_DIRECTION_2LINES,
                 .DataSize = SPI_DATASIZE_8BIT,
-                .CLKPolarity = conf.pol,
-                .CLKPhase = conf.pha,
                 .NSS = SPI_NSS_SOFT,
                 .BaudRatePrescaler = conf.presc,
                 .FirstBit = SPI_FIRSTBIT_MSB,
@@ -168,6 +151,27 @@ public:
                 .NSSPMode = SPI_NSS_PULSE_DISABLE,
             },
         };
+        switch (conf.mode) {
+            case 0:
+                handle.Init.CLKPolarity = SPI_POLARITY_LOW;
+                handle.Init.CLKPhase = SPI_PHASE_1EDGE;
+                break;
+            case 1:
+                handle.Init.CLKPolarity = SPI_POLARITY_LOW;
+                handle.Init.CLKPhase = SPI_PHASE_2EDGE;
+                break;
+            case 2:
+                handle.Init.CLKPolarity = SPI_POLARITY_HIGH;
+                handle.Init.CLKPhase = SPI_PHASE_1EDGE;
+                break;
+            case 3:
+                handle.Init.CLKPolarity = SPI_POLARITY_HIGH;
+                handle.Init.CLKPhase = SPI_PHASE_2EDGE;
+                break;
+            default:
+                // there are only 4 modes.
+                while(true) {};
+        }
         while(HAL_SPI_Init(&handle) != HAL_OK);
 
         HAL_SPI_RegisterCallback(&handle, HAL_SPI_TX_COMPLETE_CB_ID, transferComplete);
