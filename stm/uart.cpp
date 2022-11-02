@@ -31,8 +31,9 @@ HardwareUART::HardwareUART(USART_TypeDef *dUsart, uint32_t iBaudRate) :
     RequestQueue<UART_RX>(10, 0)
 {
     reg.reg(this, &handle);
-    handle.Instance = dUsart;
-    handle.Init = {
+    handle = {
+        .Instance = dUsart,
+        .Init = {
             .BaudRate = iBaudRate,
             .WordLength = UART_WORDLENGTH_8B,
             .StopBits = UART_STOPBITS_1,
@@ -40,6 +41,7 @@ HardwareUART::HardwareUART(USART_TypeDef *dUsart, uint32_t iBaudRate) :
             .Mode = UART_MODE_TX_RX,
             .HwFlowCtl = UART_HWCONTROL_NONE,
             .OverSampling = UART_OVERSAMPLING_16,
+        },
     };
     while (HAL_UART_Init(&handle) != HAL_OK);
     HAL_UART_RegisterRxEventCallback(&handle, _rxcallback);
