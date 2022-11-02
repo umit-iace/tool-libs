@@ -12,22 +12,22 @@
 
 struct UART_TX {
     static constexpr unsigned int SZ = 512;
-    unsigned char buf[SZ];
-    unsigned short len;
-    UART_TX() {len = 0;}
-    UART_TX(unsigned char *src, unsigned short len) : len(len) {
+    unsigned char buf[SZ]{};
+    unsigned short len{};
+    void (*cb)(){};
+    UART_TX(unsigned char *src=nullptr,
+            unsigned short len=0,
+            void (*cb)()=nullptr) : len(len), cb(cb) {
         memcpy(buf, src, len);
     }
 };
 struct UART_RX {
-    UART_RX() {buf = nullptr; len = 0;}
-    UART_RX(unsigned char *dst, unsigned short len) : buf(dst), len(len) {}
     UART_RX(unsigned char *dst,
             unsigned short len,
-            void (*bw)(uint8_t c)) : buf(dst), len(len), bytewise(bw) {}
-    unsigned char *buf;
-    unsigned short len;
-    void (*bytewise)(uint8_t c) = nullptr;
+            void (*cb)()=nullptr) : buf(dst), len(len), cb(cb) {}
+    unsigned char *buf{};
+    unsigned short len{};
+    void (*cb)(){};
 };
 /**
  * @brief Template class for hardware based UART derivations
