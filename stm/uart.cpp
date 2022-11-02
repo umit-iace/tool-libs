@@ -27,7 +27,7 @@ void _errcallback(UART_HandleTypeDef *handle) {
  * @param iBaudRate baud rate
  */
 HardwareUART::HardwareUART(USART_TypeDef *dUsart, uint32_t iBaudRate) :
-    RequestQueue<UART_TX>(10, 0),
+    RequestQueue<UART_TX>(30, 0),
     RequestQueue<UART_RX>(10, 0)
 {
     reg.reg(this, &handle);
