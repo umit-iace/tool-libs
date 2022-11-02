@@ -31,10 +31,21 @@ struct UART_RX {
 };
 /**
  * @brief Template class for hardware based UART derivations
+ *
+ * API:
+ * *tx: use the @ref request(UART_TX) method to set up sending a buffer
+ *      over the serial line
+ * *rx:
+ *      - use the @ref request(UART_RX) method if exact length to be
+ *      received is known
+ *      - use the @ref listen(void (*func)(char c)) method to set up a
+ *      listener on this interface. All received bytes will be sent to it
  */
 class HardwareUART : public RequestQueue<UART_TX>, public RequestQueue<UART_RX>{
 public:
     inline static Registry<HardwareUART, UART_HandleTypeDef, 8> reg;
+    void (*listener)(uint8_t c){};
+    uint8_t listenbuf[512];
     /**
      * Initialize the peripheral
      *
@@ -44,7 +55,8 @@ public:
      * @param iBaudRate baud rate
      */
     HardwareUART(USART_TypeDef *dUsart, uint32_t iBaudRate);
-    void rxcallback(uint16_t nbs);
+    void rxevent(uint16_t nbs);
+    void rxcallback();
     void txcallback();
     /** interrupt handler
      *
@@ -61,5 +73,7 @@ public:
     void rqTimeout(UART_TX *r) override;
     void rqTimeout(UART_RX *r) override;
     unsigned long getTime() override;
+    /* listener api */
+    void listen(void (*func)(uint8_t c));
 };
 #endif //STM_UART_H
