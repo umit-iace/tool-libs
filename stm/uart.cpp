@@ -13,6 +13,10 @@ void _rxcallback(UART_HandleTypeDef *handle, uint16_t nbs) {
 void _txcallback(UART_HandleTypeDef *handle) {
     HardwareUART::reg.from(handle)->txcallback();
 }
+void _errcallback(UART_HandleTypeDef *handle) {
+    auto led = DIO(GPIO_PIN_13, GPIOC);
+    led.set(true);
+}
 
 /**
  * Initialize the peripheral
@@ -40,6 +44,7 @@ HardwareUART::HardwareUART(USART_TypeDef *dUsart, uint32_t iBaudRate) :
     while (HAL_UART_Init(&handle) != HAL_OK);
     HAL_UART_RegisterRxEventCallback(&handle, _rxcallback);
     HAL_UART_RegisterCallback(&handle, HAL_UART_TX_COMPLETE_CB_ID, _txcallback);
+    HAL_UART_RegisterCallback(&handle, HAL_UART_ERROR_CB_ID, _errcallback);
 }
 
 void HardwareUART::rxcallback(uint16_t nbs) {
