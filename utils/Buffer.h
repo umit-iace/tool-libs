@@ -1,26 +1,27 @@
 #pragma once
 #include <cstdio>
 #include <cstring>
+#include <cstdint>
 
 struct Buffer {
     uint8_t *payload;
     size_t len, size;
     Buffer(size_t sz) : payload{new uint8_t[sz]()}, len(0), size(sz) {
-        /* fprintf(stderr, "Buffer new payload: %x\n", payload); */
+        /* fprintf(stderr, "Buffer new payload: %p\n", payload); */
     }
     /** copy constructor */
     Buffer(const Buffer &b) : payload{new uint8_t[b.size]()}, len(b.len), size(b.size) {
-        fprintf(stderr, "Buffer cp constr\n");
+        /* fprintf(stderr, "Buffer cp constr\n"); */
         memcpy(payload, b.payload, len);
-        /* fprintf(stderr, "Buffer cpy payload: %x\n", payload); */
+        /* fprintf(stderr, "Buffer cpy payload: %p\n", payload); */
     }
     ~Buffer() {
-        /* fprintf(stderr, "Buffer del payload: %x\n", payload); */
+        /* fprintf(stderr, "Buffer del payload: %p\n", payload); */
         delete[] payload;
     }
     /** move constructor */
     Buffer(Buffer &&b) : payload(b.payload), len(b.len), size(b.size) {
-        fprintf(stderr, "Buffer mv constr\n");
+        /* fprintf(stderr, "Buffer mv constr\n"); */
         b.payload = 0;
         b.len = 0;
         b.size = 0;
@@ -28,7 +29,7 @@ struct Buffer {
     /** move operator */
     Buffer& operator=(Buffer &&b) {
         delete[] payload;
-        fprintf(stderr, "Buffer mv from to: %x %x\n", b.payload, payload);
+        /* fprintf(stderr, "Buffer mv from to: %p %p\n", b.payload, payload); */
         payload = b.payload;
         len = b.len;
         size = b.size;
