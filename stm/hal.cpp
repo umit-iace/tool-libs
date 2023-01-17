@@ -1,4 +1,6 @@
 #include "hal.h"
+HAL_StatusTypeDef hal = HAL_Init();
+extern "C" {
 /**
   * @brief This function handles Non maskable interrupt.
   */
@@ -45,4 +47,5 @@ void PendSV_Handler(void) { }
 void SysTick_Handler(void) {
     HAL_IncTick();
     HAL_SYSTICK_IRQHandler();
+}
 }

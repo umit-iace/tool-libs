@@ -1,5 +1,5 @@
 set(SOURCES
-    hal.c
+    hal.cpp
     uart.cpp
 )
 target_sources(tool-libs INTERFACE
