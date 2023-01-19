@@ -53,7 +53,7 @@ struct Frame {
 };
 
 struct CRC32 {
-    uint32_t checksum{};
+    uint32_t checksum{0xffffffff};
     void init() {
         checksum = 0xffffffffU;
     }
@@ -73,26 +73,59 @@ struct CRC32 {
 
 class Min : public ByteHandler {
 public:
-    int send(uint8_t id, const uint8_t *payload, uint8_t len) {
-        tx.req = new Buffer(128);
-        txrq->request(
-                tx.prepare(id & (uint8_t) 0x3fU, 0, payload, 0, 0xffffU, len)
-                );
-        return 0;
-    }
+    Min(RequestQueue<Buffer> *txrq) : txrq(txrq) { }
+
+    /* int send(uint8_t id, const uint8_t *payload, uint8_t len) { */
+    /*     tx.req = new Buffer(128); */
+    /*     txrq->request( */
+    /*             tx.prepare(id & (uint8_t) 0x3fU, 0, payload, 0, 0xffffU, len) */
+    /*             ); */
+    /*     return 0; */
+    /* } */
     void send(Frame &f) {
-        tx.req = new Buffer(128);
-        txrq->request(
-                tx.prepare(f.id & 0x3f, 0, f.b.payload, 0, 0xffff, f.b.len)
-                );
+        // sending state
+        struct {
+            CRC32 crc;
+            Buffer *req{new Buffer{128}};
+            uint8_t header_countdown = 2;
+            void stuff(uint8_t b) {
+                req->append(b);
+                crc.step(b);
+
+                // See if an additional stuff byte is needed
+                if (b == HEADER_BYTE) {
+                    if (--header_countdown == 0) {
+                        req->append(STUFF_BYTE);        // Stuff byte
+                        header_countdown = 2U;
+                    }
+                } else {
+                    header_countdown = 2U;
+                }
+            }
+            void nostuff(uint8_t b) {
+                req->append(b);
+            }
+        } tx{};
+        tx.nostuff(HEADER_BYTE);
+        tx.nostuff(HEADER_BYTE);
+        tx.nostuff(HEADER_BYTE);
+        tx.stuff(f.id);
+        tx.stuff(f.b.len);
+        for (size_t i = 0; i < f.b.len; ++i) {
+            tx.stuff(f.b.at(i));
+        }
+        uint32_t sum = tx.crc.finalize();
+        tx.stuff((uint8_t) ((sum >> 24) & 0xff));
+        tx.stuff((uint8_t) ((sum >> 16) & 0xff));
+        tx.stuff((uint8_t) ((sum >> 8) & 0xff));
+        tx.stuff((uint8_t) ((sum >> 0) & 0xff));
+        tx.nostuff(EOF_BYTE);
+        txrq->request(tx.req);
     }
 
     void recv(uint8_t b) override {
         rx.byte(b);
     }
-
-    Min(RequestQueue<Buffer> *txrq) : txrq(txrq)
-    { }
 
     Frame getFrame() {
         if (rx.queue.empty()) return Frame{};
@@ -109,67 +142,6 @@ private:
         STUFF_BYTE = 0x55U,
         EOF_BYTE = 0x55U,
     };
-    // sending state
-    struct {
-        CRC32 crc;
-        Buffer *req{};
-        uint8_t header_countdown;
-        void stuff(uint8_t b) {
-            // Transmit the byte
-            req->append(b);
-            crc.step(b);
-
-            // See if an additional stuff byte is needed
-            if (b == HEADER_BYTE) {
-                if (--header_countdown == 0) {
-                    req->append(STUFF_BYTE);        // Stuff byte
-                    header_countdown = 2U;
-                }
-            } else {
-                header_countdown = 2U;
-            }
-        }
-        Buffer *prepare(uint8_t id_control,
-                uint8_t seq,
-                const uint8_t *payload_base,
-                uint16_t payload_offset,
-                uint16_t payload_mask,
-                uint8_t payload_len) {
-            uint8_t n;
-            uint32_t checksum;
-
-            header_countdown = 2U;
-            crc.init();
-
-            // Header is 3 bytes; because unstuffed will reset receiver immediately
-            req->append(HEADER_BYTE);
-            req->append(HEADER_BYTE);
-            req->append(HEADER_BYTE);
-
-            stuff(id_control);
-
-            stuff(payload_len);
-
-            for (n = payload_len; n > 0; n--) {
-                stuff(payload_base[payload_offset]);
-                payload_offset++;
-                payload_offset &= payload_mask;
-            }
-
-            checksum = crc.finalize();
-
-            // Network order is big-endian. A decent C compiler will spot that this
-            // is extracting bytes and will use efficient instructions.
-            stuff((uint8_t) ((checksum >> 24) & 0xffU));
-            stuff((uint8_t) ((checksum >> 16) & 0xffU));
-            stuff((uint8_t) ((checksum >> 8) & 0xffU));
-            stuff((uint8_t) ((checksum >> 0) & 0xffU));
-
-            // Ensure end-of-frame doesn't contain 0xaa and confuse search for start-of-frame
-            req->append(EOF_BYTE);
-            return req;
-        }
-    } tx{};
     // receiving state
     struct {
         CRC32 crc;
@@ -192,6 +164,8 @@ private:
             RECEIVING_EOF,
         } state;
         void byte(uint8_t b) {
+            // XXX: we're doing stuff directly in the queue's memory.
+            // don't!
             Frame &frame = queue.back();
             // Regardless of state, three header bytes means "start of frame" and
             // should reset the frame buffer and be ready to receive frame data
