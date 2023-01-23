@@ -1,7 +1,10 @@
 #pragma once
-#include <cstdio>
 #include <cstring>
 #include <cstdint>
+#ifndef DEBUGLOG
+#define DEBUGLOG(...)
+#define UNDEF
+#endif
 
 struct Buffer {
     uint8_t *payload;
@@ -24,18 +27,18 @@ struct Buffer {
     /* Rule of Five */
     /** destructor */
     ~Buffer() {
-        /* fprintf(stderr, "Buffer del payload: %p\n", payload); */
+        DEBUGLOG(stderr, "Buffer del payload: %p\n", payload);
         delete[] payload; len = 0; size = 0;
     }
     /** constructor */
     Buffer(size_t sz) : payload{new uint8_t[sz]()}, len(0), size(sz) {
-        /* fprintf(stderr, "Buffer new payload: %p\n", payload); */
+        DEBUGLOG(stderr, "Buffer new payload: %p\n", payload);
     }
     /** copy constructor */
     Buffer(const Buffer &b) : payload{new uint8_t[b.size]()}, len(b.len), size(b.size) {
-        /* fprintf(stderr, "Buffer cp constr\n"); */
+        DEBUGLOG(stderr, "Buffer cp constr\n");
         memcpy(payload, b.payload, len);
-        /* fprintf(stderr, "Buffer cp constr from: %p to: %p\n", b.payload, payload); */
+        DEBUGLOG(stderr, "Buffer cp constr from: %p to: %p\n", b.payload, payload);
     }
     /** copy assignment operator */
     Buffer& operator=(const Buffer &b) {
@@ -47,14 +50,14 @@ struct Buffer {
         }
         assert(payload != nullptr);
         assert(size > b.len);
-        /* fprintf(stderr, "Buffer cp from to: %p %p\n", b.payload, payload); */
+        DEBUGLOG(stderr, "Buffer cp from to: %p %p\n", b.payload, payload);
         memcpy(payload, b.payload, b.len);
         len = b.len;
         return *this;
     }
     /** move constructor */
     Buffer(Buffer &&b) noexcept : payload(b.payload), len(b.len), size(b.size) {
-        /* fprintf(stderr, "Buffer mv constr from: %p to: %p\n", b.payload, payload); */
+        DEBUGLOG(stderr, "Buffer mv constr from: %p to: %p\n", b.payload, payload);
         b.payload = 0;
         b.len = 0;
         b.size = 0;
@@ -62,7 +65,7 @@ struct Buffer {
     /** move assignment operator */
     Buffer& operator=(Buffer &&b) noexcept {
         if (this == &b) return *this; // move to self
-        /* fprintf(stderr, "Buffer mv from to: %p %p\n", b.payload, payload); */
+        DEBUGLOG(stderr, "Buffer mv from to: %p %p\n", b.payload, payload);
         delete[] payload;
         payload = b.payload;
         len = b.len;
@@ -73,3 +76,6 @@ struct Buffer {
         return *this;
     }
 };
+#ifdef UNDEF
+#undef DEBUGLOG
+#endif
