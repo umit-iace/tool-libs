@@ -31,11 +31,11 @@ void strdat(){
     cout << endl;
 }
 void buf() {
-    Buffer b{5};
+    Buffer<uint8_t> b{5};
     b.append('a').append('b').append('c').append('d').append('e');
-    Queue<Buffer, 3> q;
+    Queue<Buffer<uint8_t>, 3> q;
     q.push(std::move(b));
-    Buffer c = q.pop();
+    Buffer<uint8_t> c = q.pop();
     for (size_t ix = 0; ix < c.len; ++ix) {
         cout << c.at(ix) << ' ';
     }

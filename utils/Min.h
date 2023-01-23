@@ -11,7 +11,7 @@ struct ByteHandler {
 };
 
 struct Frame {
-    Buffer b{128};
+    Buffer<uint8_t> b{128};
     uint8_t id{};
     Frame(uint8_t id) : id(id) { }
     Frame() : id(0) { }
@@ -62,7 +62,7 @@ struct CRC32 {
 
 class Min : public ByteHandler {
 public:
-    Min(RequestQueue<Buffer> *txrq) : tx{.q = txrq} { }
+    Min(RequestQueue<Buffer<uint8_t>> *txrq) : tx{.q = txrq} { }
 
     void send(Frame &f) {
         tx.enqueue(f);
@@ -91,8 +91,8 @@ private:
     // sending state
     struct {
         CRC32 crc;
-        Buffer *req{nullptr};
-        RequestQueue<Buffer> *q;
+        Buffer<uint8_t> *req{nullptr};
+        RequestQueue<Buffer<uint8_t>> *q;
         uint8_t header_countdown = 2;
         void stuff(uint8_t b) {
             req->append(b);
@@ -112,7 +112,7 @@ private:
             req->append(b);
         }
         void enqueue(Frame &f) {
-            req = new Buffer{128};
+            req = new Buffer<uint8_t>{128};
             nostuff(HEADER_BYTE);
             nostuff(HEADER_BYTE);
             nostuff(HEADER_BYTE);

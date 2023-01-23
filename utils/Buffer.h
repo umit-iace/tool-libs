@@ -6,28 +6,29 @@
 #define UNDEF
 #endif
 
+template<typename T>
 struct Buffer {
-    uint8_t *payload;
+    T *payload;
     size_t len, size;
 
     /** access */
-    uint8_t& at(size_t ix) {
+    T& at(size_t ix) {
         assert(ix < len);
         return payload[ix];
     }
-    uint8_t& operator[](size_t ix) {
+    T& operator[](size_t ix) {
         assert(ix < size);
         return payload[ix];
     }
-    Buffer& append(uint8_t b) {
+    Buffer& append(T b) {
         assert(len < size);
         payload[len++] = b;
         return *this;
     }
-    uint8_t* begin() {
+    T* begin() {
         return &payload[0];
     }
-    uint8_t* end() {
+    T* end() {
         return &payload[len];
     }
     /* Rule of Five */
@@ -37,11 +38,11 @@ struct Buffer {
         delete[] payload; len = 0; size = 0;
     }
     /** constructor */
-    Buffer(size_t sz) : payload{new uint8_t[sz]()}, len(0), size(sz) {
+    Buffer(size_t sz) : payload{new T[sz]()}, len(0), size(sz) {
         DEBUGLOG(stderr, "Buffer new payload: %p\n", payload);
     }
     /** copy constructor */
-    Buffer(const Buffer &b) : payload{new uint8_t[b.size]()}, len(b.len), size(b.size) {
+    Buffer(const Buffer &b) : payload{new T[b.size]()}, len(b.len), size(b.size) {
         DEBUGLOG(stderr, "Buffer cp constr\n");
         memcpy(payload, b.payload, len);
         DEBUGLOG(stderr, "Buffer cp constr from: %p to: %p\n", b.payload, payload);
@@ -51,7 +52,7 @@ struct Buffer {
         if (this == &b) return *this; // copy to self
         if (!size && size != b.size) { // necessary to realloc
             delete[] payload;
-            payload = new uint8_t[b.size]();
+            payload = new T[b.size]();
             size = b.size;
         }
         assert(payload != nullptr);

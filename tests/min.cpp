@@ -6,24 +6,24 @@
 #include <utils/Min.h>
 // XXX: rewrite into testing framework
 
-struct Printer : RequestQueue<Buffer> {
-    void rqBegin(Buffer *b) override {
+struct Printer : RequestQueue<Buffer<uint8_t>> {
+    void rqBegin(Buffer<uint8_t> *b) override {
         for (uint32_t i = 0; i < b->len; ++i) {
             printf("\\%2x", b->payload[i]);
         }
         printf("\n");
         rqEnd();
     }
-    void rqTimeout(Buffer *b) override {}
+    void rqTimeout(Buffer<uint8_t> *b) override {}
     unsigned long getTime() override {return 0;}
     Printer() : RequestQueue(10, 0) {}
 };
-struct Bufferer : RequestQueue<Buffer> {
-    Queue<Buffer, 2> q;
-    void rqBegin(Buffer *b) override {
+struct Bufferer : RequestQueue<Buffer<uint8_t>> {
+    Queue<Buffer<uint8_t>, 2> q;
+    void rqBegin(Buffer<uint8_t> *b) override {
         q.push(*b);
     }
-    void rqTimeout(Buffer *b) override {}
+    void rqTimeout(Buffer<uint8_t> *b) override {}
     unsigned long getTime() override {return 0;}
     Bufferer() : RequestQueue(10, 0) {}
 };
