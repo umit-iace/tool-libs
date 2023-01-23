@@ -1,13 +1,10 @@
 #pragma once
 
 #include <stdint.h>
-#include <stdlib.h>
-#include <assert.h>
-#include <queue>
-#include <utils/Buffer.h>
-#include <utils/RequestQueue.h>
-#include <utils/Queue.h>
-#include <cstdio>
+#include <utility>
+#include "utils/Buffer.h"
+#include "utils/RequestQueue.h"
+#include "utils/Queue.h"
 
 struct ByteHandler {
     virtual void recv(uint8_t b) = 0;
@@ -28,11 +25,7 @@ struct Frame {
         assert(cursor.pack + sizeof(T) < b.size);
         b.len += sizeof(T);
         for (int i = sizeof(T) - 1; i >= 0; --i) {
-            /* if (cursor.pack + i >= b.size) { */
-            /*     return; */
-            /* } */
             b[cursor.pack + i] = *origin++;
-            /* b.payload[cursor.pack + i] = *origin++; */
         }
         cursor.pack += sizeof(T);
     }
@@ -42,11 +35,7 @@ struct Frame {
         auto *dest = (uint8_t *) &value;
         assert(cursor.unpack + sizeof(T) < b.size);
         for (int i = sizeof(T) - 1; i >= 0; --i) {
-            /* if (cursor.unpack + i >= b.size) { */
-            /*     value = T{}; */
-            /* } */
             *dest++ = b[cursor.unpack + i];
-            /* *dest++ = b.payload[cursor.unpack + i]; */
         }
         cursor.unpack += sizeof(T);
     }
@@ -73,54 +62,18 @@ struct CRC32 {
 
 class Min : public ByteHandler {
 public:
-    Min(RequestQueue<Buffer> *txrq) : txrq(txrq) { }
+    Min(RequestQueue<Buffer> *txrq) : tx{.q = txrq} { }
 
-    /* int send(uint8_t id, const uint8_t *payload, uint8_t len) { */
-    /*     tx.req = new Buffer(128); */
-    /*     txrq->request( */
-    /*             tx.prepare(id & (uint8_t) 0x3fU, 0, payload, 0, 0xffffU, len) */
-    /*             ); */
-    /*     return 0; */
-    /* } */
     void send(Frame &f) {
-        // sending state
-        struct {
-            CRC32 crc;
-            Buffer *req{new Buffer{128}};
-            uint8_t header_countdown = 2;
-            void stuff(uint8_t b) {
-                req->append(b);
-                crc.step(b);
-
-                // See if an additional stuff byte is needed
-                if (b == HEADER_BYTE) {
-                    if (--header_countdown == 0) {
-                        req->append(STUFF_BYTE);        // Stuff byte
-                        header_countdown = 2U;
-                    }
-                } else {
-                    header_countdown = 2U;
-                }
-            }
-            void nostuff(uint8_t b) {
-                req->append(b);
-            }
-        } tx{};
-        tx.nostuff(HEADER_BYTE);
-        tx.nostuff(HEADER_BYTE);
-        tx.nostuff(HEADER_BYTE);
-        tx.stuff(f.id);
-        tx.stuff(f.b.len);
-        for (size_t i = 0; i < f.b.len; ++i) {
-            tx.stuff(f.b.at(i));
-        }
-        uint32_t sum = tx.crc.finalize();
-        tx.stuff((uint8_t) ((sum >> 24) & 0xff));
-        tx.stuff((uint8_t) ((sum >> 16) & 0xff));
-        tx.stuff((uint8_t) ((sum >> 8) & 0xff));
-        tx.stuff((uint8_t) ((sum >> 0) & 0xff));
-        tx.nostuff(EOF_BYTE);
-        txrq->request(tx.req);
+        tx.enqueue(f);
+    }
+    /* for backwards-compatibility */
+    int send(uint8_t id, const uint8_t *payload, uint8_t len) {
+        Frame f{id};
+        memcpy(f.b.payload, payload, len);
+        f.b.len = len;
+        send(f);
+        return 0;
     }
 
     void recv(uint8_t b) override {
@@ -135,13 +88,55 @@ public:
     }
 
 private:
-    RequestQueue<Buffer> *txrq;
     // Special protocol bytes
     enum {
         HEADER_BYTE = 0xaaU,
         STUFF_BYTE = 0x55U,
         EOF_BYTE = 0x55U,
     };
+    // sending state
+    struct {
+        CRC32 crc;
+        Buffer *req{nullptr};
+        RequestQueue<Buffer> *q;
+        uint8_t header_countdown = 2;
+        void stuff(uint8_t b) {
+            req->append(b);
+            crc.step(b);
+
+            // See if an additional stuff byte is needed
+            if (b == HEADER_BYTE) {
+                if (--header_countdown == 0) {
+                    req->append(STUFF_BYTE);        // Stuff byte
+                    header_countdown = 2U;
+                }
+            } else {
+                header_countdown = 2U;
+            }
+        }
+        void nostuff(uint8_t b) {
+            req->append(b);
+        }
+        void enqueue(Frame &f) {
+            req = new Buffer{128};
+            nostuff(HEADER_BYTE);
+            nostuff(HEADER_BYTE);
+            nostuff(HEADER_BYTE);
+            stuff(f.id);
+            stuff(f.b.len);
+            for (size_t i = 0; i < f.b.len; ++i) {
+                stuff(f.b.at(i));
+            }
+            uint32_t sum = crc.finalize();
+            stuff((uint8_t) ((sum >> 24) & 0xff));
+            stuff((uint8_t) ((sum >> 16) & 0xff));
+            stuff((uint8_t) ((sum >> 8) & 0xff));
+            stuff((uint8_t) ((sum >> 0) & 0xff));
+            nostuff(EOF_BYTE);
+            q->request(req);
+
+        }
+    } tx{};
     // receiving state
     struct {
         CRC32 crc;
