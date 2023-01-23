@@ -67,14 +67,6 @@ public:
     void send(Frame &f) {
         tx.enqueue(f);
     }
-    /* for backwards-compatibility */
-    int send(uint8_t id, const uint8_t *payload, uint8_t len) {
-        Frame f{id};
-        memcpy(f.b.payload, payload, len);
-        f.b.len = len;
-        send(f);
-        return 0;
-    }
 
     void recv(uint8_t b) override {
         rx.byte(b);
