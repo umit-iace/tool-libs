@@ -2,8 +2,8 @@
  *
  * Copyright (c) 2019 IACE
  */
-#ifndef MOVINGAVERAGE_H
-#define MOVINGAVERAGE_H
+#pragma once
+#include "Queue.h"
 
 /**
  * Template class that implements a moving average filter as fifo.
@@ -12,17 +12,15 @@
  */
 template<typename T, int N>
 class MovingAverage {
+    Queue<T, N> samples{};
+    T total{};
 public:
     /**
      * Operator overload to return the average value.
      * @return the average value as double
      */
     double operator()() {
-        if (!bInit)
-            return (double) tTotal / N;
-        if (!iIndex)
-            return 0;
-        return (double) tTotal / iIndex;
+        return (double)total / samples.size();
     }
 
     /**
@@ -30,20 +28,10 @@ public:
      * @param tSample new value
      */
     void operator()(T tSample) {
-        tTotal += tSample - tSamples[iIndex];
-        tSamples[iIndex] = tSample;
-        iIndex = ++iIndex % N;
-        if (!iIndex)
-            bInit = false;
+        total += tSample;
+        if (samples.size() == N) {
+            total -= samples.pop();
+        }
+        samples.push(tSample);
     }
-
-private:
-    //\cond false
-    T tSamples[N] = {};             ///< array to hold all needed samples
-    unsigned int iIndex = 0;        ///< current index in array of all samples
-    T tTotal = 0;                   ///< summed total value
-    bool bInit = true;              ///< flag to recognize initialization
-    //\endcond
 };
-
-#endif //MOVINGAVERAGE_H
