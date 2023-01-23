@@ -2,16 +2,21 @@
 #include "Min.h"
 
 struct FrameRegistry {
-    using Handler = void (*)(Frame &f);
-    Handler list[64]{};
-    void setHandler(uint8_t id, Handler h) {
-        list[id] = h;
+    using Arg = void *;
+    using Handler = void (*)(Frame &f, Arg);
+    struct Container {
+        Handler h;
+        Arg a;
+    };
+    Container list[64]{};
+    void setHandler(uint8_t id, Handler h, Arg a=nullptr) {
+        list[id] = {h, a};
     }
 
     void handle(Frame &f) {
-        Handler tmp = list[f.id];
-        if (tmp) {
-            tmp(f);
+        Container tmp = list[f.id];
+        if (tmp.h) {
+            tmp.h(f, tmp.a);
         }
     }
 };
