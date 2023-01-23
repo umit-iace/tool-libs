@@ -140,9 +140,8 @@ private:
     // receiving state
     struct {
         CRC32 crc;
-        /* Frame frame{}; */
-        /* std::queue<Frame> queue; */
-        Queue<Frame, 2> queue;
+        Frame frame{};
+        Queue<Frame, 20> queue;
         uint8_t header_seen, frame_length;
         uint32_t frame_crc;
         // Receiving state machine
@@ -159,13 +158,10 @@ private:
             RECEIVING_EOF,
         } state;
         void byte(uint8_t b) {
-            // XXX: we're doing stuff directly in the queue's memory.
-            // don't!
-            Frame &frame = queue.back();
-            // Regardless of state, three header bytes means "start of frame" and
-            // should reset the frame buffer and be ready to receive frame data
+            // three header bytes always mean "start of frame" and will
+            // reset the frame buffer and be ready to receive frame data
             //
-            // Two in a row in over the frame means to expect a stuff byte.
+            // two in a row during the frame means to expect a stuff byte.
 
             if (header_seen == 2) {
                 header_seen = 0;
@@ -174,10 +170,10 @@ private:
                     return;
                 }
                 if (b == STUFF_BYTE) {
-                    /* Discard this byte; carry on receiving on the next character */
+                    // discard this byte
                     return;
                 } else {
-                    /* Something has gone wrong, give up on this frame and look for header again */
+                    // something has gone wrong, give up
                     state = SEARCHING_FOR_SOF;
                     return;
                 }
@@ -191,6 +187,7 @@ private:
 
             switch (state) {
                 case SEARCHING_FOR_SOF:
+                    // handled at the header byte site
                     break;
                 case RECEIVING_ID_CONTROL:
                     frame.id = b & (uint8_t) 0x3fU;
@@ -203,19 +200,13 @@ private:
                     frame_length = b;
                     crc.step(b);
                     if (frame_length > 0) {
-                        // Can reduce the RAM size by compiling limits to frame sizes
-                        if (frame_length <= 80) {
-                            state = RECEIVING_PAYLOAD;
-                        } else {
-                            // Frame dropped because it's longer than any frame we can buffer
-                            state = SEARCHING_FOR_SOF;
-                        }
+                        state = RECEIVING_PAYLOAD;
                     } else {
                         state = RECEIVING_CHECKSUM_3;
                     }
                     break;
                 case RECEIVING_PAYLOAD:
-                    queue.back().b.append(b);
+                    frame.b.append(b);
                     crc.step(b);
                     if (--frame_length == 0) {
                         state = RECEIVING_CHECKSUM_3;
@@ -235,25 +226,18 @@ private:
                     break;
                 case RECEIVING_CHECKSUM_0:
                     frame_crc |= b;
-                    if (frame_crc != crc.finalize()) {
-                        // Frame fails the checksum and so is dropped
-                        state = SEARCHING_FOR_SOF;
-                    } else {
-                        // Checksum passes, go on to check for the end-of-frame marker
-                        state = RECEIVING_EOF;
-                    }
-                    break;
-                case RECEIVING_EOF:
-                    if (b == EOF_BYTE) {
+                    if (frame_crc == crc.finalize()) {
                         // Frame received OK, pass up data to handler
-                        queue.push(frame);
-                        /* frame = Frame{}; */
-                        // XXX: reset frame?
+                        queue.push(std::move(frame));
+                        frame = Frame{};
                     }
-                    // else discard
-                    // Look for next frame */
+                    // Either the frame failed, or we already handled it
+                    // anyway we can start looking for the next frame,
+                    // we don't have to explicitly wait for the EOF
                     state = SEARCHING_FOR_SOF;
                     break;
+                case RECEIVING_EOF:
+                    // fallthrough
                 default:
                     // Should never get here but in case we do then reset to a safe state
                     state = SEARCHING_FOR_SOF;
