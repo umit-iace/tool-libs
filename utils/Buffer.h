@@ -24,6 +24,12 @@ struct Buffer {
         payload[len++] = b;
         return *this;
     }
+    uint8_t* begin() {
+        return &payload[0];
+    }
+    uint8_t* end() {
+        return &payload[len];
+    }
     /* Rule of Five */
     /** destructor */
     ~Buffer() {
