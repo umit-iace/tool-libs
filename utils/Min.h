@@ -80,11 +80,13 @@ public:
         rx.byte(b);
     }
 
+    bool available() {
+        return !rx.queue.empty();
+    }
+
+    //XXX: always guard by if(available()) { smth }
     Frame getFrame() {
-        if (rx.queue.empty()) return Frame{};
-        Frame ret = rx.queue.front();
-        rx.queue.pop();
-        return ret;
+        return rx.queue.pop();
     }
 
 private:

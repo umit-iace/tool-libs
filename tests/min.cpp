@@ -1,5 +1,9 @@
-#include <utils/Min.h>
 #include <cstdio>
+#include <cassert>
+#include <utils/Queue.h>
+#include <utils/Buffer.h>
+#define DEBUGLOG(...) fprintf(__VA_ARGS__)
+#include <utils/Min.h>
 // XXX: rewrite into testing framework
 
 struct Printer : RequestQueue<Buffer> {
@@ -13,6 +17,15 @@ struct Printer : RequestQueue<Buffer> {
     void rqTimeout(Buffer *b) override {}
     unsigned long getTime() override {return 0;}
     Printer() : RequestQueue(10, 0) {}
+};
+struct Bufferer : RequestQueue<Buffer> {
+    Queue<Buffer, 2> q;
+    void rqBegin(Buffer *b) override {
+        q.push(*b);
+    }
+    void rqTimeout(Buffer *b) override {}
+    unsigned long getTime() override {return 0;}
+    Bufferer() : RequestQueue(10, 0) {}
 };
 
 struct __attribute__((packed)) TestStruct {
@@ -77,17 +90,14 @@ void testRx() {
     for (int i = 0; i < 22; ++i) {
         min.recv(input[1][i]);
     }
-    Frame f;
-    do {
-        f = min.getFrame();
-        if (f.id) {
+    while (min.available()) {
+        Frame f = min.getFrame();
             double pi;
             uint32_t sph;
             f.unPack(pi);
             f.unPack(sph);
             printf("id=%d pi=%f sph=%d\n", f.id, pi, sph);
-        }
-    } while (f.id);
+    }
 }
 void testStructroundtrip() {
     Frame f{19};
@@ -96,11 +106,33 @@ void testStructroundtrip() {
     f.pack(3.14);
     f.unPack(recv);
     printf("id=%d pi=%f sph=%d tru=%x\n", f.id, recv.pi, recv.sph, recv.tru);
+    f = Frame{18};
+    f.pack(send);
+    f.unPack(recv);
+    printf("id=%d pi=%f sph=%d tru=%x\n", f.id, recv.pi, recv.sph, recv.tru);
 }
 int main() {
     testFrame();
     testTx();
     testRx();
     testStructroundtrip();
+    Bufferer b{};
+    Printer p{};
+    Min m{&b};
+    Frame f{18}, r{};
+    f.pack(send);
+    m.send(f);
+    auto buf = b.q.pop();
+    for (size_t ix=0; ix < buf.len; ++ix) {
+        m.recv(buf.at(ix));
+    }
+    r = m.getFrame();
+    m = Min{&p};
+    printf("id=%d\n", r.id);
+    /* for (size_t ix=0; r.id != 0; ++ix, r=m.getFrame()) { */
+    /*     m.recv(f.b.at(ix)); */
+    /* } */
+    m.send(r);
+
 }
 
