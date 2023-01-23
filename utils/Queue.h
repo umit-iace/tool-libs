@@ -12,6 +12,26 @@
  */
 template <typename T, int sz>
 class Queue {
+    uint8_t space[sz * sizeof(T)]{};
+    struct QueueAccess {
+        T *ptr;
+        T& operator[](size_t i) {
+            assert(i < sz);
+            return ptr[i];
+        }
+    } q {(T*)space}; // Typed pointer into empty uint8_t[] space
+    size_t len{};
+    struct ArrayIndex {
+        size_t val;
+        operator size_t() {
+            return val;
+        }
+        size_t operator++(int) {
+            size_t ret = val;
+            val = (val + 1) % sz;
+            return ret;
+        }
+    } head{}, tail{};
 public:
     /**
      * copy element into queue
@@ -69,27 +89,6 @@ public:
     bool empty() {
         return len == 0;
     }
-private:
-    uint8_t space[sz * sizeof(T)]{};
-    struct QueueAccess {
-        T *ptr;
-        T& operator[](size_t i) {
-            assert(i < sz);
-            return ptr[i];
-        }
-    } q {(T*)space}; // Typed pointer into empty uint8_t[] space
-    size_t len{};
-    struct ArrayIndex {
-        size_t val;
-        operator size_t() {
-            return val;
-        }
-        size_t operator++(int) {
-            size_t ret = val;
-            val = (val + 1) % sz;
-            return ret;
-        }
-    } head{}, tail{};
 };
 #ifdef UNDEF
 #undef DEBUGLOG
