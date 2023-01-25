@@ -5,10 +5,7 @@
 #include "utils/Buffer.h"
 #include "utils/RequestQueue.h"
 #include "utils/Queue.h"
-
-struct ByteHandler {
-    virtual void recv(uint8_t b) = 0;
-};
+#include "hw/uart.h"
 
 struct Frame {
     Buffer<uint8_t> b{128};
