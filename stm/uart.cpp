@@ -3,8 +3,7 @@
  * Copyright (c) 2022 IACE
  */
 #include "uart.h"
-#include "stm/hal.h"
-#include "stm/gpio.h"
+using UART_TX = Buffer<uint8_t>;
 
 /* HAL glue */
 void _rxevent(UART_HandleTypeDef *handle, uint16_t nbs) {
@@ -29,9 +28,13 @@ void _errcallback(UART_HandleTypeDef *handle) {
  * @param dUsart definition of used UART
  * @param iBaudRate baud rate
  */
-HardwareUART::HardwareUART(USART_TypeDef *dUsart, uint32_t iBaudRate) :
+HardwareUART::HardwareUART(
+        USART_TypeDef *dUsart,
+        uint32_t iBaudRate,
+        ByteHandler *l
+        ) :
     RequestQueue<UART_TX>(30, 0),
-    RequestQueue<UART_RX>(10, 0)
+    listener(l)
 {
     reg.reg(this, &handle);
     handle = {
@@ -51,6 +54,7 @@ HardwareUART::HardwareUART(USART_TypeDef *dUsart, uint32_t iBaudRate) :
     HAL_UART_RegisterCallback(&handle, HAL_UART_RX_COMPLETE_CB_ID, _rxcallback);
     HAL_UART_RegisterCallback(&handle, HAL_UART_TX_COMPLETE_CB_ID, _txcallback);
     HAL_UART_RegisterCallback(&handle, HAL_UART_ERROR_CB_ID, _errcallback);
+    HAL_UARTEx_ReceiveToIdle_IT(&handle, listenbuf, sizeof listenbuf);
 }
 
 void HardwareUART::rxevent(uint16_t nbs) {
@@ -63,51 +67,50 @@ void HardwareUART::rxevent(uint16_t nbs) {
     uint8_t *tmp = handle.pRxBuffPtr - nbs;
     HAL_UARTEx_ReceiveToIdle_IT(&handle, p, workleft);
     for (uint16_t i = 0; i < nbs; ++i) {
-        listener(tmp[i]);
+        listener->recv(tmp[i]);
     }
 }
 void HardwareUART::rxcallback() {
-    auto r = RequestQueue<UART_RX>::rqCurrent();
-    if (r->cb) r->cb();
-    HAL_UART_AbortReceive_IT(&handle);
-    RequestQueue<UART_RX>::rqEnd();
+    /* auto r = RequestQueue<UART_RX>::rqCurrent(); */
+    /* if (r->cb) r->cb(); */
+    /* HAL_UART_AbortReceive_IT(&handle); */
+    /* RequestQueue<UART_RX>::rqEnd(); */
 }
 void HardwareUART::txcallback() {
-    auto r = RequestQueue<UART_TX>::rqCurrent();
-    if (r->cb) r->cb();
-    RequestQueue<UART_TX>::rqEnd();
+    rqEnd();
+    /* auto r = RequestQueue<UART_TX>::rqCurrent(); */
+    /* if (r->cb) r->cb(); */
+    /* RequestQueue<UART_TX>::rqEnd(); */
 }
 
-short HardwareUART::request(UART_TX *r) {
-    return RequestQueue<UART_TX>::request(r);
-}
-short HardwareUART::request(UART_RX *r) {
-    return RequestQueue<UART_RX>::request(r);
-}
+/* short HardwareUART::request(UART_TX *r) { */
+/*     return RequestQueue<UART_TX>::request(r); */
+/* } */
+/* short HardwareUART::request(UART_RX *r) { */
+/*     return RequestQueue<UART_RX>::request(r); */
+/* } */
 
 void HardwareUART::irqHandler() {
     HAL_UART_IRQHandler(&handle);
 }
 
 void HardwareUART::rqBegin(UART_TX *r) {
-    auto ret = HAL_UART_Transmit_IT(&handle, r->buf, r->len);
+    auto ret = HAL_UART_Transmit_IT(&handle, r->payload, r->len);
     if (ret != HAL_OK) {
         asm("bkpt");
     }
 
 }
-void HardwareUART::rqBegin(UART_RX *r) {
-    auto ret = HAL_UART_Receive_IT(&handle, r->buf, r->len);
-    if (ret != HAL_OK) {
-        asm("bkpt");
-    }
-}
+/* void HardwareUART::rqBegin(UART_RX *r) { */
+/*     auto ret = HAL_UART_Receive_IT(&handle, r->buf, r->len); */
+/*     if (ret != HAL_OK) { */
+/*         asm("bkpt"); */
+/*     } */
+/* } */
 /* we don't use these */
 void HardwareUART::rqTimeout(UART_TX *r) { /* not implemented */ }
-void HardwareUART::rqTimeout(UART_RX *r) { /* not implemented */ }
 unsigned long HardwareUART::getTime() { return 0; }
-void HardwareUART::listen(void (*func)(uint8_t c)) {
-    assert(listener == nullptr);
-    listener = func;
-    HAL_UARTEx_ReceiveToIdle_IT(&handle, listenbuf, sizeof listenbuf);
-}
+/* void HardwareUART::listen(void (*func)(uint8_t c)) { */
+/*     assert(listener == nullptr); */
+/*     listener = func; */
+/* } */
