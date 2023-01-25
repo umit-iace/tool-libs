@@ -2,6 +2,8 @@ set(SOURCES
     hal.cpp
     uart.cpp
 )
+
+cmake_policy(VERSION 3.24)
 target_sources(tool-libs INTERFACE
-    $<PATH:APPEND,${CMAKE_CURRENT_SOURCE_DIR},${SOURCES}>
+    ${SOURCES}
 )
