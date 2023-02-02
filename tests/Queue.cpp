@@ -1,21 +1,36 @@
 #include <cassert>
 #include <cstdio>
-#define DEBUGLOG(...) fprintf(__VA_ARGS__)
+#define log(...) fprintf(stderr, __VA_ARGS__)
 #include "utils/Queue.h"
 #include "utils/Buffer.h"
 #include <queue>
 #include <iostream>
 using namespace std;
 struct data {
-    double d;
-    data(double d): d(d) {
+    double *d{nullptr};
+    data(double d): d(new double{d}) {
         cout << "constr " << d << endl;
     }
     ~data() {
         cout << "destr " << d << endl;
+        delete d;
         d = 0;
     }
-    operator double() { return d; }
+    data(const data &dat) : d(new double{*dat.d}) {
+    }
+    data& operator=(const data &dat) {
+        *d = *dat.d;
+        return *this;
+    }
+    data(data &&dat) noexcept : d(dat.d) {
+        dat.d = nullptr;
+    }
+    data& operator=(data &&dat) noexcept {
+        d = dat.d;
+        dat.d = 0;
+        return *this;
+    }
+    operator double() { return *d; }
 };
 void strdat(){
     /* queue<struct data> q; */
@@ -24,7 +39,7 @@ void strdat(){
     q.push(8.);
     q.push(3.14);
     while (!q.empty()) {
-        cout << q.front() << " ";// << q.back() << endl;
+        cout << q.front() << " " << q.back() << endl;
         /* q.pop(); */
         cout << q.pop() << " ";
     }
