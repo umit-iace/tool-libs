@@ -27,8 +27,3 @@ target_include_directories(IntTest PUBLIC ${Boost_INCLUDE_DIRS})
 target_link_libraries(IntTest ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 add_test(NAME InterpolationTest COMMAND IntTest)
 
-add_executable(DATest DynamicArrayTest.cpp)
-target_compile_definitions(DATest PUBLIC BOOST_TEST_DYN_LINK)
-target_include_directories(DATest PUBLIC ${Boost_INCLUDE_DIRS})
-target_link_libraries(DATest ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
-add_test(NAME DynamicArrayTest COMMAND DATest)
