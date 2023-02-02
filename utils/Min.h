@@ -1,11 +1,14 @@
+/** @file Min.h
+ *
+ * Copyright (c) 2023 IACE
+ */
 #pragma once
 
 #include <stdint.h>
 #include <utility>
 #include "utils/Buffer.h"
-#include "utils/RequestQueue.h"
 #include "utils/Queue.h"
-#include "hw/uart.h"
+#include "utils/Interfaces.h"
 
 struct Frame {
     Buffer<uint8_t> b{128};
@@ -57,24 +60,30 @@ struct CRC32 {
     }
 };
 
-class Min : public ByteHandler {
+class Min : public Push<Frame>, public Pull<Frame> {
 public:
-    Min(RequestQueue<Buffer<uint8_t>> *txrq) : tx{.q = txrq} { }
+    Min(Push<Buffer<uint8_t>> &whereto, Pull<Buffer<uint8_t>> &wherefrom) :
+        tx{.push = whereto}, rx{.pull = wherefrom} {}
 
-    void send(Frame &f) {
+    /** push frames through to underlying transport layer */
+    void push(const Frame &f) override {
+        push(std::move(Frame{f}));
+    }
+    void push(Frame &&f) override {
         tx.enqueue(f);
     }
 
-    void recv(uint8_t b) override {
-        rx.byte(b);
-    }
-
-    bool available() {
-        return !rx.queue.empty();
+    bool empty() override {
+        while (!rx.pull.empty()) {
+            for (auto b: rx.pull.pop()) {
+                rx.byte(b);
+            }
+        }
+        return rx.queue.empty();
     }
 
     //XXX: always guard by if(available()) { smth }
-    Frame getFrame() {
+    Frame pop() override {
         return rx.queue.pop();
     }
 
@@ -88,17 +97,17 @@ private:
     // sending state
     struct {
         CRC32 crc;
-        Buffer<uint8_t> *req{nullptr};
-        RequestQueue<Buffer<uint8_t>> *q;
+        Buffer<uint8_t> req{128};
+        Push<Buffer<uint8_t>> &push;
         uint8_t header_countdown = 2;
         void stuff(uint8_t b) {
-            req->append(b);
+            req.append(b);
             crc.step(b);
 
             // See if an additional stuff byte is needed
             if (b == HEADER_BYTE) {
                 if (--header_countdown == 0) {
-                    req->append(STUFF_BYTE);        // Stuff byte
+                    req.append(STUFF_BYTE);        // Stuff byte
                     header_countdown = 2U;
                 }
             } else {
@@ -106,10 +115,10 @@ private:
             }
         }
         void nostuff(uint8_t b) {
-            req->append(b);
+            req.append(b);
         }
         void enqueue(Frame &f) {
-            req = new Buffer<uint8_t>{128};
+            req = Buffer<uint8_t>{128};
             nostuff(HEADER_BYTE);
             nostuff(HEADER_BYTE);
             nostuff(HEADER_BYTE);
@@ -124,15 +133,15 @@ private:
             stuff((uint8_t) ((sum >> 8) & 0xff));
             stuff((uint8_t) ((sum >> 0) & 0xff));
             nostuff(EOF_BYTE);
-            q->request(req);
-
+            push.push(req);
         }
-    } tx{};
+    } tx;
     // receiving state
     struct {
         CRC32 crc;
         Frame frame{};
         Queue<Frame, 20> queue;
+        Pull<Buffer<uint8_t>> &pull;
         uint8_t header_seen, frame_length;
         uint32_t frame_crc;
         // Receiving state machine
@@ -235,5 +244,5 @@ private:
                     break;
             }
         }
-    } rx{};
+    } rx;
 };
