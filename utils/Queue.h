@@ -1,17 +1,20 @@
+/** @file Queue.h
+ *
+ * Copyright (c) 2023 IACE
+ */
 #pragma once
+
 #include <cstddef>
 #include <cstdint>
 #include <utility>
-#ifndef DEBUGLOG
-#define DEBUGLOG(...)
-#define UNDEF
-#endif
+
+#include "Interfaces.h"
 
 /**
  * simple Array backed circle buffer queue to be used as FIFO
  */
 template <typename T, int sz>
-class Queue {
+class Queue : public Push<T>, public Pull<T> {
     uint8_t space[sz * sizeof(T)]{};
     struct QueueAccess {
         T *ptr;
@@ -36,20 +39,19 @@ public:
     /**
      * copy element into queue
      */
-    Queue& push(const T &val) {
-        DEBUGLOG(stderr, "copying ..\n");
+    void push(const T &val) override {
+        log("copying ..");
         return push(std::move(T{val}));
     }
     /**
      * move element into queue
      */
-    Queue& push(T &&val) {
-        DEBUGLOG(stderr, "moving ..\n");
+    void push(T &&val) override {
+        log("moving ..\n");
         assert(len < sz);
         q[tail] = std::move(val);
         tail++;
         len++;
-        return *this;
     }
     /**
      * return reference to first element in queue
@@ -69,6 +71,7 @@ public:
      * remove front of queue and return it
      *
      * does not check that there's something in the queue
+     * guard with `if (size()) ...` or `if (!empty()) ...`
      */
     T pop() {
         assert(len != 0);
@@ -89,7 +92,10 @@ public:
     bool empty() {
         return len == 0;
     }
+    /**
+     * return true if queue is full
+     */
+    bool full() {
+        return len == sz;
+    }
 };
-#ifdef UNDEF
-#undef DEBUGLOG
-#endif
