@@ -7,10 +7,10 @@
 #include "stm/gpio.h"
 #include "stm/hal.h"
 #include "stm/registry.h"
-#include "utils/RequestQueue.h"
 #include "utils/Buffer.h"
-#include "x/Timeout.h"
-#include "hw/uart.h"
+#include "utils/Interfaces.h"
+#include "utils/Timeout.h"
+#include "utils/Queue.h"
 
 struct HardwareUART : public Push<Buffer<uint8_t>>, public Pull<Buffer<uint8_t>> {
     // Init Structs
