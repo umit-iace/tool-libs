@@ -1,6 +1,9 @@
+/** @file registry.h
+ *
+ * Copyright (c) 2023 IACE
+ */
 #pragma once
 
-#include <assert.h>
 
 /** registry that maps classes to HAL handles
  *
@@ -12,16 +15,16 @@ class Registry {
     H *h[sz];
     unsigned int len = 0;
 public:
-    /* register given class instance to handle */
+    /** register given class instance to handle */
     void reg(T *inst, H *handle) {
         for (unsigned int i = 0; i < len; ++i) {
-            assert(t[i] != inst);
+            assert(t[i] != inst); // class instance already registered!
         }
         t[len] = inst;
         h[len] = handle;
         ++len;
     }
-    /* get registered class instance from handle */
+    /** get registered class instance from handle */
     T* from(H *handle) {
         for (unsigned int i = 0; i < len; ++i) {
             if (h[i] == handle) return t[i];
