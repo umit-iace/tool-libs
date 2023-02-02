@@ -1,31 +1,23 @@
 #include <cstdio>
 #include <cassert>
+#define log(...)
+/* #define log(...) fprintf(stderr, __VA_ARGS__) */
 #include <utils/Queue.h>
 #include <utils/Buffer.h>
-#define DEBUGLOG(...) fprintf(__VA_ARGS__)
 #include <utils/Min.h>
+#include <utils/Interfaces.h>
 // XXX: rewrite into testing framework
 
-struct Printer : RequestQueue<Buffer<uint8_t>> {
-    void rqBegin(Buffer<uint8_t> *b) override {
-        for (uint32_t i = 0; i < b->len; ++i) {
-            printf("\\%2x", b->payload[i]);
+struct Printer : Push<Buffer<uint8_t>> {
+    void push(const Buffer<uint8_t> &b) override {
+        push(std::move(Buffer<uint8_t>{b}));
+    }
+    void push(Buffer<uint8_t> &&b) override {
+        for (auto c: b) {
+            printf("\\%2x", c);
         }
         printf("\n");
-        rqEnd();
     }
-    void rqTimeout(Buffer<uint8_t> *b) override {}
-    unsigned long getTime() override {return 0;}
-    Printer() : RequestQueue(10, 0) {}
-};
-struct Bufferer : RequestQueue<Buffer<uint8_t>> {
-    Queue<Buffer<uint8_t>, 2> q;
-    void rqBegin(Buffer<uint8_t> *b) override {
-        q.push(*b);
-    }
-    void rqTimeout(Buffer<uint8_t> *b) override {}
-    unsigned long getTime() override {return 0;}
-    Bufferer() : RequestQueue(10, 0) {}
 };
 
 struct __attribute__((packed)) TestStruct {
@@ -52,20 +44,20 @@ void testFrame() {
 }
 void testTx() {
     Printer p;
-    Min min{&p};
+    Queue<Buffer<uint8_t>, 0> null;
+    Min min{p, null};
     Frame f{1};
     f.pack(3.14);
     f.pack((uint32_t) 3600);
 
-    /* min.send(1, f.b.payload, f.b.len); */
-    min.send(f);
+    min.push(f);
     f.id=0x10;
-    min.send(f);
-    /* min.send(0x10, f.b.payload, f.b.len); */
+    min.push(f);
 }
 void testRx() {
     Printer p;
-    Min min{&p};
+    Queue<Buffer<uint8_t>, 2> q;
+    Min min{p, q};
     uint8_t input[][22] = {
         {
         0xaa, 0xaa, 0xaa,
@@ -84,14 +76,10 @@ void testRx() {
         0x55,
         },
     };
-    for (int i = 0; i < 22; ++i) {
-        min.recv(input[0][i]);
-    }
-    for (int i = 0; i < 22; ++i) {
-        min.recv(input[1][i]);
-    }
-    while (min.available()) {
-        Frame f = min.getFrame();
+    q.push({input[0], sizeof input[0]});
+    q.push({input[1], sizeof input[1]});
+    while (!min.empty()) {
+        Frame f = min.pop();
             double pi;
             uint32_t sph;
             f.unPack(pi);
@@ -116,23 +104,15 @@ int main() {
     testTx();
     testRx();
     testStructroundtrip();
-    Bufferer b{};
-    Printer p{};
-    Min m{&b};
+    Queue<Buffer<uint8_t>, 3> q;
+    Min m{q, q};
     Frame f{18}, r{};
     f.pack(send);
-    m.send(f);
-    auto buf = b.q.pop();
-    for (size_t ix=0; ix < buf.len; ++ix) {
-        m.recv(buf.at(ix));
+    m.push(f);
+    if (!m.empty()) {
+        r = m.pop();
+        printf("id=%d\n", r.id);
+        Printer{}.push(r.b);
     }
-    r = m.getFrame();
-    m = Min{&p};
-    printf("id=%d\n", r.id);
-    /* for (size_t ix=0; r.id != 0; ++ix, r=m.getFrame()) { */
-    /*     m.recv(f.b.at(ix)); */
-    /* } */
-    m.send(r);
-
 }
 
