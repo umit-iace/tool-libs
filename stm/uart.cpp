@@ -1,8 +1,9 @@
 /** @file uart.cpp
  *
- * Copyright (c) 2022 IACE
+ * Copyright (c) 2023 IACE
  */
 #include "uart.h"
+// debugging helpers
 struct SR {
     uint32_t PE:1;
     uint32_t FE:1;
@@ -99,11 +100,13 @@ void startTransmit(HardwareUART *uart) {
             asm("bkpt");
         }
     }
+    //XXX: consider calculating the timeout based on the b.len * 8 / baudrate
+    //or smth
     uart->tx.timeout = Timeout{uwTick + 140};
 }
 void startReceive(HardwareUART *uart) {
     auto ret = HAL_OK;
-    if ((ret = HAL_UARTEx_ReceiveToIdle_IT(&uart->handle, uart->rx.buf, uart->rx.size))) {
+    if ((ret = HAL_UARTEx_ReceiveToIdle_IT(&uart->handle, uart->rx.buf.buf, uart->rx.buf.size))) {
         if (ret != HAL_OK) {
             asm("bkpt");
         }
@@ -124,14 +127,18 @@ void poll(HardwareUART *uart) {
 
 void _rxevent(UART_HandleTypeDef *handle, uint16_t nbs) {
     auto uart = HardwareUART::reg.from(handle);
-    uart->rx.len = nbs;
-    uart->listener.push(std::move(uart->rx));
-    uart->rx = Buffer<uint8_t>{512};
+    uart->rx.buf.len = nbs;
+    if (!uart->rx.q.full()) {
+        uart->rx.q.push(std::move(uart->rx.buf));
+    } else {
+        // dropping Buffer, reader should call more often...
+    }
+    uart->rx.buf = Buffer<uint8_t>{512};
     startReceive(uart);
 }
 void _rxcallback(UART_HandleTypeDef *handle) {
     auto uart = HardwareUART::reg.from(handle);
-    _rxevent(handle, uart->rx.size);
+    _rxevent(handle, uart->rx.buf.size);
 }
 void _txcallback(UART_HandleTypeDef *handle) {
     auto uart = HardwareUART::reg.from(handle);
@@ -151,15 +158,15 @@ void init(HardwareUART *uart, UART_HandleTypeDef *handle) {
     startReceive(uart);
 }
 
-// class functions
-HardwareUART::HardwareUART(const Manual &conf) : listener(conf.handler) {
+// class methods
+HardwareUART::HardwareUART(const Manual &conf) {
     handle = {
         .Instance = conf.uart,
         .Init = conf.init,
     };
     init(this, &handle);
 }
-HardwareUART::HardwareUART(const Default &conf) : listener(conf.handler) {
+HardwareUART::HardwareUART(const Default &conf) {
     handle = {
         .Instance = conf.uart,
         .Init = {
@@ -188,4 +195,10 @@ void HardwareUART::push(const Buffer<uint8_t> &b) {
 void HardwareUART::push(Buffer<uint8_t> &&b) {
     tx.q.push(std::move(b));
     poll(this);
+}
+bool HardwareUART::empty() {
+    return rx.q.empty();
+}
+Buffer<uint8_t> HardwareUART::pop() {
+    return rx.q.pop();
 }

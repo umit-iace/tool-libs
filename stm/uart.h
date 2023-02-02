@@ -12,19 +12,17 @@
 #include "x/Timeout.h"
 #include "hw/uart.h"
 
-struct HardwareUART : public Push<Buffer<uint8_t>> {
+struct HardwareUART : public Push<Buffer<uint8_t>>, public Pull<Buffer<uint8_t>> {
     // Init Structs
     struct Default {
         USART_TypeDef *uart;
         AFIO rx, tx;
         uint32_t baudrate;
-        Push<Buffer<uint8_t>> &handler;
     };
     struct Manual {
         USART_TypeDef *uart;
         AFIO rx, tx;
         UART_InitTypeDef init;
-        Push<Buffer<uint8_t>> &handler;
     };
     /**
      * constructor with default config
@@ -39,15 +37,22 @@ struct HardwareUART : public Push<Buffer<uint8_t>> {
      */
     void push(Buffer<uint8_t> &&tx) override;
     void push(const Buffer<uint8_t> &tx) override;
+    /**
+     * pull buffer from receiving queue
+     */
+    bool empty() override;
+    Buffer<uint8_t> pop() override;
     /** interrupt handler
      *
      * call this directly in interrupt
      */
     void irqHandler();
     inline static Registry<HardwareUART, UART_HandleTypeDef, 8> reg;
-    // rx
-    Buffer<uint8_t> rx{512};
-    Push<Buffer<uint8_t>> &listener;
+    // rx state
+    struct {
+        Queue<Buffer<uint8_t>, 30> q;
+        Buffer<uint8_t> buf{512};
+    } rx{};
     // tx state
     struct {
         Queue<Buffer<uint8_t>, 30> q;
