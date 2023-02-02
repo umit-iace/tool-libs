@@ -11,20 +11,17 @@
  */
 class HardwareDMA {
 public:
-    HardwareDMA(DMA_Stream_TypeDef *dma, uint32_t channel) {
-        handle.Instance = dma;
-        handle.Init = {
-                .Channel = channel,
-                .Direction = DMA_PERIPH_TO_MEMORY,
-                .PeriphInc = DMA_PINC_DISABLE,
-                .MemInc = DMA_MINC_ENABLE,
-                .PeriphDataAlignment = DMA_PDATAALIGN_BYTE,
-                .MemDataAlignment = DMA_MDATAALIGN_BYTE,
-                .Mode = DMA_CIRCULAR,
-                .Priority = DMA_PRIORITY_LOW,
-                .FIFOMode = DMA_FIFOMODE_DISABLE,
-        };
+    struct Conf {
+        DMA_Stream_TypeDef *stream;
+        DMA_InitTypeDef init;
+    };
+    HardwareDMA(Conf conf) {
+        handle.Instance = conf.stream;
+        handle.Init = conf.init;
         while (HAL_DMA_Init(&handle) != HAL_OK);
+    }
+    void irqHandler() {
+        HAL_DMA_IRQHandler(&handle);
     }
     DMA_HandleTypeDef handle{};
 };
