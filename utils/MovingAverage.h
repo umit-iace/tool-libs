@@ -29,7 +29,7 @@ public:
      */
     void operator()(T tSample) {
         total += tSample;
-        if (samples.size() == N) {
+        if (samples.full()) {
             total -= samples.pop();
         }
         samples.push(tSample);

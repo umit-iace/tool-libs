@@ -6,6 +6,7 @@
 #define BOOST_TEST_MODULE MovingAverageTest
 
 #include <cassert>
+#define log(...)
 #include "MovingAverage.h"
 
 #include <boost/test/unit_test.hpp>
