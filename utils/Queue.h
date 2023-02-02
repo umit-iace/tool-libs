@@ -25,16 +25,15 @@ class Queue : public Push<T>, public Pull<T> {
     } q {(T*)space}; // Typed pointer into empty uint8_t[] space
     size_t len{};
     struct ArrayIndex {
-        size_t val;
+        size_t val{};
         operator size_t() {
             return val;
         }
-        size_t operator++(int) {
-            size_t ret = val;
+        size_t operator++() {
             val = (val + 1) % sz;
-            return ret;
+            return val;
         }
-    } head{}, tail{};
+    } head, tail;
 public:
     /**
      * copy element into queue
@@ -49,9 +48,10 @@ public:
     void push(T &&val) override {
         log("moving ..\n");
         assert(len < sz);
+        if (len == 0) tail = {0};
+        else ++tail;
         q[tail] = std::move(val);
-        tail++;
-        len++;
+        ++len;
     }
     /**
      * return reference to first element in queue
@@ -64,7 +64,7 @@ public:
      * return reference to last element in queue
      */
     T& back() {
-        assert(len != sz); // XXX: uhm, what? can this happen?
+        assert(len <= sz);
         return q[tail];
     }
     /**
@@ -76,8 +76,14 @@ public:
     T pop() {
         assert(len != 0);
         auto ix = head;
-        head++;
-        len--;
+        ++head;
+        --len;
+        // let queue always start at the beginning
+        // if we ever get it empty
+        if (len == 0) {
+            head = {0};
+            tail = {0};
+        }
         return std::move(q[ix]);
     }
     /**
