@@ -16,6 +16,8 @@ template<typename T>
 struct Buffer {
     T *buf;
     size_t len, size;
+    /** implicit cast to pointer to T */
+    operator T*() { return buf; }
     //XXX: how about a slice into a buffer?
 
     /** access into known length of buffer */
@@ -35,13 +37,10 @@ struct Buffer {
         return *this;
     }
     /** begin method for range-based for loops */
-    T* begin() {
-        return &buf[0];
-    }
+    T* begin() { return &buf[0]; }
     /** end method for range-based for loops */
-    T* end() {
-        return &buf[len];
-    }
+    T* end() { return &buf[len]; }
+
     /* Rule of Five */
     /** destructor */
     ~Buffer() {
