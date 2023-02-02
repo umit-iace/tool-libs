@@ -1,88 +1,101 @@
+/** @file Buffer.h
+ *
+ * Copyright (c) 2023 IACE
+ */
 #pragma once
 #include <cstring>
 #include <cstdint>
-#ifndef DEBUGLOG
-#define DEBUGLOG(...)
-#define UNDEF
-#endif
 
+/**
+ * dynamically allocated, but fixed-size buffer template
+ *
+ * keeps track of the number of items stored, and of allocated size
+ * provides both copy & move semantics
+ */
 template<typename T>
 struct Buffer {
-    T *payload;
+    T *buf;
     size_t len, size;
+    //XXX: how about a slice into a buffer?
 
-    /** access */
+    /** access into known length of buffer */
     T& at(size_t ix) {
         assert(ix < len);
-        return payload[ix];
+        return buf[ix];
     }
+    /** access into known size of buffer */
     T& operator[](size_t ix) {
         assert(ix < size);
-        return payload[ix];
+        return buf[ix];
     }
+    /** simple append single item */
     Buffer& append(T b) {
         assert(len < size);
-        payload[len++] = b;
+        buf[len++] = b;
         return *this;
     }
+    /** begin method for range-based for loops */
     T* begin() {
-        return &payload[0];
+        return &buf[0];
     }
+    /** end method for range-based for loops */
     T* end() {
-        return &payload[len];
+        return &buf[len];
     }
     /* Rule of Five */
     /** destructor */
     ~Buffer() {
-        DEBUGLOG(stderr, "Buffer del payload: %p\n", payload);
-        delete[] payload; len = 0; size = 0;
+        log("Buffer del buf: %p\n", buf);
+        delete[] buf; buf = nullptr; len = 0; size = 0;
     }
-    /** constructor */
-    Buffer(size_t sz) : payload{new T[sz]()}, len(0), size(sz) {
-        DEBUGLOG(stderr, "Buffer new payload: %p\n", payload);
+    /** copy from naked array with known length */
+    Buffer(T *src, size_t sz) : buf{new T[sz]}, size(sz) {
+        log("Buffer new from buf: %p len: %ld\n", src, sz);
+        memcpy(buf, src, sz);
+        len = sz;
+    }
+    /** constructor with fixed size */
+    Buffer(size_t sz) : buf{new T[sz]()}, len(0), size(sz) {
+        log("Buffer new buf: %p\n", buf);
     }
     /** copy constructor */
-    Buffer(const Buffer &b) : payload{new T[b.size]()}, len(b.len), size(b.size) {
-        DEBUGLOG(stderr, "Buffer cp constr\n");
-        memcpy(payload, b.payload, len);
-        DEBUGLOG(stderr, "Buffer cp constr from: %p to: %p\n", b.payload, payload);
+    Buffer(const Buffer &b) : buf{new T[b.size]()}, len(b.len), size(b.size) {
+        memcpy(buf, b.buf, len);
+        log("Buffer cp constr from: %p to: %p\n", b.buf, buf);
     }
     /** copy assignment operator */
     Buffer& operator=(const Buffer &b) {
         if (this == &b) return *this; // copy to self
         if (!size && size != b.size) { // necessary to realloc
-            delete[] payload;
-            payload = new T[b.size]();
+            delete[] buf;
+            buf = new T[b.size]();
             size = b.size;
         }
-        assert(payload != nullptr);
+        assert(buf != nullptr);
         assert(size > b.len);
-        DEBUGLOG(stderr, "Buffer cp from to: %p %p\n", b.payload, payload);
-        memcpy(payload, b.payload, b.len);
+        log("Buffer cp from to: %p %p\n", b.buf, buf);
+        memcpy(buf, b.buf, b.len);
         len = b.len;
         return *this;
     }
     /** move constructor */
-    Buffer(Buffer &&b) noexcept : payload(b.payload), len(b.len), size(b.size) {
-        DEBUGLOG(stderr, "Buffer mv constr from: %p to: %p\n", b.payload, payload);
-        b.payload = 0;
+    Buffer(Buffer &&b) noexcept : buf(b.buf), len(b.len), size(b.size) {
+        log("Buffer mv constr from: %p to: %p\n", b.buf, buf);
+        b.buf = nullptr;
         b.len = 0;
         b.size = 0;
     }
     /** move assignment operator */
     Buffer& operator=(Buffer &&b) noexcept {
         if (this == &b) return *this; // move to self
-        DEBUGLOG(stderr, "Buffer mv from to: %p %p\n", b.payload, payload);
-        delete[] payload;
-        payload = b.payload;
+        log("Buffer mv from: %p to: %p\n", b.buf, buf);
+        delete[] buf;
+        buf = b.buf;
         len = b.len;
         size = b.size;
         b.len = 0;
         b.size = 0;
-        b.payload = nullptr;
+        b.buf = nullptr;
         return *this;
     }
 };
-#ifdef UNDEF
-#undef DEBUGLOG
-#endif
