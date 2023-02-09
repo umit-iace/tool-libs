@@ -16,7 +16,8 @@ struct Timeout {
     uint32_t when{};
     /// time expired
     bool operator()(uint32_t now) {
-        if (when == 0) return false;
-        return now >= when;
+        if (when == 0 || now < when) return false;
+        when = 0;
+        return true;
     }
 };
