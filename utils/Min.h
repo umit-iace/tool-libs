@@ -21,23 +21,23 @@ struct Frame {
     } cursor{};
     template<typename T>
     void pack(T value) {
-        auto *origin = (uint8_t *) &value;
         assert(cursor.pack + sizeof(T) < b.size);
-        b.len += sizeof(T);
-        for (int i = sizeof(T) - 1; i >= 0; --i) {
-            b[cursor.pack + i] = *origin++;
-        }
+        *(T*)&b[cursor.pack] = value;
         cursor.pack += sizeof(T);
+        b.len += sizeof(T);
     }
-
     template<typename T>
     void unPack(T &value) {
-        auto *dest = (uint8_t *) &value;
         assert(cursor.unpack + sizeof(T) < b.size);
-        for (int i = sizeof(T) - 1; i >= 0; --i) {
-            *dest++ = b[cursor.unpack + i];
-        }
+        value = *(T*)&b[cursor.unpack];
         cursor.unpack += sizeof(T);
+    }
+    template<typename T>
+    T unpack() {
+        assert(cursor.unpack + sizeof(T) < b.size);
+        T ret = *(T*)&b[cursor.unpack];
+        cursor.unpack += sizeof(T);
+        return ret;
     }
 };
 

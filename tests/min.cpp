@@ -62,17 +62,17 @@ void testRx() {
         {
         0xaa, 0xaa, 0xaa,
         0x1, 0xc,
-        0x40, 0x9, 0x1e, 0xb8, 0x51, 0xeb, 0x85, 0x1f,
-        0x0, 0x0, 0xe, 0x10,
-        0xe0, 0x29, 0xc2, 0x86,
+        0x1f, 0x85, 0xeb, 0x51, 0xb8, 0x1e, 0x9, 0x40,
+        0x10, 0xe, 0x0, 0x0,
+        0x13, 0x96, 0x30, 0x3c,
         0x55,
         },
         {
         0xaa, 0xaa, 0xaa,
         0x10, 0xc,
-        0x40, 0x9, 0x1e, 0xb8, 0x51, 0xeb, 0x85, 0x1f,
-        0x0, 0x0, 0xe, 0x10,
-        0x1b, 0x94, 0x1f, 0x9c,
+        0x1f, 0x85, 0xeb, 0x51, 0xb8, 0x1e, 0x9, 0x40,
+        0x10, 0xe, 0x0, 0x0,
+        0xe8, 0x2b, 0xed, 0x26,
         0x55,
         },
     };
@@ -80,23 +80,21 @@ void testRx() {
     q.push({input[1], sizeof input[1]});
     while (!min.empty()) {
         Frame f = min.pop();
-            double pi;
-            uint32_t sph;
-            f.unPack(pi);
-            f.unPack(sph);
+            double pi = f.unpack<double>();
+            uint32_t sph = f.unpack<uint32_t>();
             printf("id=%d pi=%f sph=%d\n", f.id, pi, sph);
     }
 }
 void testStructroundtrip() {
     Frame f{19};
-    f.pack(true);
-    f.pack((uint32_t)3600);
     f.pack(3.14);
-    f.unPack(recv);
+    f.pack((uint32_t)3600);
+    f.pack(true);
+    recv = f.unpack<decltype(recv)>();
     printf("id=%d pi=%f sph=%d tru=%x\n", f.id, recv.pi, recv.sph, recv.tru);
     f = Frame{18};
     f.pack(send);
-    f.unPack(recv);
+    recv = f.unpack<decltype(recv)>();
     printf("id=%d pi=%f sph=%d tru=%x\n", f.id, recv.pi, recv.sph, recv.tru);
 }
 int main() {
