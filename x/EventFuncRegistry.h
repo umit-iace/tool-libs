@@ -1,31 +1,30 @@
 #pragma once
 #include "utils/Buffer.h"
-#include "utils/Queue.h"
 #include "x/Schedule.h"
-struct EventFuncRegistry//: public Scheduler {
-{
-    using Func = void (*)(uint32_t time_ms);
-    /* struct Callable { */
-    /*     Func func; */
-    /*     uint32_t sched_time; */
-    /*     void call() { */
-    /*         func(sched_time); */
-    /*     } */
-    /* }; */
 
-    Buffer<Func> list{20};
-    /* Queue<Callable, 20> q; */
-    void reg(Func func) {
-        list.append(func);
-    }
-    void schedule(Scheduler &s, uint32_t time) {
-        for (Func &f : list) {
-            s.push(new EventSchedulableFunc(f, {time}));
+struct EventFuncRegistry {
+    using Func = void (*)(uint32_t);
+    template<typename T>
+    using Method = void (T::*)(uint32_t);
+    Buffer<SchedulableBase *> list{20};
+    ~EventFuncRegistry() {
+        for (auto &entry : list) {
+            delete entry;
         }
     }
-    /* void run() override { */
-    /*     while (!q.empty()) { */
-    /*         q.pop().call(); */
-    /*     } */
-    /* } */
+    /** register Function to be scheduled for calling on Event */
+    void onEvent(Func func) {
+        list.append(new EventSchedulableFunc{func, {0}});
+    }
+    template<typename T>
+    void onEvent(T& base, Method<T> method) {
+        list.append(new EventSchedulableMethod<T>(&base, method, {0}));
+    }
+    void schedule(Scheduler &s, uint32_t time) {
+        for (auto &f : list) {
+            f->schedule(s.q, time);
+        }
+            /* s.push(new EventSchedulableFunc(f, {time})); */
+        /* } */
+    }
 };

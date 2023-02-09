@@ -5,37 +5,33 @@
 
 struct TimedFuncRegistry {
     using Func = void (*)(uint32_t, uint32_t);
-    inline uint32_t min(uint32_t a, uint32_t b) { return a < b ? a : b; }
-    struct Container {
-        Func func;
-        uint32_t dt_ms, next;
-    };
-
-    Buffer<Container> list{20}; //< list of registered functions to be scheduled
-    uint32_t next; //< next point in time when this registry shall be called
+    template <typename T>
+    using Method = void (T::*)(uint32_t, uint32_t);
+    ~TimedFuncRegistry() {
+        for (auto &entry: list) {
+            delete entry;
+        }
+    }
+    Buffer<SchedulableBase *> list{20}; //< list of registered functions to be scheduled
 
     /** register a function to be called every @dt_ms */
-    void reg(Func func, uint32_t dt_ms) {
-        list.append({.func = func, .dt_ms = dt_ms});
-        next = 0;
+    void every(uint32_t dt_ms, Func func) {
+        list.append(new TimeSchedulableFunc{func, {.dt_ms = dt_ms}});
     }
+    template<typename T>
+    void every(uint32_t dt_ms, T& base, Method<T> method) {
+        list.append(new TimeSchedulableMethod<T>(&base, method, {.dt_ms=dt_ms}));
+    }
+
     void schedule(Scheduler &s, uint32_t time) {
-        if (time < next) return;
-        next = (uint32_t)-1;
-        for (Container &c : list) {
-            if (c.next == 0 || time+1 >= c.next) {
-                c.next += c.dt_ms;
-                next = min(next, c.next);
-                // schedule the call of the registered function
-                s.push(new TimeSchedulableFunc(c.func, {time, c.dt_ms}));
-            }
+        for (auto &c : list) {
+            c->schedule(s.q, time);
         }
     }
     /** reset calling times of all registered functions */
     void reset() {
-        next = 0;
         for (auto &c: list) {
-            c.next = 0;
+            c->reset();
         }
     }
 };
