@@ -62,7 +62,7 @@ struct CRC32 {
 
 class Min : public Push<Frame>, public Pull<Frame> {
 public:
-    Min(Push<Buffer<uint8_t>> &whereto, Pull<Buffer<uint8_t>> &wherefrom) :
+    Min(Pull<Buffer<uint8_t>> &wherefrom, Push<Buffer<uint8_t>> &whereto) :
         tx{.push = whereto}, rx{.pull = wherefrom} {}
 
     /** push frames through to underlying transport layer */
