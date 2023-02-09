@@ -100,9 +100,9 @@ void startTransmit(HardwareUART *uart) {
             asm("bkpt");
         }
     }
-    //XXX: consider calculating the timeout based on the b.len * 8 / baudrate
-    //or smth
-    uart->tx.timeout = Timeout{uwTick + 140};
+
+    size_t need = 1000 * b.len * (8+2) / uart->handle.Init.BaudRate;
+    uart->tx.timeout = Timeout{uwTick + need};
 }
 void startReceive(HardwareUART *uart) {
     auto ret = HAL_OK;
