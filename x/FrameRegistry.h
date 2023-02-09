@@ -1,5 +1,5 @@
 #pragma once
-#include "Min.h"
+#include "utils/Min.h"
 
 struct FrameRegistry {
     using Arg = void *;
@@ -13,7 +13,7 @@ struct FrameRegistry {
         list[id] = {h, a};
     }
 
-    void handle(Frame &f) {
+    void handle(Frame f) {
         Container tmp = list[f.id];
         if (tmp.h) {
             tmp.h(f, tmp.a);
