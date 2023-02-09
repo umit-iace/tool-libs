@@ -53,12 +53,15 @@ inline struct Experiment {
 
     void handleFrame(Frame &f, uint32_t time_ms) {
         assert(f.id == 1);
-        uint8_t b;
-        f.unPack(b);
-        if (b & 2) {
+        struct {
+            uint8_t alive:1;
+            uint8_t heartbeat:1;
+            uint8_t _:6;
+        } b = f.unpack<decltype(b)>();
+        if (b.heartbeat) {
             heartbeat = {time_ms + HB};
         } else {
-            alive = b&1;
+            alive = b.alive;
         }
     }
 } k;
