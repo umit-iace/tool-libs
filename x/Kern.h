@@ -7,39 +7,20 @@
 #include "Schedule.h"
 #define HB (500)
 inline struct Experiment {
-    enum State { IDLE, INIT, RUN, STOP } state{};
+    enum State { IDLE, RUN } state{};
     bool alive{};
-    Timeout keeper{};
     void statemachine() {
         State old = state;
-        switch (state) {
+        // very simple state machine
+        state = alive ? RUN : IDLE;
+        // react to state changes
+        if (state != old) switch(old) {
         case IDLE:
-            state = alive ? INIT : IDLE;
-            break;
-        case INIT:
-            state = keeper(time)? RUN : INIT;
-            state = alive ? state : STOP;
-            break;
-        case RUN:
-            state = alive ? RUN : STOP;
-            break;
-        case STOP:
-            state = keeper(time)? IDLE : STOP;
-            break;
-        }
-        if (state != old) switch(state) {
-        case IDLE:
-            break;
-        case INIT:
-            keeper = {time+400};
             init.schedule(s,time);
-            break;
-        case RUN:
             time = 0;
             always.reset(); idle.reset(); running.reset();
             break;
-        case STOP:
-            keeper = {time+100};
+        case RUN:
             stop.schedule(s,time);
             break;
         }
