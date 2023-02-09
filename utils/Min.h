@@ -119,6 +119,7 @@ private:
         }
         void enqueue(Frame &f) {
             req = Buffer<uint8_t>{128};
+            crc.init();
             nostuff(HEADER_BYTE);
             nostuff(HEADER_BYTE);
             nostuff(HEADER_BYTE);
