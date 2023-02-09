@@ -30,10 +30,6 @@ inline struct Experiment {
     TimedFuncRegistry always{}, idle{}, running{};
     Scheduler s{};
     uint32_t time{};
-    /* Buffer<Scheduler*> sched{5}; */
-    /* Experiment() { */
-    /*     sched.append(&stop).append(&init).append(&running).append(&idle).append(&always); */
-    /* } */
 
     /** call this every millisecond in an interrupt */
     void ms_tick(uint32_t globaltime) {
@@ -53,14 +49,6 @@ inline struct Experiment {
      */
     void run() {
         s.run();
-        /* init.run(); */
-        /* stop.run(); */
-        /* always.run(); */
-        /* idle.run(); */
-        /* running.run(); */
-        /* for (auto s: sched) { */
-        /*     s->run(); */
-        /* } */
     }
 
     void handleFrame(Frame &f, uint32_t time_ms) {
