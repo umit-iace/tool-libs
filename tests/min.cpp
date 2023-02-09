@@ -45,7 +45,7 @@ void testFrame() {
 void testTx() {
     Printer p;
     Queue<Buffer<uint8_t>, 0> null;
-    Min min{p, null};
+    Min min{null, p};
     Frame f{1};
     f.pack(3.14);
     f.pack((uint32_t) 3600);
@@ -57,7 +57,7 @@ void testTx() {
 void testRx() {
     Printer p;
     Queue<Buffer<uint8_t>, 2> q;
-    Min min{p, q};
+    Min min{q, p};
     uint8_t input[][22] = {
         {
         0xaa, 0xaa, 0xaa,
