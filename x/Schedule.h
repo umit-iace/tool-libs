@@ -32,16 +32,25 @@ struct EventSchedulableFunc: public SchedulableBase {
 };
 
 template<typename T>
-struct SchedulableFunc : public SchedulableBase {
-
+struct TimeSchedulableMethod : public SchedulableBase {
+    using Base = T*;
+    using Method = void (T::*)(uint32_t, uint32_t);
+    using Args = struct {
+        uint32_t time_ms;
+        uint32_t dt_ms;
+    };
+    Base base;
+    Method method;
+    Args args;
+    TimeSchedulableMethod(Base b, Method m, Args a): base(b), method(m), args(a) { }
+    virtual void call() override {
+        return (base->*method)(args.time_ms, args.dt_ms);
+    }
 };
 
 struct Scheduler {
     Queue<SchedulableBase*, 30> q;
-    void push(EventSchedulableFunc *f) {
-        q.push(f);
-    }
-    void push(TimeSchedulableFunc *f) {
+    void push(SchedulableBase *f) {
         q.push(f);
     }
     void run() {
@@ -52,30 +61,3 @@ struct Scheduler {
         }
     }
 };
-
-struct TimeCallable {
-    using Func = void (*)(uint32_t, uint32_t);
-    using Args = struct {
-        uint32_t time_ms;
-        uint32_t dt_ms;
-    };
-    Func func;
-    Args args;
-    void operator()() {
-        return func(args.time_ms, args.dt_ms);
-    }
-};
-struct EventCallable {
-    using Func = void (*)(uint32_t);
-    using Args = struct {
-        uint32_t time_ms;
-    };
-    Func func;
-    Args args;
-    void operator()() {
-        return func(args.time_ms);
-    }
-};
-
-using TimeSchedule = Queue<TimeCallable, 20>;
-using EventSchedule = Queue<EventCallable, 20>;
