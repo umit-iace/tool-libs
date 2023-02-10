@@ -10,6 +10,7 @@ struct FrameRegistry {
     };
     Container list[64]{};
     void setHandler(uint8_t id, Handler h, Arg a=nullptr) {
+        assert(list[id].h == nullptr);
         list[id] = {h, a};
     }
 
