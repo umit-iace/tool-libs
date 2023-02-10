@@ -25,6 +25,26 @@ inline struct Experiment {
             break;
         }
     }
+    //forward method calls
+    enum Event { INIT, STOP };
+    template<typename ...Args>
+    constexpr void onEvent(Event e, Args &&... a) {
+        switch (e){
+            case INIT: init.onEvent(std::forward<Args>(a)...);break;
+            case STOP: stop.onEvent(std::forward<Args>(a)...);break;
+        }
+    }
+    template<typename ...Args>
+    constexpr void every(Args&& ...a) {
+        return always.every(std::forward<Args>(a)...);
+    }
+    // more verbose access
+    constexpr TimedFuncRegistry& during(State s) {
+        switch (s) {
+            case IDLE: return idle;
+            case RUN: return running;
+        }
+    }
     Timeout heartbeat{};
     EventFuncRegistry init{}, stop{};
     TimedFuncRegistry always{}, idle{}, running{};
