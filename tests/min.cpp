@@ -29,6 +29,21 @@ struct __attribute__((packed)) TestStruct {
     .sph=0,
     .tru=false,
 };
+struct __attribute((packed)) BigStruct {
+    uint8_t msg[75] ="\n\
+        Hello World!             |\n\
+        hoi                      |\n";
+    double pi=3.14159265;
+    uint32_t longs[4] = {123456,0,0, 234567};
+    bool tru = true;
+    void print(){
+        printf("msg=%s pi=%lf l=[%d,%d,%d,%d] tru=%x\n"
+                , msg, pi
+                , longs[0],longs[1],longs[2],longs[3]
+                , tru
+              );
+    }
+} bigsend, bigrecv = { .msg = "", .pi=0, .longs = {0, 0}, .tru=false };
 
 void testFrame() {
     Frame f;
@@ -96,6 +111,12 @@ void testStructroundtrip() {
     f.pack(send);
     recv = f.unpack<decltype(recv)>();
     printf("id=%d pi=%f sph=%d tru=%x\n", f.id, recv.pi, recv.sph, recv.tru);
+    f = Frame{16};
+    f.pack(bigsend);
+    bigrecv = f.unpack<decltype(bigrecv)>();
+    printf("id=%d ", f.id);
+    bigrecv.print();
+    printf("size of BigStruct: %ld\n", sizeof(bigrecv));
 }
 int main() {
     testFrame();
