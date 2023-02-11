@@ -16,12 +16,12 @@ inline struct Experiment {
         // react to state changes
         if (state != old) switch(old) {
         case IDLE:
-            init.schedule(s,time);
+            s.schedule(time, init);
             time = 0;
             always.reset(); idle.reset(); running.reset();
             break;
         case RUN:
-            stop.schedule(s,time);
+            s.schedule(time, stop);
             break;
         }
     }
@@ -39,7 +39,8 @@ inline struct Experiment {
         return always.every(std::forward<Args>(a)...);
     }
     // more verbose access
-    constexpr Schedule::Timed::Registry& during(State s) {
+    constexpr
+    Schedule::Recurring::Registry& during(State s) {
         switch (s) {
             case IDLE: return idle;
             case RUN: return running;
@@ -47,7 +48,7 @@ inline struct Experiment {
     }
     Timeout heartbeat{};
     Schedule::Evented::Registry init{}, stop{};
-    Schedule::Timed::Registry always{}, idle{}, running{};
+    Schedule::Recurring::Registry always{}, idle{}, running{};
     Scheduler s{};
     uint32_t time{};
 
@@ -56,10 +57,10 @@ inline struct Experiment {
         /* time = globaltime - expstarttime; */
         statemachine();
         if (heartbeat(time)) alive = false;
-        always.schedule(s,time);
+        s.schedule(time, always);
         switch (state) {
-            case IDLE: idle.schedule(s,time); break;
-            case RUN: running.schedule(s,time); break;
+            case IDLE: s.schedule(time, idle); break;
+            case RUN : s.schedule(time, running); break;
             default:;
         }
         time++;

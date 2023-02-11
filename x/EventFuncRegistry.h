@@ -3,6 +3,10 @@
 #include "x/Schedule.h"
 namespace Schedule { namespace Evented {
 
+using SFunc = void (*)(uint32_t);
+template<typename T>
+using SMethod = void (T::*)(uint32_t);
+
 struct Schedulable: public Callable {
     uint32_t time{};
     bool schedule(uint32_t t) override {
@@ -10,9 +14,6 @@ struct Schedulable: public Callable {
         return true;
     }
 };
-using SFunc = void (*)(uint32_t);
-template<typename T>
-using SMethod = void (T::*)(uint32_t);
 
 struct Func: public Schedulable {
     SFunc func{};
@@ -33,7 +34,8 @@ struct Method: public Schedulable {
 };
 
 struct Registry {
-    Buffer<Schedulable *> list{20};
+    Buffer<Callable *> list{20};
+    operator Buffer<Callable *>&() { return list; }
     /** register Function to be scheduled for calling on Event */
     void onEvent(SFunc func) {
         list.append(new Func{func});
@@ -41,11 +43,6 @@ struct Registry {
     template<typename T>
     void onEvent(T& base, SMethod<T> method) {
         list.append(new Method<T>{&base, method});
-    }
-    void schedule(Scheduler &s, uint32_t time) {
-        for (auto &f : list) {
-            if (f->schedule(time)) s.push(f);
-        }
     }
     ~Registry() {
         for (auto &entry : list) {

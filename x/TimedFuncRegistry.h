@@ -1,8 +1,11 @@
 #pragma once
 #include "utils/Buffer.h"
-#include "utils/Queue.h"
 #include "x/Schedule.h"
-namespace Schedule { namespace Timed {
+namespace Schedule { namespace Recurring {
+
+using SFunc = void (*)(uint32_t, uint32_t);
+template<typename T>
+using SMethod = void (T::*)(uint32_t, uint32_t);
 
 struct Schedulable: public Callable {
     uint32_t next{}, time{}, dt{};
@@ -15,10 +18,6 @@ struct Schedulable: public Callable {
     }
     void reset() { next = 0; }
 };
-
-using SFunc = void (*)(uint32_t, uint32_t);
-template<typename T>
-using SMethod = void (T::*)(uint32_t, uint32_t);
 
 struct Func: public Schedulable {
     SFunc func;
@@ -38,7 +37,8 @@ struct Method : public Schedulable {
 };
 
 struct Registry {
-    Buffer<Schedulable *> list{20};
+    Buffer<Callable *> list{20};
+    operator Buffer<Callable *>&() { return list; }
     /** register a function to be called every @dt_ms */
     void every(uint32_t dt_ms, SFunc func) {
         list.append(new Func{func, dt_ms});
@@ -47,16 +47,10 @@ struct Registry {
     void every(uint32_t dt_ms, T& base, SMethod<T> method) {
         list.append(new Method<T>{&base, method, dt_ms});
     }
-
-    void schedule(Scheduler &s, uint32_t time) {
-        for (auto &c : list) {
-            if (c->schedule(time)) s.push(c);
-        }
-    }
     /** reset calling times of all registered functions */
     void reset() {
         for (auto &c: list) {
-            c->reset();
+            static_cast<Schedulable *>(c)->reset();
         }
     }
     ~Registry() {

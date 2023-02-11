@@ -12,8 +12,11 @@ struct Callable {
 struct Scheduler {
     // this is pointing to the actual callables in the registries
     Queue<Schedule::Callable*, 30> q;
-    void push(Schedule::Callable *f) {
-        q.push(f);
+
+    void schedule(uint32_t time, const Buffer<Schedule::Callable *> &buf) {
+        for (auto &c: buf) {
+            if (c->schedule(time)) q.push(c);
+        }
     }
     void run() {
         while (!q.empty()) {
