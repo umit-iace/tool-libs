@@ -39,15 +39,15 @@ inline struct Experiment {
         return always.every(std::forward<Args>(a)...);
     }
     // more verbose access
-    constexpr TimedFuncRegistry& during(State s) {
+    constexpr Schedule::Timed::Registry& during(State s) {
         switch (s) {
             case IDLE: return idle;
             case RUN: return running;
         }
     }
     Timeout heartbeat{};
-    EventFuncRegistry init{}, stop{};
-    TimedFuncRegistry always{}, idle{}, running{};
+    Schedule::Evented::Registry init{}, stop{};
+    Schedule::Timed::Registry always{}, idle{}, running{};
     Scheduler s{};
     uint32_t time{};
 
