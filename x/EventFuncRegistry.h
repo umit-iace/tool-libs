@@ -33,9 +33,7 @@ struct Method: public Schedulable {
     }
 };
 
-struct Registry {
-    Buffer<Callable *> list{20};
-    operator Buffer<Callable *>&() { return list; }
+struct Registry : Schedule::Registry {
     /** register Function to be scheduled for calling on Event */
     void onEvent(SFunc func) {
         list.append(new Func{func});
@@ -43,11 +41,6 @@ struct Registry {
     template<typename T>
     void onEvent(T& base, SMethod<T> method) {
         list.append(new Method<T>{&base, method});
-    }
-    ~Registry() {
-        for (auto &entry : list) {
-            delete entry;
-        }
     }
 };
 }}

@@ -36,9 +36,7 @@ struct Method : public Schedulable {
     }
 };
 
-struct Registry {
-    Buffer<Callable *> list{20};
-    operator Buffer<Callable *>&() { return list; }
+struct Registry : Schedule::Registry {
     /** register a function to be called every @dt_ms */
     void every(uint32_t dt_ms, SFunc func) {
         list.append(new Func{func, dt_ms});
@@ -51,11 +49,6 @@ struct Registry {
     void reset() {
         for (auto &c: list) {
             static_cast<Schedulable *>(c)->reset();
-        }
-    }
-    ~Registry() {
-        for (auto &entry: list) {
-            delete entry;
         }
     }
 };
