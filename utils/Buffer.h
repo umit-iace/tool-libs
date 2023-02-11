@@ -38,8 +38,10 @@ struct Buffer {
     }
     /** begin method for range-based for loops */
     T* begin() { return &buf[0]; }
+    T* begin() const { return &buf[0]; }
     /** end method for range-based for loops */
     T* end() { return &buf[len]; }
+    T* end() const { return &buf[len]; }
 
     /* Rule of Five */
     /** destructor */
