@@ -1,9 +1,9 @@
+#define log(...)
 #include <cassert>
 #include <iostream>
-#include <utils/FrameRegistry.h>
+#include <x/FrameRegistry.h>
 using namespace std;
-FrameRegistry reg;
-void handle(Frame &f, void* stuff) {
+void handle(Frame &f) {
     double d;
     bool e;
     switch (f.id) {
@@ -21,35 +21,45 @@ void handle(Frame &f, void* stuff) {
             break;
     }
 }
-void simple() {
+struct Exp{
+    void runlog(Frame &f) {
+        bool run = f.unpack<bool>();
+        cout << "Classexperiment " << (run?"start":"stop") << endl;
+    }
+    void getPi(Frame &f) {
+        double pi = f.unpack<double>();
+        assert(pi - 3.14 < 0.01);
+        cout << "pi = " << pi << endl;
+    }
+};
+void func() {
+    FrameRegistry reg;
     Frame e{1}, f{10}, g{1};
     e.pack(true);
     f.pack(3.14);
     g.pack(false);
     reg.setHandler(1, handle);
     reg.setHandler(10, handle);
-    reg.handle(e);
-    reg.handle(f);
-    reg.handle(g);
+    reg.handle(std::move(e));
+    reg.handle(std::move(f));
+    reg.handle(std::move(g));
 }
-struct complexstruct {
-    double d;
-    bool b;
-} cs{};
-void handleargs(Frame &f, void* stuff) {
-    auto c = (complexstruct *)stuff;
-    f.unPack(c->d);
-    f.unPack(c->b);
-    cout << c->d <<" "<< (c->b?"true":"false") << endl;
-}
-void voidargs() {
-    Frame e{2};
-    e.pack(3.14);
-    e.pack(true);
-    reg.setHandler(2, handleargs, &cs);
-    reg.handle(e);
+
+void meth() {
+    FrameRegistry reg;
+    Exp exp;
+    reg.setHandler(1, exp, &Exp::runlog);
+    reg.setHandler(10, exp, &Exp::getPi);
+    Frame f{1}, p{10};
+    f.pack(true);
+    p.pack(3.14);
+    reg.handle(std::move(f));
+    reg.handle(std::move(p));
+    f = Frame{1};
+    f.pack(false);
+    reg.handle(std::move(f));
 }
 int main() {
-    simple();
-    voidargs();
+    func();
+    meth();
 }

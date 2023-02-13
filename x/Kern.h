@@ -72,7 +72,7 @@ inline struct Experiment {
         s.run();
     }
 
-    void handleFrame(Frame &f, uint32_t time_ms) {
+    void handleFrame(Frame &f) {
         assert(f.id == 1);
         struct {
             uint8_t alive:1;
@@ -80,7 +80,7 @@ inline struct Experiment {
             uint8_t _:6;
         } b = f.unpack<decltype(b)>();
         if (b.heartbeat) {
-            heartbeat = {time_ms + HB};
+            heartbeat = {time + HB};
         } else {
             alive = b.alive;
         }
