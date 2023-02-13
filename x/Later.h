@@ -15,32 +15,42 @@
  */
 template<typename T>
 struct Later {
-    const T& where{};
-    const Later *nested{};
+    T& where{};
+    Later *nested{};
     enum Op {NOP, ADD, SUB} op{};
     ~Later() { delete nested; nested = nullptr;}
-    Later(T& val): where(val) {}
+    Later(T& val): where(val) {} // unable to store temporaries. use `plus` or `minus`
     Later(T& v, Later *n, Op op): where(v), nested(n), op(op) {}
-    Later(Later &l) : where(l.where), nested(l.nested), op(l.op) {
+    // copying impossible. who'd own nested Laters?
+    Later(const Later &)=delete;
+    Later& operator=(const Later &)=delete;
+    // moving is ok
+    Later(Later &&l) noexcept : where(l.where), nested(l.nested), op(l.op) {
         l.nested = nullptr;
     }
-    Later(Later &&l)=delete;
-    Later& operator=(Later l)=delete;
-    Later& operator=(Later &&l)=delete;
+    Later& operator=(Later &&l) noexcept {
+        this->~Later();
+        where = l.where;
+        nested = l.nested;
+        op = l.op;
+        l.nested = nullptr;
+        return *this;
+    }
     Later plus(T &val) {
         return {
             val,
-            new Later{*this},
+            new Later{std::move(*this)},
             ADD,
         };
     }
     Later minus(T &val) {
         return {
             val,
-            new Later{*this},
+            new Later{std::move(*this)},
             SUB,
         };
     }
+    /** implicit type conversion access */
     constexpr operator T() const {
         switch (op) {
         case NOP: return where;
@@ -48,6 +58,7 @@ struct Later {
         case SUB: return *nested - where;
         }
     }
+    /** explicit accessor */
     T get() const {
         return (T)*this;
     }
