@@ -29,6 +29,7 @@ struct Later {
         l.nested = nullptr;
     }
     Later& operator=(Later &&l) noexcept {
+        if (this == &l) return *this;
         this->~Later();
         where = l.where;
         nested = l.nested;
