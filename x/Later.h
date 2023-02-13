@@ -53,9 +53,9 @@ struct Later {
     /** implicit type conversion access */
     constexpr operator T() const {
         switch (op) {
-        case NOP: return where;
         case ADD: return (T)*nested + where;
         case SUB: return (T)*nested - where;
+        default: return where;
         }
     }
     /** explicit accessor */
