@@ -7,7 +7,7 @@
  * e.g.
  * ```
  * int a{8}, b{3}, c{4};
- * auto op = Later(a).plus(b).minus(c);
+ * auto op = (Later<int>) a + b - c;
  * op.get() /// -> 7
  * a = 4;
  * op.get() /// -> 3
@@ -19,7 +19,7 @@ struct Later {
     Later *nested{};
     enum Op {NOP, ADD, SUB} op{};
     ~Later() { delete nested; nested = nullptr;}
-    Later(T& val): where(val) {} // unable to store temporaries. use `plus` or `minus`
+    Later(T& val): where(val) {} // unable to store temporaries. cast the first operand to this type first
     Later(T& v, Later *n, Op op): where(v), nested(n), op(op) {}
     // copying impossible. who'd own nested Laters?
     Later(const Later &)=delete;
@@ -36,14 +36,14 @@ struct Later {
         l.nested = nullptr;
         return *this;
     }
-    Later plus(T &val) {
+    Later operator+(T &val) {
         return {
             val,
             new Later{std::move(*this)},
             ADD,
         };
     }
-    Later minus(T &val) {
+    Later operator-(T &val) {
         return {
             val,
             new Later{std::move(*this)},
@@ -54,8 +54,8 @@ struct Later {
     constexpr operator T() const {
         switch (op) {
         case NOP: return where;
-        case ADD: return *nested + where;
-        case SUB: return *nested - where;
+        case ADD: return (T)*nested + where;
+        case SUB: return (T)*nested - where;
         }
     }
     /** explicit accessor */
