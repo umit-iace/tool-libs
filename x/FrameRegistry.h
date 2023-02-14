@@ -18,12 +18,11 @@ struct FrameRegistry {
         }
     };
     template<typename T>
-    using Method = void(T::*)(Frame &f);
-    template<typename T>
     struct MethodHandler: public Callable {
+        typedef void(T::*Method)(Frame &f);
         T* base;
-        Method<T> method;
-        MethodHandler(T* b, Method<T> m) : base(b), method(m) { }
+        Method method;
+        MethodHandler(T* b, Method m) : base(b), method(m) { }
         void call(Frame &f) override {
             return (base->*method)(f);
         }
@@ -36,8 +35,11 @@ struct FrameRegistry {
         list[id] = new FuncHandler(f);
     }
     /** register class instance & method to handle all frames with given id */
+    /* template<typename T> */
+    /* using Method = MethodHandler<T>::Method; */
     template<typename T>
-    void setHandler(uint8_t id, T& base, Method<T> method) {
+    void setHandler(uint8_t id, T& base,
+            typename MethodHandler<T>::Method method) {
         assert(list[id] == nullptr);
         list[id] = new MethodHandler(&base, method);
     }
