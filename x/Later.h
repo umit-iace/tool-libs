@@ -31,10 +31,7 @@ struct Later {
     Later& operator=(Later &&l) noexcept {
         if (this == &l) return *this;
         this->~Later();
-        where = l.where;
-        nested = l.nested;
-        op = l.op;
-        l.nested = nullptr;
+        new (this) Later(std::move(l));
         return *this;
     }
     Later operator+(T &val) {
