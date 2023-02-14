@@ -48,16 +48,12 @@ struct Later {
             SUB,
         };
     }
-    /** implicit type conversion access */
-    constexpr operator T() const {
+    /** explicit accessor */
+    constexpr T get() const {
         switch (op) {
-        case ADD: return (T)*nested + where;
-        case SUB: return (T)*nested - where;
+        case ADD: return nested->get() + where;
+        case SUB: return nested->get() - where;
         default: return where;
         }
-    }
-    /** explicit accessor */
-    T get() const {
-        return (T)*this;
     }
 };
