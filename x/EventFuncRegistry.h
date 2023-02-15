@@ -33,11 +33,11 @@ struct Registry : Schedule::Registry {
     };
 
     /** register Function to be scheduled for calling on Event */
-    void onEvent(Func::Call func) {
+    void call(Func::Call func) {
         list.append(new Func{func});
     }
     template<typename T>
-    void onEvent(T& base, typename Method<T>::Call method) {
+    void call(T& base, typename Method<T>::Call method) {
         list.append(new Method<T>{&base, method});
     }
 };
