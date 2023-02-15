@@ -1,4 +1,5 @@
 #pragma once
+#include "utils/Buffer.h"
 #include "utils/Queue.h"
 namespace Schedule {
 struct Schedulable {
