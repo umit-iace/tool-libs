@@ -1,75 +1,77 @@
 #pragma once
 
-#include "Experiment.h"
+#include "x/Kern.h"
+#include "utils/Min.h"
 #include "utils/Timeout.h"
 #include "EventFuncRegistry.h"
 #include "TimedFuncRegistry.h"
-#include "Schedule.h"
-#define HB (500)
-inline struct Experiment {
-    enum State { IDLE, RUN } state{};
+#include "FrameRegistry.h"
+/** Experiment Controller
+ *
+ * implicitly depends on a Kernel object `k` in this namespace to be alive
+ */
+inline class Experiment {
+public:
+    enum State { IDLE, RUN };
+    enum Event { INIT, STOP };
+    Experiment() {
+        k.every(1, *this, &Experiment::tick);
+    }
+    /** set frame registry from which Experiment will receive frames */
+    void registerWith(FrameRegistry &reg) {
+        reg.setHandler(1, *this, &Experiment::handleFrame);
+    }
+    /** register callbacks for Experiment state change events */
+    Schedule::Evented::Registry& onEvent(Event e) {
+        switch (e) {
+            case INIT: return init;
+            default: return stop;
+        }
+    }
+    /** register regular callbacks during Experiment states */
+    Schedule::Recurring::Registry& during(State s) {
+        switch (s) {
+            case IDLE: return idle;
+            default: return running;
+        }
+    }
+    /** const access to Experiment state */
+    const State& state{state_};
+
+private:
+    State state_{};
     bool alive{};
     void statemachine() {
         State old = state;
         // very simple state machine
-        state = alive ? RUN : IDLE;
+        state_ = alive ? RUN : IDLE;
         // react to state changes
         if (state != old) switch(old) {
         case IDLE:
-            s.schedule(time, init);
+            k.schedule(time, init);
             time = 0;
-            always.reset(); idle.reset(); running.reset();
+            idle.reset(); running.reset();
             break;
         case RUN:
-            s.schedule(time, stop);
+            k.schedule(time, stop);
             break;
         }
     }
-    //forward method calls
-    enum Event { INIT, STOP };
-    template<typename ...Args>
-    constexpr void onEvent(Event e, Args &&... a) {
-        switch (e){
-            case INIT: init.onEvent(std::forward<Args>(a)...);break;
-            case STOP: stop.onEvent(std::forward<Args>(a)...);break;
-        }
-    }
-    template<typename ...Args>
-    constexpr void every(Args&& ...a) {
-        return always.every(std::forward<Args>(a)...);
-    }
-    // more verbose access
-    constexpr
-    Schedule::Recurring::Registry& during(State s) {
-        switch (s) {
-            case IDLE: return idle;
-            case RUN: return running;
-        }
-    }
-    Timeout heartbeat{};
     Schedule::Evented::Registry init{}, stop{};
-    Schedule::Recurring::Registry always{}, idle{}, running{};
-    Scheduler s{};
+    Schedule::Recurring::Registry idle{}, running{};
     uint32_t time{};
+    Timeout heartbeat{};
+    uint32_t hb_timeout{500};
 
-    /** call this every millisecond in an interrupt */
-    void ms_tick(uint32_t globaltime) {
-        /* time = globaltime - expstarttime; */
+    void tick(uint32_t, uint32_t dt) {
         statemachine();
         if (heartbeat(time)) alive = false;
-        s.schedule(time, always);
         switch (state) {
-            case IDLE: s.schedule(time, idle); break;
-            case RUN : s.schedule(time, running); break;
+            case IDLE: k.schedule(time, idle); break;
+            case RUN : k.schedule(time, running); break;
             default:;
         }
-        time++;
-    }
-    /** call this in the main loop to actually run the functions
-     * previously scheduled in ``ms_tick``
-     */
-    void run() {
-        s.run();
+        time += dt;
     }
 
     void handleFrame(Frame &f) {
@@ -80,9 +82,9 @@ inline struct Experiment {
             uint8_t _:6;
         } b = f.unpack<decltype(b)>();
         if (b.heartbeat) {
-            heartbeat = {time + HB};
+            heartbeat = {time + hb_timeout};
         } else {
             alive = b.alive;
         }
     }
-} k;
+} e;
