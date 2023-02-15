@@ -49,7 +49,7 @@ struct Later {
         };
     }
     /** explicit accessor */
-    constexpr T get() const {
+    T get() const {
         switch (op) {
         case ADD: return nested->get() + where;
         case SUB: return nested->get() - where;
