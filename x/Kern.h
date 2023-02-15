@@ -2,27 +2,34 @@
 #include "x/Schedule.h"
 #include "x/TimedFuncRegistry.h"
 
+/** simple kernel for running tool-libs based applications */
 inline struct Kernel {
     Scheduler s{};
     Schedule::Recurring::Registry always{};
 
+    /** register recurring callback */
     template<typename ...Args>
     constexpr void every(Args&& ...a) {
         return always.every(std::forward<Args>(a)...);
     }
-    template<typename ...Args>
-    constexpr void schedule(uint32_t t, Args&& ...a) {
-        return s.schedule(t, std::forward<Args>(a)...);
+    /** pass registry to scheduler for actual scheduling */
+    void schedule(uint32_t time, Schedule::Registry &reg) {
+        return s.schedule(time, reg);
     }
+    /** call every ms */
     void tick(uint32_t gtime) {
         s.schedule(gtime, always);
     }
-    /** call this in the main loop to actually run the functions
-     * previously scheduled in ``ms_tick``
-     */
-    void run() {
-        s.run();
+    /** kernel entry point */
+    [[noreturn]] void run () {
+        while(true) {
+            s.run();
+            idle();
+        }
     }
+    /** implement to not burn unnecessary cpu cycles
+     * a simple sleep or 'wait for interrupt' will do
+     */
     void idle();
 } k;
 
