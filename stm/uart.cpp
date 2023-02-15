@@ -101,6 +101,7 @@ void startTransmit(HardwareUART *uart) {
         }
     }
 
+    // need = ms/s * Bytes * (bit/Byte + Stop + Parity) / (bit/s)
     size_t need = 1000 * b.len * (8+2) / uart->handle.Init.BaudRate;
     uart->tx.timeout = Timeout{uwTick + need};
 }
