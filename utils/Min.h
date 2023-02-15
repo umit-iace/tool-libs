@@ -96,7 +96,7 @@ private:
     };
     // sending state
     struct {
-        CRC32 crc;
+        CRC32 crc{};
         Buffer<uint8_t> req{128};
         Push<Buffer<uint8_t>> &push;
         uint8_t header_countdown = 2;
@@ -139,12 +139,12 @@ private:
     } tx;
     // receiving state
     struct {
-        CRC32 crc;
+        CRC32 crc{};
         Frame frame{};
-        Queue<Frame, 20> queue;
+        Queue<Frame, 20> queue{};
         Pull<Buffer<uint8_t>> &pull;
-        uint8_t header_seen, frame_length;
-        uint32_t frame_crc;
+        uint8_t header_seen{0}, frame_length{0};
+        uint32_t frame_crc{0};
         // Receiving state machine
         enum State {
             SEARCHING_FOR_SOF,
@@ -157,7 +157,7 @@ private:
             RECEIVING_CHECKSUM_1,
             RECEIVING_CHECKSUM_0,
             RECEIVING_EOF,
-        } state;
+        } state {};
         void byte(uint8_t b) {
             // three header bytes always mean "start of frame" and will
             // reset the frame buffer and be ready to receive frame data
