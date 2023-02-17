@@ -66,9 +66,6 @@ public:
         tx{.push = whereto}, rx{.pull = wherefrom} {}
 
     /** push frames through to underlying transport layer */
-    void push(const Frame &f) override {
-        push(std::move(Frame{f}));
-    }
     void push(Frame &&f) override {
         tx.enqueue(f);
     }
