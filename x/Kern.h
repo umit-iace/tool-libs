@@ -3,7 +3,7 @@
 #include "x/TimedFuncRegistry.h"
 
 /** simple kernel for running tool-libs based applications */
-inline struct Kernel {
+extern struct Kernel {
     Scheduler s{};
     Schedule::Recurring::Registry always{};
 
@@ -32,4 +32,3 @@ inline struct Kernel {
      */
     void idle();
 } k;
-
