@@ -10,7 +10,7 @@
  *
  * implicitly depends on a Kernel object `k` in this namespace to be alive
  */
-inline class Experiment {
+extern class Experiment {
 public:
     enum State { IDLE, RUN };
     enum Event { INIT, STOP };
