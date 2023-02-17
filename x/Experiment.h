@@ -13,7 +13,7 @@
 extern class Experiment {
 public:
     enum State { IDLE, RUN };
-    enum Event { INIT, STOP };
+    enum Event { INIT, STOP, TIMEOUT };
     Experiment() {
         k.every(1, *this, &Experiment::tick);
     }
@@ -25,7 +25,8 @@ public:
     Schedule::Evented::Registry& onEvent(Event e) {
         switch (e) {
             case INIT: return init;
-            default: return stop;
+            case STOP: return stop;
+            default: return timeout;
         }
     }
     /** register regular callbacks during Experiment states */
@@ -37,6 +38,10 @@ public:
     }
     /** const access to Experiment state */
     const State& state{state_};
+
+    void setHeartbeatTimeout(uint32_t timeout) {
+        heartbeat.timeout = timeout;
+    }
 
 private:
     State state_{};
@@ -55,22 +60,35 @@ private:
         case RUN:
             k.schedule(time, stop);
             break;
+        } else switch (state) {
+        // no state changes
+        case IDLE:
+            k.schedule(time, idle);
+            break;
+        case RUN :
+           k.schedule(time, running);
+           if (heartbeat && heartbeat(time)) {
+               k.schedule(time, timeout);
+               alive = false;
+           }
+           break;
         }
     }
-    Schedule::Evented::Registry init{}, stop{};
+    Schedule::Evented::Registry init{}, stop{}, timeout{};
     Schedule::Recurring::Registry idle{}, running{};
     uint32_t time{};
-    Timeout heartbeat{};
-    uint32_t hb_timeout{500};
+    struct : Timeout {
+        uint32_t timeout{};
+        operator bool() {
+            return timeout;
+        }
+        void reset(uint32_t now) {
+            when = now + timeout;
+        }
+    } heartbeat{};
 
     void tick(uint32_t, uint32_t dt) {
         statemachine();
-        if (heartbeat(time)) alive = false;
-        switch (state) {
-            case IDLE: k.schedule(time, idle); break;
-            case RUN : k.schedule(time, running); break;
-            default:;
-        }
         time += dt;
     }
 
@@ -81,8 +99,8 @@ private:
             uint8_t heartbeat:1;
             uint8_t _:6;
         } b = f.unpack<decltype(b)>();
-        if (b.heartbeat) {
-            heartbeat = {time + hb_timeout};
+        if (b.heartbeat && heartbeat) {
+            heartbeat.reset(time);
         } else {
             alive = b.alive;
         }
