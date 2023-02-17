@@ -4,6 +4,8 @@ set(SOURCES
 )
 
 cmake_policy(VERSION 3.24)
-target_sources(tool-libs INTERFACE
+
+add_library(tool-libs-stm INTERFACE)
+target_sources(tool-libs-stm INTERFACE
     ${SOURCES}
 )
