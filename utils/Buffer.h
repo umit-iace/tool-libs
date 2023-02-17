@@ -50,7 +50,7 @@ struct Buffer {
         delete[] buf; buf = nullptr; len = 0; size = 0;
     }
     /** copy from naked array with known length */
-    Buffer(T *src, size_t len, size_t sz=0) : buf{}, len(len), size(sz) {
+    Buffer(const T *src, size_t len, size_t sz=0) : buf{}, len(len), size(sz) {
         if (sz == 0) size = len;
         buf = new T[size]();
         log("Buffer new from buf: %p len: %ld\n", src, sz);
