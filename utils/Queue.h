@@ -36,13 +36,6 @@ class Queue : public Push<T>, public Pull<T> {
     } head, tail;
 public:
     /**
-     * copy element into queue
-     */
-    void push(const T &val) override {
-        log("copying ..");
-        return push(std::move(T{val}));
-    }
-    /**
      * move element into queue
      */
     void push(T &&val) override {
@@ -73,7 +66,7 @@ public:
      * does not check that there's something in the queue
      * guard with `if (size()) ...` or `if (!empty()) ...`
      */
-    T pop() {
+    T pop() override {
         assert(len != 0);
         auto ix = head;
         ++head;
@@ -95,7 +88,7 @@ public:
     /**
      * return true if queue is empty
      */
-    bool empty() {
+    bool empty() override {
         return len == 0;
     }
     /**
