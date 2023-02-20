@@ -190,9 +190,6 @@ void HardwareUART::irqHandler() {
     /** luckily we only ever use this one type of reception */
     handle.ReceptionType = HAL_UART_RECEPTION_TOIDLE;
 }
-void HardwareUART::push(const Buffer<uint8_t> &b) {
-    push(std::move(Buffer<uint8_t>{b}));
-}
 void HardwareUART::push(Buffer<uint8_t> &&b) {
     tx.q.push(std::move(b));
     poll(this);
