@@ -1,6 +1,7 @@
 /** @file Interfaces.h
  *
  * Copyright (c) 2023 IACE
+ * \todo should we provide empty or assert(false) implementations?
  */
 #pragma once
 #include <utility>
@@ -10,18 +11,19 @@
 /// and handling them at a later time
 template<typename T>
 struct Push {
-    //XXX: should we provide empty or assert(false) implementations?
     /// copy semantics
     virtual void push(const T& t) {
         push(std::move(T{t}));
     }
-    virtual void push(T&&)=0;      //< move semantics
+    /// move semantics
+    virtual void push(T&&)=0;
 };
 
 /// generic Interface for pulling objects around
 template<typename T>
 struct Pull {
-    //XXX: should we provide empty or assert(false) implementations?
+    /// check if Pull interface is empty
     virtual bool empty()=0;
+    /// pull object from interface
     [[nodiscard]] virtual T pop()=0;
 };
