@@ -11,7 +11,7 @@
 #include "Interfaces.h"
 
 /**
- * simple Array backed circle buffer queue to be used as FIFO
+ * simple Array backed queue implementation
  */
 template <typename T, int sz>
 class Queue : public Push<T>, public Pull<T> {
@@ -35,9 +35,8 @@ class Queue : public Push<T>, public Pull<T> {
         }
     } head, tail;
 public:
-    /**
-     * move element into queue
-     */
+    using Push<T>::push;
+    /** move element into queue */
     void push(T &&val) override {
         log("moving ..\n");
         assert(len < sz);
@@ -46,16 +45,12 @@ public:
         q[tail] = std::move(val);
         ++len;
     }
-    /**
-     * return reference to first element in queue
-     */
+    /** return reference to first element in queue */
     T& front() {
         assert(len != 0);
         return q[head];
     }
-    /**
-     * return reference to last element in queue
-     */
+    /** return reference to last element in queue */
     T& back() {
         assert(len <= sz);
         return q[tail];
@@ -64,7 +59,7 @@ public:
      * remove front of queue and return it
      *
      * does not check that there's something in the queue
-     * guard with `if (size()) ...` or `if (!empty()) ...`
+     * guard with `if (size()) ...` or `if (! empty()) ...`
      */
     T pop() override {
         assert(len != 0);
@@ -79,21 +74,15 @@ public:
         }
         return std::move(q[ix]);
     }
-    /**
-     * return number of elements in queue
-     */
+    /** return number of elements in queue */
     size_t size() {
         return len;
     }
-    /**
-     * return true if queue is empty
-     */
+    /** check if queue is empty */
     bool empty() override {
         return len == 0;
     }
-    /**
-     * return true if queue is full
-     */
+    /** return true if queue is full */
     bool full() {
         return len == sz;
     }
