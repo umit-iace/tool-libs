@@ -11,12 +11,15 @@
 #include "utils/Interfaces.h"
 #include "x/FrameRegistry.h"
 
+/** simple CRC32 implementation */
 struct CRC32 {
+    /** state */
     uint32_t checksum{0xffffffff};
+    /** reinitialize state */
     void init() {
-        checksum = 0xffffffffU;
+        *this = CRC32{};
     }
-
+    /** calculate step with given byte */
     void step(uint8_t byte) {
         checksum ^= byte;
         for (uint32_t j = 0; j < 8; j++) {
@@ -24,7 +27,7 @@ struct CRC32 {
             checksum = (checksum >> 1) ^ (0xedb88320U & mask);
         }
     }
-
+    /** get final CRC32 value */
     uint32_t finalize() {
         return ~checksum;
     }
