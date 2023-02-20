@@ -1,42 +1,42 @@
 #pragma once
 #include "utils/Min.h"
 
-/**
- * Registry for dispatching frames to their required destinations
- */
+/** Registry for dispatching frames to their registered destinations */
 struct FrameRegistry {
-    struct Callable {
-        virtual ~Callable(){}
-        virtual void call(Frame &f)=0;
+    /** Virtual Base for a callable Frame handler */
+    struct FrameHandler {
+        virtual ~FrameHandler(){}
+        virtual void handle(Frame &f)=0;
     };
-    using Func = void (*)(Frame &f);
-    struct FuncHandler: public Callable {
+    /** pure function FrameHandler */
+    struct FuncHandler: public FrameHandler {
+        typedef void (*Func)(Frame &f);
         Func func{};
         FuncHandler(Func f) : func(f) { }
-        void call(Frame &f) override {
+        void handle(Frame &f) override {
             return func(f);
         }
     };
+    /** class method FrameHandler */
     template<typename T>
-    struct MethodHandler: public Callable {
+    struct MethodHandler: public FrameHandler {
         typedef void(T::*Method)(Frame &f);
         T* base;
         Method method;
         MethodHandler(T* b, Method m) : base(b), method(m) { }
-        void call(Frame &f) override {
+        void handle(Frame &f) override {
             return (base->*method)(f);
         }
     };
 
-    Callable *list[64]{};
-    /** register function to handle all frames with given id */
-    void setHandler(uint8_t id, Func f) {
+    /** list of registered handlers */
+    FrameHandler *list[64]{};
+    /** register pure function FrameHandler for given id */
+    void setHandler(uint8_t id, FuncHandler::Func f) {
         assert(list[id] == nullptr);
         list[id] = new FuncHandler(f);
     }
-    /** register class instance & method to handle all frames with given id */
-    /* template<typename T> */
-    /* using Method = MethodHandler<T>::Method; */
+    /** register class method FrameHandler for given id */
     template<typename T>
     void setHandler(uint8_t id, T& base,
             typename MethodHandler<T>::Method method) {
@@ -50,8 +50,8 @@ struct FrameRegistry {
      * to have the compiler let you do this.
      */
     void handle(Frame &&f) {
-        Callable *c = list[f.id];
-        if (c) c->call(f);
+        FrameHandler *c = list[f.id];
+        if (c) c->handle(f);
     }
     ~FrameRegistry() {
         for (auto &entry: list) {
