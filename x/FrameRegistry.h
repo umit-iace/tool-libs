@@ -1,5 +1,50 @@
 #pragma once
-#include "utils/Min.h"
+
+/** pyWisp communication frame */
+struct Frame {
+    /** buffer containing the Frame payload */
+    Buffer<uint8_t> b{128};
+    /** buffer id: [0..63] */
+    uint8_t id{};
+    /** construct Frame with given id */
+    Frame(uint8_t id=0) : id(id) { }
+    /** pack value into Frame
+     *
+     * use `pack<typename>(value)` to be explicit
+     **/
+    template<typename T>
+    void pack(T value) {
+        assert(cursor.pack + sizeof(T) < b.size);
+        *(T*)&b[cursor.pack] = value;
+        cursor.pack += sizeof(T);
+        b.len += sizeof(T);
+    }
+    /** unpack into value from Frame
+     *
+     * use `unPack<typename>(location)` to be explicit
+     */
+    template<typename T>
+    void unPack(T &value) {
+        assert(cursor.unpack + sizeof(T) < b.size);
+        value = *(T*)&b[cursor.unpack];
+        cursor.unpack += sizeof(T);
+    }
+    /** return unpacked value from Frame
+     *
+     * can only be used explicitly as `unpack<typename>`
+     */
+    template<typename T>
+    T unpack() {
+        assert(cursor.unpack + sizeof(T) < b.size);
+        T ret = *(T*)&b[cursor.unpack];
+        cursor.unpack += sizeof(T);
+        return ret;
+    }
+private:
+    struct {
+        uint8_t pack, unpack;
+    } cursor{};
+};
 
 /** Registry for dispatching frames to their registered destinations */
 struct FrameRegistry {

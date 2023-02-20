@@ -9,37 +9,7 @@
 #include "utils/Buffer.h"
 #include "utils/Queue.h"
 #include "utils/Interfaces.h"
-
-struct Frame {
-    Buffer<uint8_t> b{128};
-    uint8_t id{};
-    Frame(uint8_t id) : id(id) { }
-    Frame() : id(0) { }
-
-    struct {
-        uint8_t pack, unpack;
-    } cursor{};
-    template<typename T>
-    void pack(T value) {
-        assert(cursor.pack + sizeof(T) < b.size);
-        *(T*)&b[cursor.pack] = value;
-        cursor.pack += sizeof(T);
-        b.len += sizeof(T);
-    }
-    template<typename T>
-    void unPack(T &value) {
-        assert(cursor.unpack + sizeof(T) < b.size);
-        value = *(T*)&b[cursor.unpack];
-        cursor.unpack += sizeof(T);
-    }
-    template<typename T>
-    T unpack() {
-        assert(cursor.unpack + sizeof(T) < b.size);
-        T ret = *(T*)&b[cursor.unpack];
-        cursor.unpack += sizeof(T);
-        return ret;
-    }
-};
+#include "x/FrameRegistry.h"
 
 struct CRC32 {
     uint32_t checksum{0xffffffff};
