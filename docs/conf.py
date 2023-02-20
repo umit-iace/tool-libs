@@ -123,7 +123,7 @@ if sys.platform == 'win32':
 
 # -- Options to translate tikz pictures to png ------------------------
 tikz_proc_suite = 'ImageMagick'
-tikz_latex_preamble = '''\usepackage{bm}
+tikz_latex_preamble = r'''\usepackage{bm}
 \usepackage{ifthen}'''
 tikz_tikzlibraries = 'plotmarks,math,positioning,shapes,arrows,backgrounds,circuits.logic.IEC,circuits.ee.IEC,decorations.pathmorphing,patterns,shapes.geometric,calc,fit,spy,matrix,decorations.pathreplacing,decorations.markings'
 
