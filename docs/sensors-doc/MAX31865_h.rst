@@ -1,5 +1,0 @@
-MAX31865.h
-~~~~~~~~~~
-
-.. doxygenfile:: MAX31865.h
-   :project: Sensors
