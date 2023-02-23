@@ -10,6 +10,7 @@
 #include "utils/Queue.h"
 #include "utils/Interfaces.h"
 #include "x/FrameRegistry.h"
+#include "x/TimedFuncRegistry.h"
 
 /** simple CRC32 implementation */
 struct CRC32 {
@@ -33,82 +34,20 @@ struct CRC32 {
     }
 };
 
-class Min : public Push<Frame>, public Pull<Frame> {
-public:
-    Min(Pull<Buffer<uint8_t>> &wherefrom, Push<Buffer<uint8_t>> &whereto) :
-        tx{.push = whereto}, rx{.pull = wherefrom} {}
-
-    /** push frames through to underlying transport layer */
-    void push(Frame &&f) override {
-        tx.enqueue(f);
-    }
-
-    bool empty() override {
-        while (!rx.pull.empty()) {
-            for (auto b: rx.pull.pop()) {
-                rx.byte(b);
-            }
-        }
-        return rx.queue.empty();
-    }
-
-    //XXX: always guard by if(available()) { smth }
-    Frame pop() override {
-        return rx.queue.pop();
-    }
-
-private:
+namespace MIN {
     // Special protocol bytes
     enum {
         HEADER_BYTE = 0xaaU,
         STUFF_BYTE = 0x55U,
         EOF_BYTE = 0x55U,
     };
-    // sending state
-    struct {
-        CRC32 crc{};
-        Buffer<uint8_t> req{128};
-        Push<Buffer<uint8_t>> &push;
-        uint8_t header_countdown = 2;
-        void stuff(uint8_t b) {
-            req.append(b);
-            crc.step(b);
+}
 
-            // See if an additional stuff byte is needed
-            if (b == HEADER_BYTE) {
-                if (--header_countdown == 0) {
-                    req.append(STUFF_BYTE);        // Stuff byte
-                    header_countdown = 2U;
-                }
-            } else {
-                header_countdown = 2U;
-            }
-        }
-        void nostuff(uint8_t b) {
-            req.append(b);
-        }
-        void enqueue(Frame &f) {
-            req = Buffer<uint8_t>{128};
-            crc.init();
-            nostuff(HEADER_BYTE);
-            nostuff(HEADER_BYTE);
-            nostuff(HEADER_BYTE);
-            stuff(f.id);
-            stuff(f.b.len);
-            for (size_t i = 0; i < f.b.len; ++i) {
-                stuff(f.b.at(i));
-            }
-            uint32_t sum = crc.finalize();
-            stuff((uint8_t) ((sum >> 24) & 0xff));
-            stuff((uint8_t) ((sum >> 16) & 0xff));
-            stuff((uint8_t) ((sum >> 8) & 0xff));
-            stuff((uint8_t) ((sum >> 0) & 0xff));
-            nostuff(EOF_BYTE);
-            push.push(req);
-        }
-    } tx;
-    // receiving state
-    struct {
+
+/** Connection wrapper */
+struct Min {
+    /** incoming Min stream */
+    class MinIn : public Pull<Frame> {
         CRC32 crc{};
         Frame frame{};
         Queue<Frame, 20> queue{};
@@ -136,11 +75,11 @@ private:
 
             if (header_seen == 2) {
                 header_seen = 0;
-                if (b == HEADER_BYTE) {
+                if (b == MIN::HEADER_BYTE) {
                     state = RECEIVING_ID_CONTROL;
                     return;
                 }
-                if (b == STUFF_BYTE) {
+                if (b == MIN::STUFF_BYTE) {
                     // discard this byte
                     return;
                 } else {
@@ -150,7 +89,7 @@ private:
                 }
             }
 
-            if (b == HEADER_BYTE) {
+            if (b == MIN::HEADER_BYTE) {
                 header_seen++;
             } else {
                 header_seen = 0;
@@ -210,10 +149,89 @@ private:
                 case RECEIVING_EOF:
                     // fallthrough
                 default:
-                    // Should never get here but in case we do then reset to a safe state
                     state = SEARCHING_FOR_SOF;
                     break;
             }
         }
-    } rx;
+    public:
+        /** unwrap given Buffer stream into Frame s */
+        MinIn(Pull<Buffer<uint8_t>> &from) : pull{from} { }
+        /** check if Frame available */
+        bool empty() override {
+            while (!pull.empty()) {
+                for (auto b: pull.pop()) {
+                    byte(b);
+                }
+            }
+            return queue.empty();
+        }
+
+        /** get available Frame
+         *
+         * always guard by if(! empty())
+         */
+        Frame pop() override {
+            return queue.pop();
+        }
+    };
+    /** outgoing Min stream */
+    class MinOut : public Push<Frame> {
+        CRC32 crc{};
+        Buffer<uint8_t> req{128};
+        Push<Buffer<uint8_t>> &out;
+        uint8_t header_countdown = 2;
+        void stuff(uint8_t b) {
+            req.append(b);
+            crc.step(b);
+
+            // See if an additional stuff byte is needed
+            if (b == MIN::HEADER_BYTE) {
+                if (--header_countdown == 0) {
+                    req.append(MIN::STUFF_BYTE);
+                    header_countdown = 2U;
+                }
+            } else {
+                header_countdown = 2U;
+            }
+        }
+        void nostuff(uint8_t b) {
+            req.append(b);
+        }
+    public:
+        /** create Buffer stream wrapper */
+        MinOut(Push<Buffer<uint8_t>> &to) : out{to} { }
+        using Push<Frame>::push;
+        /** push Frame~s through to underlying transport layer */
+        void push(Frame &&f) override {
+            req = Buffer<uint8_t>{128};
+            crc.init();
+            nostuff(MIN::HEADER_BYTE);
+            nostuff(MIN::HEADER_BYTE);
+            nostuff(MIN::HEADER_BYTE);
+            stuff(f.id);
+            stuff(f.b.len);
+            for (size_t i = 0; i < f.b.len; ++i) {
+                stuff(f.b.at(i));
+            }
+            uint32_t sum = crc.finalize();
+            stuff((uint8_t) ((sum >> 24) & 0xff));
+            stuff((uint8_t) ((sum >> 16) & 0xff));
+            stuff((uint8_t) ((sum >> 8) & 0xff));
+            stuff((uint8_t) ((sum >> 0) & 0xff));
+            nostuff(MIN::EOF_BYTE);
+            out.push(req);
+        }
+    };
+    /** incoming Frame stream */
+    MinIn in;
+    /** outgoing Frame stream */
+    MinOut out;
+    /** Frame registry for this connection */
+    FrameRegistry reg;
+    /** dispatch incoming Frame s through registry */
+    void poll(uint32_t, uint32_t) {
+        while (!in.empty()) {
+            reg.handle(in.pop());
+        }
+    };
 };
