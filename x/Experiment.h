@@ -1,10 +1,8 @@
 #pragma once
 
 #include "x/Kern.h"
-#include "utils/Min.h"
 #include "utils/Timeout.h"
 #include "EventFuncRegistry.h"
-#include "TimedFuncRegistry.h"
 #include "FrameRegistry.h"
 
 /** @brief Experiment Controller
@@ -18,11 +16,11 @@
  *      node [shape = circle];
  *      IDLE [URL="\ref IDLE"]
  *      RUN [URL="\ref RUN"]
- *      IDLE -> IDLE [label= "tick", URL="\ref tick"]
+ *      IDLE -> IDLE [label= "tick"]
  *      IDLE -> RUN [ label = "INIT", URL="\ref INIT"];
  *      RUN -> IDLE [ label = "STOP", URL="\ref STOP"];
  *      RUN -> IDLE [ label = "TIMEOUT", URL="\ref TIMEOUT"];
- *      RUN -> RUN [label= "tick", URL="\ref tick"]
+ *      RUN -> RUN [label= "tick"]
  * }
  * \enddot
  * \note implicitly depends on a Kernel object `k` in this namespace to be alive
