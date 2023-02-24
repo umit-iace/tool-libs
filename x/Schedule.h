@@ -21,7 +21,7 @@ struct Registry {
 struct Scheduler {
     // this is pointing to the actual callables in the registries
     // we do not own them
-    Queue<Schedule::Schedulable*, 30> q;
+    Queue<Schedule::Schedulable*> q;
 
     void schedule(uint32_t time, Schedule::Registry &reg) {
         for (auto &c: reg.list) {
