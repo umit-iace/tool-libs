@@ -43,12 +43,12 @@ struct HardwareUART : public Sink<Buffer<uint8_t>>, public Source<Buffer<uint8_t
     inline static Registry<HardwareUART, UART_HandleTypeDef, 8> reg;
     /** rx state */
     struct RX {
-        Queue<Buffer<uint8_t>, 30> q;
+        Queue<Buffer<uint8_t>> q;
         Buffer<uint8_t> buf{512};
     } rx{};
     /** tx state */
     struct TX {
-        Queue<Buffer<uint8_t>, 30> q;
+        Queue<Buffer<uint8_t>> q;
         Timeout timeout;
         bool active;
     } tx{};
