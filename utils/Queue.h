@@ -62,7 +62,7 @@ public:
      */
     T pop() override {
         assert(q.len != 0);
-        q.len++;
+        q.len--;
         return std::move(q[head++]);
     }
     /** return number of elements in queue */
