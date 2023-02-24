@@ -5,10 +5,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <utility>
-#include "utils/Buffer.h"
 #include "utils/Queue.h"
-#include "utils/Interfaces.h"
 #include "x/FrameRegistry.h"
 
 /** simple CRC32 implementation */
