@@ -6,7 +6,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <utility>
 
 #include "Interfaces.h"
 
@@ -14,7 +13,7 @@
  * simple Array backed queue implementation
  */
 template <typename T, int sz>
-class Queue : public Push<T>, public Pull<T> {
+class Queue : public Sink<T>, public Source<T> {
     uint8_t space[sz * sizeof(T)]{};
     struct QueueAccess {
         T *ptr;
@@ -35,7 +34,7 @@ class Queue : public Push<T>, public Pull<T> {
         }
     } head, tail;
 public:
-    using Push<T>::push;
+    using Sink<T>::push;
     /** move element into queue */
     void push(T &&val) override {
         assert(len < sz);
