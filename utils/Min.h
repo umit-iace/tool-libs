@@ -10,7 +10,6 @@
 #include "utils/Queue.h"
 #include "utils/Interfaces.h"
 #include "x/FrameRegistry.h"
-#include "x/TimedFuncRegistry.h"
 
 /** simple CRC32 implementation */
 struct CRC32 {
@@ -47,11 +46,11 @@ namespace MIN {
 /** Connection wrapper */
 struct Min {
     /** incoming Min stream */
-    class MinIn : public Pull<Frame> {
+    class MinIn : public Source<Frame> {
         CRC32 crc{};
         Frame frame{};
         Queue<Frame, 20> queue{};
-        Pull<Buffer<uint8_t>> &pull;
+        Source<Buffer<uint8_t>> &source;
         uint8_t header_seen{0}, frame_length{0};
         uint32_t frame_crc{0};
         // Receiving state machine
@@ -155,11 +154,11 @@ struct Min {
         }
     public:
         /** unwrap given Buffer stream into Frame s */
-        MinIn(Pull<Buffer<uint8_t>> &from) : pull{from} { }
+        MinIn(Source<Buffer<uint8_t>> &from) : source{from} { }
         /** check if Frame available */
         bool empty() override {
-            while (!pull.empty()) {
-                for (auto b: pull.pop()) {
+            while (!source.empty()) {
+                for (auto b: source.pop()) {
                     byte(b);
                 }
             }
@@ -175,10 +174,10 @@ struct Min {
         }
     };
     /** outgoing Min stream */
-    class MinOut : public Push<Frame> {
+    class MinOut : public Sink<Frame> {
         CRC32 crc{};
         Buffer<uint8_t> req{128};
-        Push<Buffer<uint8_t>> &out;
+        Sink<Buffer<uint8_t>> &out;
         uint8_t header_countdown = 2;
         void stuff(uint8_t b) {
             req.append(b);
@@ -199,8 +198,8 @@ struct Min {
         }
     public:
         /** create Buffer stream wrapper */
-        MinOut(Push<Buffer<uint8_t>> &to) : out{to} { }
-        using Push<Frame>::push;
+        MinOut(Sink<Buffer<uint8_t>> &to) : out{to} { }
+        using Sink<Frame>::push;
         /** push Frame~s through to underlying transport layer */
         void push(Frame &&f) override {
             req = Buffer<uint8_t>{128};
