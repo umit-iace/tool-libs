@@ -1,17 +1,16 @@
 #pragma once
 
-#include "utils/Interfaces.h"
-#include "utils/Buffer.h"
 #include "utils/Queue.h"
+#include "utils/Buffer.h"
 
 // simple example of a pipe that receives bytes as they come in and splits them
 // into '\n' delimited lines.
-class LineFilter : public Pull<Buffer<uint8_t>> {
+class LineFilter : public Source<Buffer<uint8_t>> {
     static constexpr size_t linelen = 1024;
     static constexpr size_t qlen = 30;
     Queue<Buffer<uint8_t>, qlen> q{};
     Buffer<uint8_t> l{linelen}; // stash
-    Pull<Buffer<uint8_t>> &pull;
+    Source<Buffer<uint8_t>> &source;
     void recv(uint8_t b) {
         // handle both \n and \r\n newlines
         if (b == '\n' || b == '\r') {
@@ -32,10 +31,10 @@ class LineFilter : public Pull<Buffer<uint8_t>> {
         l.append(b);
     }
 public:
-    LineFilter(Pull<Buffer<uint8_t>> &p): pull(p) { }
+    LineFilter(Source<Buffer<uint8_t>> &p): source(p) { }
     bool empty() override {
-        while (!pull.empty()) {
-            for (auto b: pull.pop()) {
+        while (!source.empty()) {
+            for (auto b: source.pop()) {
                 recv(b);
             }
         }
@@ -43,10 +42,10 @@ public:
     }
     Buffer<uint8_t> pop() override { return q.pop(); }
 };
-class LineDelimiter : public Push<Buffer<uint8_t>> {
-    Push<Buffer<uint8_t>> &p;
+class LineDelimiter : public Sink<Buffer<uint8_t>> {
+    Sink<Buffer<uint8_t>> &p;
 public:
-    LineDelimiter(Push<Buffer<uint8_t>> &p): p(p) { }
+    LineDelimiter(Sink<Buffer<uint8_t>> &p): p(p) { }
     void push(const Buffer<uint8_t> &b) override {
         if (b.len + 1 <= b.size) {
             push(std::move(Buffer<uint8_t>{b}));
