@@ -7,15 +7,14 @@
 // into '\n' delimited lines.
 class LineFilter : public Source<Buffer<uint8_t>> {
     static constexpr size_t linelen = 1024;
-    static constexpr size_t qlen = 30;
-    Queue<Buffer<uint8_t>, qlen> q{};
+    Queue<Buffer<uint8_t>> q;
     Buffer<uint8_t> l{linelen}; // stash
     Source<Buffer<uint8_t>> &source;
     void recv(uint8_t b) {
         // handle both \n and \r\n newlines
         if (b == '\n' || b == '\r') {
             if (l.len == 0) return;
-            if (q.size() != qlen) {
+            if (!q.full()) {
                 q.push(std::move(l));
             } else {
                 // fallthrough: Drop Line, queue was full
