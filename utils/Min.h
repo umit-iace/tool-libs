@@ -49,7 +49,7 @@ struct Min {
     class MinIn : public Source<Frame> {
         CRC32 crc{};
         Frame frame{};
-        Queue<Frame, 20> queue{};
+        Queue<Frame> queue{20};
         Source<Buffer<uint8_t>> &source;
         uint8_t header_seen{0}, frame_length{0};
         uint32_t frame_crc{0};
