@@ -6,11 +6,13 @@
 #pragma once
 #include <utility>
 
-/// generic Interface for pushing objects around
-/// can often nicely be implemented by stashing them in a queue
-/// and handling them at a later time
+/** generic object sink, i.e. consumer of objects
+ *
+ * can often be implemented nicely by stashing them in a queue
+ * and handling them at a later time
+ */
 template<typename T>
-struct Push {
+struct Sink {
     /// copy semantics
     virtual void push(const T& t) {
         push(std::move(T{t}));
@@ -19,10 +21,14 @@ struct Push {
     virtual void push(T&&)=0;
 };
 
-/// generic Interface for pulling objects around
+/** generic object source, i.e. generator of objects
+ *
+ * can often be implemented nicely by checking for / creating objects
+ * into a queue on the `empty()` call and handing them out in the `pop()`
+ */
 template<typename T>
-struct Pull {
-    /// check if Pull interface is empty
+struct Source {
+    /// check if interface is empty
     virtual bool empty()=0;
     /// pull object from interface
     [[nodiscard]] virtual T pop()=0;
