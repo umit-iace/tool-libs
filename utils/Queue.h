@@ -38,7 +38,6 @@ public:
     using Push<T>::push;
     /** move element into queue */
     void push(T &&val) override {
-        log("moving ..\n");
         assert(len < sz);
         if (len == 0) tail = {0};
         else ++tail;
