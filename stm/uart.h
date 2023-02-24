@@ -6,7 +6,6 @@
 
 #include "stm/gpio.h"
 #include "stm/registry.h"
-#include "utils/Buffer.h"
 #include "utils/Timeout.h"
 #include "utils/Queue.h"
 
