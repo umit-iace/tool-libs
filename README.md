@@ -14,7 +14,7 @@ process. Provided are following building blocks:
 \todo fix description
 
 The Kernel provides scheduling for regularly recurring tasks. It provides an
-interface for the application to register itself, and has only two immutables:
+interface for the application to register itself, and has only two invariants:
 its `@tick` method must be called every millisecond, and the `idle`
 method should be implemented by the platform to not burn through unnecessary
 cycles.
