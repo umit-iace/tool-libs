@@ -2,18 +2,14 @@
  *
  * Copyright (c) 2020 IACE
  */
-#ifndef STM_TIMER_H
-#define STM_TIMER_H
-
+#pragma once
 #include "stm/hal.h"
 
-/**
- * @brief Template class for hardware based Timers
- */
+/** wrapper for timer peripheral */
 class HardwareTimer {
 public:
     /**
-     * Initialize Timer Hardware
+     * Initialize Timer Peripheral
      *
      * @param dTim Timer instance
      * @param prescaler value to write into prescaler register
@@ -41,21 +37,17 @@ public:
     /**
      * configure callback on PERIOD ELAPSED event
      * @param callback function to be called
-     * @param irq interrupt number
-     * @param pre priority
-     * @param sub priority
      */
     void configCallback(void (*callback)(TIM_HandleTypeDef *)) {
         HAL_TIM_RegisterCallback(&handle, HAL_TIM_PERIOD_ELAPSED_CB_ID, callback);
     }
 
-    /**
-     * start timer in interrupt mode
-     */
+    /** start timer in interrupt mode */
     void start() {
         while (HAL_TIM_Base_Start_IT(&handle) != HAL_OK);
     }
 
+    /** call directly in interrupt */
     void irqHandler() {
         HAL_TIM_IRQHandler(&handle);
     }
@@ -63,5 +55,3 @@ public:
     /** HAL handle, for use with unwrapped Timer capabilities */
     TIM_HandleTypeDef handle = {};
 };
-
-#endif //STM_TIMER_H
