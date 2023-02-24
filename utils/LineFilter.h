@@ -1,7 +1,6 @@
 #pragma once
 
 #include "utils/Queue.h"
-#include "utils/Buffer.h"
 
 // simple example of a pipe that receives bytes as they come in and splits them
 // into '\n' delimited lines.
