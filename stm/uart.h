@@ -5,14 +5,12 @@
 #pragma once
 
 #include "stm/gpio.h"
-#include "stm/hal.h"
 #include "stm/registry.h"
 #include "utils/Buffer.h"
-#include "utils/Interfaces.h"
 #include "utils/Timeout.h"
 #include "utils/Queue.h"
 
-struct HardwareUART : public Push<Buffer<uint8_t>>, public Pull<Buffer<uint8_t>> {
+struct HardwareUART : public Sink<Buffer<uint8_t>>, public Source<Buffer<uint8_t>> {
     /** default init struct */
     struct Default {
         USART_TypeDef *uart;
@@ -31,7 +29,7 @@ struct HardwareUART : public Push<Buffer<uint8_t>>, public Pull<Buffer<uint8_t>>
     HardwareUART(const Manual &conf);
     /** push bytebuffer into sending queue */
     void push(Buffer<uint8_t> &&tx) override;
-    using Push<Buffer<uint8_t>>::push;
+    using Sink<Buffer<uint8_t>>::push;
     /** pull buffer from receiving queue */
     Buffer<uint8_t> pop() override;
     /** check if receiving queue is empty */
