@@ -1,5 +1,4 @@
 #pragma once
-#include "x/Schedule.h"
 #include "x/TimedFuncRegistry.h"
 
 /** simple kernel for running tool-libs based applications */
