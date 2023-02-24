@@ -46,24 +46,20 @@ struct Buffer {
     /* Rule of Five */
     /** destructor */
     ~Buffer() {
-        log("Buffer del buf: %p\n", buf);
         delete[] buf; buf = nullptr; len = 0; size = 0;
     }
     /** copy from naked array with known length */
     Buffer(const T *src, size_t len, size_t sz=0) : buf{}, len(len), size(sz) {
         if (sz == 0) size = len;
         buf = new T[size]();
-        log("Buffer new from buf: %p len: %ld\n", src, sz);
         memcpy(buf, src, len);
     }
     /** constructor with fixed size */
     Buffer(size_t sz) : buf{new T[sz]()}, len(0), size(sz) {
-        log("Buffer new buf: %p\n", buf);
     }
     /** copy constructor */
     Buffer(const Buffer &b) : buf{new T[b.size]()}, len(b.len), size(b.size) {
         memcpy(buf, b.buf, len);
-        log("Buffer cp constr from: %p to: %p\n", b.buf, buf);
     }
     /** copy assignment operator */
     Buffer& operator=(const Buffer &b) {
@@ -75,14 +71,12 @@ struct Buffer {
         }
         assert(buf != nullptr);
         assert(size > b.len);
-        log("Buffer cp from to: %p %p\n", b.buf, buf);
         memcpy(buf, b.buf, b.len);
         len = b.len;
         return *this;
     }
     /** move constructor */
     Buffer(Buffer &&b) noexcept : buf(b.buf), len(b.len), size(b.size) {
-        log("Buffer mv constr from: %p to: %p\n", b.buf, buf);
         b.buf = nullptr;
         b.len = 0;
         b.size = 0;
@@ -90,7 +84,6 @@ struct Buffer {
     /** move assignment operator */
     Buffer& operator=(Buffer &&b) noexcept {
         if (this == &b) return *this; // move to self
-        log("Buffer mv from: %p to: %p\n", b.buf, buf);
         delete[] buf;
         buf = b.buf;
         len = b.len;
