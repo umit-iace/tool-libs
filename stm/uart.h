@@ -9,6 +9,24 @@
 #include "utils/Timeout.h"
 #include "utils/Queue.h"
 
+/** Character Buffer Sink & Source wrapping UART Peripheral 
+ *
+ * \dot
+ * digraph HardwareUART_SINK_SOURCE {
+ *      rankdir=LR;
+ *      size="10"
+ *      subgraph {
+ *           rank=same;
+ *           node [style=dashed, label="Buffer", URL="\ref Buffer"];
+ *           SINK
+ *           SRCE
+ *      }
+ *      HardwareUART [URL="\ref HardwareUART"];
+ *      SINK -> HardwareUART [label="push", URL="\ref push"];
+ *      HardwareUART -> SRCE [label="pop", URL="\ref pop"];
+ *      }
+ * \enddot
+ */
 struct HardwareUART : public Sink<Buffer<uint8_t>>, public Source<Buffer<uint8_t>> {
     /** default init struct */
     struct Default {
