@@ -40,9 +40,30 @@ namespace MIN {
 }
 
 
-/** Connection wrapper */
+/** full min-based connection wrapper */
 struct Min {
-    /** incoming Min stream */
+    /** incoming Min stream
+     * 
+     * check data availability from underlying Buffer stream with
+     * `empty()` then `pop()` and use data
+     * ```
+     * while (!in.empty()) {
+     *  Frame f = in.pop();
+     *  ...
+     * }
+     * ```
+     *
+     * \dot
+     * digraph {
+     *  rankdir=RL;
+     *  Frame [style=dashed, URL="\ref Frame"]
+     *  Buffer [style=dashed, URL="\ref Buffer"]
+     *  MinIn [URL="\ref MinIn"]
+     *  Buffer -> MinIn [label=empty, URL="\ref empty"]
+     *  MinIn -> Frame [label=pop, URL="\ref pop"]
+     * }
+     * \enddot
+     **/
     class MinIn : public Source<Frame> {
         CRC32 crc{};
         Frame frame{};
@@ -150,7 +171,7 @@ struct Min {
             }
         }
     public:
-        /** unwrap given Buffer stream into Frame s */
+        /** unwrap given Buffer stream into Frame */
         MinIn(Source<Buffer<uint8_t>> &from) : source{from} { }
         /** check if Frame available */
         bool empty() override {
@@ -170,7 +191,21 @@ struct Min {
             return queue.pop();
         }
     };
-    /** outgoing Min stream */
+    /** outgoing Min stream
+     * 
+     * pushes data out directly to underlying Buffer stream
+     *
+     * \dot
+     * digraph {
+     *  rankdir=LR;
+     *  Frame [style=dashed, URL="\ref Frame"]
+     *  Buffer [style=dashed, URL="\ref Buffer"]
+     *  MinOut [URL="\ref MinOut"]
+     *  Frame -> MinOut [label=push, URL="\ref push"]
+     *  MinOut -> Buffer [label=push, URL="\ref push"]
+     * }
+     * \enddot
+     **/
     class MinOut : public Sink<Frame> {
         CRC32 crc{};
         Buffer<uint8_t> req{128};
@@ -197,7 +232,7 @@ struct Min {
         /** create Buffer stream wrapper */
         MinOut(Sink<Buffer<uint8_t>> &to) : out{to} { }
         using Sink<Frame>::push;
-        /** push Frame~s through to underlying transport layer */
+        /** push Frame through to underlying Buffer stream */
         void push(Frame &&f) override {
             req = Buffer<uint8_t>{128};
             crc.init();
@@ -224,7 +259,7 @@ struct Min {
     MinOut out;
     /** Frame registry for this connection */
     FrameRegistry reg;
-    /** dispatch incoming Frame s through registry */
+    /** dispatch incoming Frames through registry */
     void poll(uint32_t, uint32_t) {
         while (!in.empty()) {
             reg.handle(in.pop());
