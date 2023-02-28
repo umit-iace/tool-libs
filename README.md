@@ -1,7 +1,7 @@
 # Overview
 
 This is a framework including a collection of useful libraries for building
-testing rigs developed and used at the UMIT-Tirol Institute of Automation and
+testing rigs developed and used at the UMIT-TIROL Institute of Automation and
 Control Engineering. It is designed to be used with
 [pyWisp](https://github.com/umit-iace/tool-pywisp), a tool for visualising and
 controlling testing rigs.
