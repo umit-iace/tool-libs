@@ -52,14 +52,14 @@ struct Buffer {
     Buffer(const T *src, size_t len, size_t sz=0) : buf{}, len(len), size(sz) {
         if (sz == 0) size = len;
         buf = new T[size]();
-        memcpy(buf, src, len);
+        memcpy(buf, src, len * sizeof(T));
     }
     /** constructor with fixed size */
     Buffer(size_t sz) : buf{new T[sz]()}, len(0), size(sz) {
     }
     /** copy constructor */
     Buffer(const Buffer &b) : buf{new T[b.size]()}, len(b.len), size(b.size) {
-        memcpy(buf, b.buf, len);
+        memcpy(buf, b.buf, len * sizeof(T));
     }
     /** copy assignment operator */
     Buffer& operator=(const Buffer &b) {
@@ -71,7 +71,7 @@ struct Buffer {
         }
         assert(buf != nullptr);
         assert(size > b.len);
-        memcpy(buf, b.buf, b.len);
+        memcpy(buf, b.buf, b.len * sizeof(T));
         len = b.len;
         return *this;
     }
