@@ -3,6 +3,8 @@
  * Copyright (c) 2023 IACE
  */
 #include "uart.h"
+namespace debug {
+    namespace uart {
 // debugging helpers
 struct SR {
     uint32_t PE:1;
@@ -88,6 +90,7 @@ struct UART_INST {
     struct CR3 CR3;
     struct GTPR GTPR;
 } inst;
+}}
 
 /* General functions hidden from Interface */
 void startTransmit(HardwareUART *uart) {
@@ -103,7 +106,7 @@ void startTransmit(HardwareUART *uart) {
 
     // need = ms/s * Bytes * (bit/Byte + Stop + Parity) / (bit/s)
     size_t need = 1000 * b.len * (8+2) / uart->handle.Init.BaudRate;
-    uart->tx.timeout = Timeout{uwTick + need};
+    uart->tx.deadline = Deadline{k.time + need};
 }
 void startReceive(HardwareUART *uart) {
     auto ret = HAL_OK;
@@ -122,7 +125,7 @@ void _errcallback(UART_HandleTypeDef *handle) {
 }
 
 void poll(HardwareUART *uart) {
-    if (uart->tx.active && uart->tx.timeout(uwTick)) return _errcallback(&uart->handle);
+    if (uart->tx.active && uart->tx.deadline(uwTick)) return _errcallback(&uart->handle);
     if (!uart->tx.active) return startTransmit(uart);
 }
 
@@ -146,7 +149,7 @@ void _txcallback(UART_HandleTypeDef *handle) {
     auto& tx = uart->tx;
     tx.q.pop();
     tx.active = false;
-    tx.timeout = Timeout{};
+    tx.deadline = Deadline{};
     poll(uart);
 }
 void init(HardwareUART *uart, UART_HandleTypeDef *handle) {

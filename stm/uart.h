@@ -6,8 +6,9 @@
 
 #include "stm/gpio.h"
 #include "stm/registry.h"
-#include "utils/Timeout.h"
+#include "utils/Deadline.h"
 #include "utils/Queue.h"
+#include "x/Kern.h"
 
 /** Character Buffer Sink & Source wrapping UART Peripheral 
  *
@@ -66,7 +67,7 @@ struct HardwareUART : public Sink<Buffer<uint8_t>>, public Source<Buffer<uint8_t
     /** tx state */
     struct TX {
         Queue<Buffer<uint8_t>> q;
-        Timeout timeout;
+        Deadline deadline;
         bool active;
     } tx{};
 
