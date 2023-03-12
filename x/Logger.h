@@ -7,28 +7,29 @@ struct DevNull: Sink<T> {
     void push(T &&) {
     }
 };
+/** black-hole sink, just drops all input */
 template<typename T>
 inline DevNull<T> devnull;
 
 /** simple printf-style logging infrastructure */
 struct Logger : Sink<Buffer<uint8_t>> {
     enum Lvl {NONE, INFO, WARN};
-    const char *clr[3] = {"\u001b[0m","\u001b[32m", "\u001b[31m"};
+    const char *color[3] = {"\u001b[0m","\u001b[32m", "\u001b[31m"};
     Sink<Buffer<uint8_t>> &out;
-    virtual Buffer<uint8_t> init() {
-        auto ret = Buffer<uint8_t>{256};
-        ret.len = snprintf((char*)ret.buf, ret.size, "(@%ldms): ", k.time);
-        return ret;
+
+    virtual Buffer<uint8_t> pre() {
+        return Buffer<uint8_t>{256};
     }
     void mklog(Lvl lvl, const char *fmt, va_list args) {
-        Buffer<uint8_t> b{init()};
-        if (lvl != NONE) puts(b, clr[lvl]);
+        Buffer<uint8_t> b{pre()};
+        if (lvl != NONE) {
+            b.len += snprintf((char*)b.buf+b.len, b.size-b.len, color[lvl]);
+        }
         b.len += vsnprintf((char*)b.buf+b.len, b.size-b.len, fmt, args);
-        if (lvl != NONE) puts(b, clr[NONE]);
+        if (lvl != NONE) {
+            b.len += snprintf((char*)b.buf+b.len, b.size-b.len, color[NONE]);
+        }
         out.push(std::move(b));
-    }
-    void puts(Buffer<uint8_t> &b, const char *s) {
-        b.len += snprintf((char*)b.buf+b.len, b.size-b.len, s);
     }
 public:
     /** Info log level */
@@ -54,7 +55,7 @@ public:
     }
     /** push otherwisely prepared Buffer through Logger */
     void push(Buffer<uint8_t> &&b) {
-        Buffer<uint8_t> tmp{init()};
+        Buffer<uint8_t> tmp{pre()};
         for (auto &c : b) { tmp.append(c); }
         out.push(std::move(tmp));
     }
