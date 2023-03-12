@@ -30,18 +30,14 @@ struct CRC32 {
     }
 };
 
-namespace MIN {
+/** full min-based connection wrapper */
+struct Min {
     // Special protocol bytes
     enum {
         HEADER_BYTE = 0xaaU,
         STUFF_BYTE = 0x55U,
         EOF_BYTE = 0x55U,
     };
-}
-
-
-/** full min-based connection wrapper */
-struct Min {
     /** incoming Min stream
      * 
      * check data availability from underlying Buffer stream with
@@ -58,13 +54,13 @@ struct Min {
      *  rankdir=RL;
      *  Frame [style=dashed, URL="\ref Frame"]
      *  Buffer [style=dashed, URL="\ref Buffer"]
-     *  MinIn [URL="\ref MinIn"]
-     *  Buffer -> MinIn [label=empty, URL="\ref empty"]
-     *  MinIn -> Frame [label=pop, URL="\ref pop"]
+     *  In [URL="\ref In"]
+     *  Buffer -> In [label=empty, URL="\ref empty"]
+     *  In -> Frame [label=pop, URL="\ref pop"]
      * }
      * \enddot
      **/
-    class MinIn : public Source<Frame> {
+    class In : public Source<Frame> {
         CRC32 crc{};
         Frame frame{};
         Queue<Frame> queue{20};
@@ -92,11 +88,11 @@ struct Min {
 
             if (header_seen == 2) {
                 header_seen = 0;
-                if (b == MIN::HEADER_BYTE) {
+                if (b == HEADER_BYTE) {
                     state = RECEIVING_ID_CONTROL;
                     return;
                 }
-                if (b == MIN::STUFF_BYTE) {
+                if (b == STUFF_BYTE) {
                     // discard this byte
                     return;
                 } else {
@@ -106,7 +102,7 @@ struct Min {
                 }
             }
 
-            if (b == MIN::HEADER_BYTE) {
+            if (b == HEADER_BYTE) {
                 header_seen++;
             } else {
                 header_seen = 0;
@@ -172,7 +168,7 @@ struct Min {
         }
     public:
         /** unwrap given Buffer stream into Frame */
-        MinIn(Source<Buffer<uint8_t>> &from) : source{from} { }
+        In(Source<Buffer<uint8_t>> &from) : source{from} { }
         /** check if Frame available */
         bool empty() override {
             while (!source.empty()) {
@@ -200,13 +196,13 @@ struct Min {
      *  rankdir=LR;
      *  Frame [style=dashed, URL="\ref Frame"]
      *  Buffer [style=dashed, URL="\ref Buffer"]
-     *  MinOut [URL="\ref MinOut"]
-     *  Frame -> MinOut [label=push, URL="\ref push"]
-     *  MinOut -> Buffer [label=push, URL="\ref push"]
+     *  Out [URL="\ref Out"]
+     *  Frame -> Out [label=push, URL="\ref push"]
+     *  Out -> Buffer [label=push, URL="\ref push"]
      * }
      * \enddot
      **/
-    class MinOut : public Sink<Frame> {
+    class Out : public Sink<Frame> {
         CRC32 crc{};
         Buffer<uint8_t> req{128};
         Sink<Buffer<uint8_t>> &out;
@@ -216,9 +212,9 @@ struct Min {
             crc.step(b);
 
             // See if an additional stuff byte is needed
-            if (b == MIN::HEADER_BYTE) {
+            if (b == HEADER_BYTE) {
                 if (--header_countdown == 0) {
-                    req.append(MIN::STUFF_BYTE);
+                    req.append(STUFF_BYTE);
                     header_countdown = 2U;
                 }
             } else {
@@ -230,15 +226,15 @@ struct Min {
         }
     public:
         /** create Buffer stream wrapper */
-        MinOut(Sink<Buffer<uint8_t>> &to) : out{to} { }
+        Out(Sink<Buffer<uint8_t>> &to) : out{to} { }
         using Sink<Frame>::push;
         /** push Frame through to underlying Buffer stream */
         void push(Frame &&f) override {
             req = Buffer<uint8_t>{128};
             crc.init();
-            nostuff(MIN::HEADER_BYTE);
-            nostuff(MIN::HEADER_BYTE);
-            nostuff(MIN::HEADER_BYTE);
+            nostuff(HEADER_BYTE);
+            nostuff(HEADER_BYTE);
+            nostuff(HEADER_BYTE);
             stuff(f.id);
             stuff(f.b.len);
             for (size_t i = 0; i < f.b.len; ++i) {
@@ -249,14 +245,14 @@ struct Min {
             stuff((uint8_t) ((sum >> 16) & 0xff));
             stuff((uint8_t) ((sum >> 8) & 0xff));
             stuff((uint8_t) ((sum >> 0) & 0xff));
-            nostuff(MIN::EOF_BYTE);
+            nostuff(EOF_BYTE);
             out.push(req);
         }
     };
     /** incoming Frame stream */
-    MinIn in;
+    In in;
     /** outgoing Frame stream */
-    MinOut out;
+    Out out;
     /** Frame registry for this connection */
     FrameRegistry reg;
     /** dispatch incoming Frames through registry */
