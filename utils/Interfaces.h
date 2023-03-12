@@ -28,8 +28,8 @@ struct Sink {
  */
 template<typename T>
 struct Source {
-    /// check if interface is empty
+    /// check if source is empty
     virtual bool empty()=0;
-    /// pull object from interface
+    /// pull object from source
     [[nodiscard]] virtual T pop()=0;
 };
