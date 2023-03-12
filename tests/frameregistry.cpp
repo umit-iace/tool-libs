@@ -1,65 +1,48 @@
-#define log(...)
+#include <doctest/doctest.h>
 #include <cassert>
-#include <iostream>
+#include <utility>
+#include <utils/Buffer.h>
 #include <x/FrameRegistry.h>
-using namespace std;
-void handle(Frame &f) {
-    double d;
-    bool e;
-    switch (f.id) {
-        case 1:
-            f.unPack(e);
-            if (e) {
-                cout << "experiment started" << endl;
-            } else {
-                cout << "experiment stopped" << endl;
-            }
-            break;
-        case 10:
-            f.unPack(d);
-            cout << "f.id = 10: data = " << d << endl;
-            break;
-    }
+
+void getStart(Frame &f) {
+    static bool frst = true;
+    CHECK(f.id == 1);
+    CHECK(f.unpack<bool>() == frst);
+    frst = false;
+}
+void getPi(Frame &f) {
+    CHECK(f.id == 10);
+    CHECK(f.unpack<double>() == doctest::Approx(3.14));
 }
 struct Exp{
-    void runlog(Frame &f) {
-        bool run = f.unpack<bool>();
-        cout << "Classexperiment " << (run?"start":"stop") << endl;
+    bool frst = true;
+    void getStart(Frame &f) {
+        CHECK(f.id == 1);
+        CHECK(f.unpack<bool>() == frst);
+        frst = false;
     }
     void getPi(Frame &f) {
-        double pi = f.unpack<double>();
-        assert(pi - 3.14 < 0.01);
-        cout << "pi = " << pi << endl;
+        CHECK(f.id == 10);
+        CHECK(f.unpack<double>() == doctest::Approx(3.14));
     }
 };
-void func() {
+TEST_CASE("tool-libs: frame registry:") {
     FrameRegistry reg;
+    SUBCASE("function handler") {
+        reg.setHandler(1, getStart);
+        reg.setHandler(10, getPi);
+    }
+    SUBCASE("method handler") {
+        static Exp exp;
+        reg.setHandler(1, exp, &Exp::getStart);
+        reg.setHandler(10, exp, &Exp::getPi);
+    }
     Frame e{1}, f{10}, g{1};
     e.pack(true);
     f.pack(3.14);
     g.pack(false);
-    reg.setHandler(1, handle);
-    reg.setHandler(10, handle);
+
     reg.handle(std::move(e));
     reg.handle(std::move(f));
     reg.handle(std::move(g));
-}
-
-void meth() {
-    FrameRegistry reg;
-    Exp exp;
-    reg.setHandler(1, exp, &Exp::runlog);
-    reg.setHandler(10, exp, &Exp::getPi);
-    Frame f{1}, p{10};
-    f.pack(true);
-    p.pack(3.14);
-    reg.handle(std::move(f));
-    reg.handle(std::move(p));
-    f = Frame{1};
-    f.pack(false);
-    reg.handle(std::move(f));
-}
-int main() {
-    func();
-    meth();
 }

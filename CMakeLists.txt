@@ -7,6 +7,7 @@ target_include_directories(tool-libs INTERFACE .)
 
 add_subdirectory(stm)
 add_subdirectory(linux)
+add_subdirectory(tests)
 
 find_package(Doxygen)
 if(DOXYGEN_FOUND)

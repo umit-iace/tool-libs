@@ -47,7 +47,7 @@ struct __attribute((packed)) BigStruct {
 
 void testFrame() {
     Frame f;
-    f.pack(3.14);
+    f.pack<double>(3.14);
     f.pack((uint32_t) 3600);
 
     double pi;
