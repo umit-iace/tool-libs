@@ -12,7 +12,7 @@
  */
 template<typename T, int N>
 class MovingAverage {
-    Queue<T, N> samples{};
+    Queue<T> samples{N};
     T total{};
 public:
     /**
