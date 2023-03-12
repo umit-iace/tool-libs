@@ -2,32 +2,32 @@
 #include "x/TimedFuncRegistry.h"
 
 /** simple kernel for running tool-libs based applications */
-extern struct Kernel {
-    Scheduler s{};
-    Schedule::Recurring::Registry always{};
-
-    /** register recurring callback */
-    template<typename ...Args>
-    constexpr void every(Args&& ...a) {
-        return always.every(std::forward<Args>(a)...);
-    }
-    /** pass registry to scheduler for actual scheduling */
-    void schedule(uint32_t time, Schedule::Registry &reg) {
-        return s.schedule(time, reg);
-    }
+extern class Kernel :
+    public Schedule::Recurring::Registry,
+    public Scheduler {
+public:
+    /** const access to global uptime */
+    const uint32_t &time{time_};
     /** call every ms */
-    void tick(uint32_t gtime) {
-        s.schedule(gtime, always);
+    void tick(uint32_t dt_ms) {
+        schedule(time, *this);
+        time_ += dt_ms;
     }
     /** kernel entry point */
     [[noreturn]] void run () {
         while(true) {
-            s.run();
+            Scheduler::run();
             idle();
         }
     }
     /** implement to not burn unnecessary cpu cycles
+     *
      * a simple sleep or 'wait for interrupt' will do
+     *
+     * if running in a single thread, you probably want to
+     * call `tick()` in this method to advance the time
      */
     void idle();
+private:
+    uint32_t time_{};
 } k;
