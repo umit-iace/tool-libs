@@ -1,9 +1,13 @@
 #pragma once
 #include "utils/Queue.h"
 namespace Schedule {
+/** represents an object that can be scheduled for later calling
+ *
+ * is the poor man's closure
+ */
 struct Schedulable {
     virtual ~Schedulable(){}
-    virtual bool schedule(uint32_t time) =0;
+    virtual bool schedule(uint32_t time){return true;}
     virtual void call() =0;
 };
 struct Registry {
