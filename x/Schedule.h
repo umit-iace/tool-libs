@@ -2,6 +2,7 @@
 #include "utils/Queue.h"
 /** namespace wrapping all functionality to do with scheduling */
 namespace Schedule {
+//XXX: figure out a way to simplify this whole namespace
 /** represents an object that can be scheduled for later calling
  *
  * is the poor man's closure
@@ -13,7 +14,7 @@ struct Schedulable {
     /** return true if object should be scheduled at this time */
     virtual bool schedule(uint32_t now) { return true; }
     /** this method is called to run the Schedulable */
-    virtual void call() =0;
+    virtual void call()=0;
 };
 /** a registry of Schedulable which can be given to the Scheduler for
  * actual scheduling of calls
