@@ -1,5 +1,17 @@
 #include "hal.h"
+#include "x/Kern.h"
 HAL_StatusTypeDef hal = HAL_Init();
+void Kernel::idle() {
+    asm("wfi");
+}
+void HAL_IncTick() {
+    k.tick(uwTickFreq);
+    uwTick += uwTickFreq;
+}
+void assert(bool b) {
+    if (!b) asm("bkpt");
+}
+
 extern "C" {
 /**
   * @brief This function handles Non maskable interrupt.
