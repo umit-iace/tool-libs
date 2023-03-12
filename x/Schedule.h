@@ -1,5 +1,6 @@
 #pragma once
 #include "utils/Queue.h"
+/** namespace wrapping all functionality to do with scheduling */
 namespace Schedule {
 /** represents an object that can be scheduled for later calling
  *
