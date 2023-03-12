@@ -82,8 +82,11 @@ Documentation is provided inline with the implementation, but can also be built
 into user-friendly html files. Make sure you have `doxygen` and `dot` (from the
 graphviz package) installed, then run
 ``` shell
-doxygen doxyfile && xdg-open _build/html/index.html
+doxygen docs/doxyfile && xdg-open html/index.html
 ```
+alternatively building the documentation is also available from a cmake target
+so you can build the documentation right alongside your project. The target is
+named `tool-libs-docs`
 
 # Contributing
 

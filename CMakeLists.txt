@@ -9,7 +9,7 @@ add_subdirectory(stm)
 find_package(Doxygen)
 if(DOXYGEN_FOUND)
     add_custom_target(tool-libs-docs
-        COMMAND ${CMAKE_COMMAND} -E env TOOL_LIBS_DOCS_OUTPUT=${CMAKE_CURRENT_BINARY_DIR} ${DOXYGEN_EXECUTABLE} doxyfile
+        COMMAND ${CMAKE_COMMAND} -E env TOOL_LIBS_DOCS_OUTPUT=${CMAKE_CURRENT_BINARY_DIR} ${DOXYGEN_EXECUTABLE} docs/doxyfile
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMENT "Generate tool-libs documentation"
         VERBATIM
