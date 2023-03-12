@@ -1,13 +1,31 @@
 #pragma once
 #include "x/TimedFuncRegistry.h"
+#include "x/Logger.h"
 
-/** simple kernel for running tool-libs based applications */
+/** simple kernel for running tool-libs based applications
+ * also provides logging functionality
+ */
 extern class Kernel :
     public Schedule::Recurring::Registry,
     public Scheduler {
+    struct KLog: Logger {
+        KLog(const uint32_t &t, Sink<Buffer<uint8_t>> &snk): Logger(snk), time(t) {}
+        KLog(const uint32_t &t): Logger(), time(t) {}
+        const uint32_t &time;
+        virtual Buffer<uint8_t> pre() override {
+            auto ret = Buffer<uint8_t>{256};
+            ret.len = snprintf((char*)ret.buf, ret.size, "(@%ldms): ", time);
+            return ret;
+        }
+    };
 public:
     /** const access to global uptime */
     const uint32_t &time{time_};
+    KLog log{time};
+    /** point logger to new sink */
+    void initLog(Sink<Buffer<uint8_t>> &snk) {
+        new(&log) KLog{time, snk};
+    }
     /** call every ms */
     void tick(uint32_t dt_ms) {
         schedule(time, *this);
