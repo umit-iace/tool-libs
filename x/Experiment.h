@@ -1,13 +1,14 @@
 #pragma once
 
 #include "x/Kern.h"
-#include "utils/Timeout.h"
+#include "utils/Deadline.h"
 #include "EventFuncRegistry.h"
 #include "FrameRegistry.h"
+#include "Logger.h"
 
 /** @brief Experiment Controller
  *
- * Implements a simple state machine and provides hooks for regular callbacks
+ * Implements a simple state machine and provides hooks for recurring callbacks
  * during the states, or on Events (state changes).
  * \dot
  * digraph Experiment_State_Machine {
@@ -43,8 +44,11 @@ public:
         /// Event generated on missed heartbeat
         TIMEOUT,
     };
-    Experiment() {
+    /// construct. if FrameRegistry is not available at this point,
+    /// call `registerWith` at the earliest convenience
+    Experiment(FrameRegistry *fr=nullptr) {
         k.every(1, *this, &Experiment::tick);
+        if (fr) registerWith(*fr);
     }
     /// set frame registry from which Experiment will receive frames
     void registerWith(FrameRegistry &reg) {
@@ -67,9 +71,20 @@ public:
     }
     /// const access to Experiment state
     const State& state{state_};
+    /// const access to Experiment time
+    const uint32_t& time{time_};
     /// set Heartbeat timeout in ms
-    void setHeartbeatTimeout(uint32_t timeout) {
-        heartbeat.timeout = timeout;
+    void setHeartbeatTimeout(uint32_t ms, Sink<Frame> &notify) {
+        heartbeat.timeout = ms;
+        heartbeat.reset(time);
+        // notify other side if we timeout
+        struct TMP :Schedule::Schedulable{
+                Sink<Frame> &s;
+                TMP(Sink<Frame>&s): s(s) {}
+                void call() override{
+                    s.push(Frame{1}.pack(false));
+                }};
+        timeout.call(new TMP{notify});
     }
 
 private:
@@ -79,18 +94,16 @@ private:
         State old = state;
         // very simple state machine
         state_ = alive ? RUN : IDLE;
-        // react to state changes
-        if (state != old) switch(old) {
+        if (state != old) switch(old) { // react to state changes
         case IDLE:
+            time_ = 0;
             k.schedule(time, init);
-            time = 0;
             idle.reset(); running.reset();
             break;
         case RUN:
             k.schedule(time, stop);
             break;
-        } else switch (state) {
-        // no state changes
+        } else switch (state) { // no state changes
         case IDLE:
             k.schedule(time, idle);
             break;
@@ -105,9 +118,9 @@ private:
     }
     Schedule::Evented::Registry init{}, stop{}, timeout{};
     Schedule::Recurring::Registry idle{}, running{};
-    uint32_t time{};
-    class : Timeout {
-    friend Experiment;
+    uint32_t time_{};
+    class _: Deadline {
+        friend Experiment;
         uint32_t timeout{};
         operator bool() {
             return timeout;
@@ -120,7 +133,7 @@ private:
 
     void tick(uint32_t, uint32_t dt) {
         statemachine();
-        time += dt;
+        time_ += dt;
     }
 
     void handleFrame(Frame &f) {
@@ -137,3 +150,22 @@ private:
         }
     }
 } e;
+
+struct ExpLog : public Logger {
+    static constexpr const char msg[] = "Experiment Logger (@%ldms): ";
+    const uint32_t &time;
+    virtual Buffer<uint8_t> pre() override {
+        auto ret = Buffer<uint8_t>{256};
+        ret.len = snprintf((char*)ret.buf, ret.size, msg, time);
+        return ret;
+    }
+    ExpLog(Experiment &e, Sink<Buffer<uint8_t>> &underlying)
+            : Logger(underlying), time(e.time) {
+        e.onEvent(e.INIT).call(*this, &ExpLog::start);
+        e.onEvent(e.STOP).call(*this, &ExpLog::stop);
+        e.onEvent(e.TIMEOUT).call(*this, &ExpLog::timeout);
+    }
+    void start(uint32_t t) { info("started %d", t); }
+    void stop(uint32_t t) { info("stopped %d", t); }
+    void timeout(uint32_t t) { warn("timed out! %d", t); }
+};
