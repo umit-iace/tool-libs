@@ -1,4 +1,4 @@
-/** @file Timeout.h
+/** @file Deadline.h
  *
  * Copyright (c) 2023 IACE
  */
@@ -6,15 +6,15 @@
 
 /** simple solution for keeping track of timeouts
  *
- * assign new Timeout to reset, assign 0 to disable
+ * assign new Deadline to reset, assign 0 to disable
  * e.g.
  * ```
- * timeout = Timeout{now + dt};
+ * deadline = Deadline{now + dt};
  * ```
  */
-struct Timeout {
+struct Deadline {
     uint32_t when{};
-    /// time expired
+    /// deadline has passed
     bool operator()(uint32_t now) {
         if (when == 0 || now < when) return false;
         when = 0;
