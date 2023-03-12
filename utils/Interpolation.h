@@ -1,128 +1,51 @@
-/** @file Interpolation.h
+#pragma once
+#include <utils/Buffer.h>
+#include <utility>
+
+/** Parametrized Curve
  *
- * Copyright (c) 2020 IACE
- */
-#ifndef INTERPOLATION_H
-#define INTERPOLATION_H
-
-struct Vec {
-    double x, y;
-};
-
-/**
- * Base class for an interpolator
- */
-class Interpolator {
+ * useful for trajectory generation
+ **/
+/* extern Logger logger; */
+struct Curve {
 public:
-    /**
-     * Constructor for a general interpolator
-     * @param count number of points for interpolator
-     */
-    Interpolator(const unsigned int count) :
-            iCount(count), P(new Vec[count]()) {}
-
-    /**
-     * Reinitialise interpolator with new dataset
-     * @param dx array of x values
-     * @param dy array of y values
-     * @param iCount of values in array
-     * @param bSort true if arrays must be sorted
-     */
-    void setData(double *dx, double *dy, unsigned int iCount, bool bSort=false) {
-        this->iCount = iCount;
-        delete[] this->P;
-        this->P = new Vec[this->iCount];
-
-        this->updateData(dx, dy, bSort);
+    virtual void setData(Buffer<double> &&b) {
+        /* logger.warn("virtual setData wrong"); */
+        assert(false); // ups, virtual call didn't work?
     }
+    /** virtual destructor */
+    virtual ~Curve() {}
 
-    /**
-     * update the points in dataset
-     * @param dx array of x values
-     * @param dy array of y values
-     * @param bSort true if arrays must be sorted
-     */
-    void updateData(double *dx, double *dy, bool bSort = false) {
-        if (!dx || !dy)
-            return;
-
-        for (unsigned int i = 0; i < this->iCount; ++i) {
-            this->P[i].x = dx[i];
-            this->P[i].y = dy[i];
-        }
-
-        if (bSort)
-            sort();
-    }
-
-    /**
-     * virtual destructor
-     */
-    virtual ~Interpolator() {
-        delete[] this->P;
-    }
-
-    /**
-     * Operator overload to get interpolated value.
-     * @param dx x position to interpolate
-     */
     double operator()(double dx) {
-        if (this->P)
-            return this->interpolate(dx);
-        else
-            return 0;
+        return getValue(dx);
     }
 
-protected:
-    ///\cond false
-    virtual double interpolate(double dx) = 0;
-
-    unsigned int iCount;                 ///< number of points in array
-    Vec *P = nullptr;                              ///< points with x and y values
-
-private:
-    void sort() {
-        Vec vTemp;
-        for(unsigned int i = 0; i < iCount - 1; i++) {
-            for(unsigned int j = 0; j < iCount - i - 1; j++) {
-                if (this->P[j].x > this->P[j + 1].x){
-                    vTemp = this->P[j];
-                    this->P[j] = this->P[j + 1];
-                    this->P[j + 1] = vTemp;
-                }
-            }
-        }
+    virtual double getValue(double) {
+        /* logger.warn("virtual getValue wrong"); */
+        assert(false); // ups, virtual call didn't work?
+        return 0;
     }
-    ///\endcond
 };
 
-/**
- * Class implementing linear interpolation
- * for a fixed number of datapoints
- */
-class LinearInterpolator : public Interpolator {
+class StepTrajectory : public Curve {
+    struct Vec {
+        double x, y;
+    };
+    Buffer<Vec> P{0};
 public:
-    /**
-     * Constructor for a linear interpolator
-     * @param dx array of x values
-     * @param dy array of y values
-     * @param iCount of values in array
-     * @param bSort true if arrays must be sorted
-     */
-    LinearInterpolator(double *dx, double *dy, const unsigned int iCount, bool bSort=false)
-            : Interpolator(iCount) {
-        this->updateData(dx, dy, bSort);
+    void setData(Buffer<double> &&b) override {
+        size_t i{0}, off{b.size/2};
+        P = Buffer<Vec>{off};
+        P.len = off;
+        for (auto &v : P) {
+            v = {b[i], b[i+off]};
+            ++i;
+        }
     }
-
-    LinearInterpolator(const unsigned int count) : Interpolator(count) {}
-
-    LinearInterpolator() : Interpolator(1) {}
-
-protected:
-    ///\cond false
-    double interpolate(double dx) {
-        int i = (this->iCount - 1) / 2;
-        int left = 0, right = this->iCount - 1;
+    double getValue(double dx) override {
+        if (!P.size) return 0;
+        size_t i = (P.size - 1) / 2;
+        size_t left = 0, right = P.size - 1;
         while (true) {
             if (left == right) {
                 return P[right].y;
@@ -137,11 +60,94 @@ protected:
                 i = (left + right) / 2;
                 continue;
             }
-            double dm = ((this->P[i + 1].y - this->P[i].y) / (this->P[i + 1].x - this->P[i].x));
-            return dm * (dx - this->P[i].x) + this->P[i].y;
+            return P[i].y;
         }
     }
-    ///\endcond
 };
 
-#endif //INTERPOLATION_H
+/** Class implementing linear interpolation */
+class LinearTrajectory : public Curve {
+    struct Vec {
+        double x, y, m;
+    };
+    Buffer<Vec> P{0};
+public:
+    void setData(Buffer<double> &&b) override {
+        size_t off{b.size/2};
+        P = Buffer<Vec>{off};
+        P.len = off;
+        double slope;
+        for (size_t i = 0; i < off; ++i) {
+            if (i+1 < off) {
+                slope = (b[i+1+off] - b[i+off]) / (b[i+1] - b[i]);
+            } else {
+                slope = 0;
+            }
+            P[i] = {b[i], b[i+off], slope};
+        }
+    }
+    double getValue(double dx) override {
+        if (!P.size) return 0;
+        size_t i = (P.size - 1) / 2;
+        size_t left = 0, right = P.size - 1;
+        while (true) {
+            if (left == right) {
+                return P[right].y;
+            }
+            if (dx < P[i].x) {
+                right = i;
+                i = (left + right) / 2;
+                continue;
+            }
+            if (dx >= P[i+1].x) {
+                left = i+1;
+                i = (left + right) / 2;
+                continue;
+            }
+            return P[i].m * (dx - P[i].x) + P[i].y;
+        }
+    }
+};
+
+/* class SmoothTrajectory : public Curve { */
+/*     struct Vec { */
+/*         double x, y; */
+/*     }; */
+/*     Buffer<Vec> P{0}; */
+/* public: */
+/*     void setData(Buffer<double> &&b) override { */
+/*         size_t off{b.size/2}; */
+/*         P = Buffer<Vec>{off}; */
+/*         P.len = off; */
+/*         double slope; */
+/*         for (size_t i = 0; i < off; ++i) { */
+/*             if (i+1 < off) { */
+/*                 slope = (b[i+1+off] - b[i+off]) / (b[i+1] - b[i]); */
+/*             } else { */
+/*                 slope = 0; */
+/*             } */
+/*             P[i] = {b[i], b[i+off], slope}; */
+/*         } */
+/*     } */
+/*     double getValue(double dx) override { */
+/*         if (!P.size) return 0; */
+/*         size_t i = (P.size - 1) / 2; */
+/*         size_t left = 0, right = P.size - 1; */
+/*         while (true) { */
+/*             if (left == right) { */
+/*                 return P[right].y; */
+/*             } */
+/*             if (dx < P[i].x) { */
+/*                 right = i; */
+/*                 i = (left + right) / 2; */
+/*                 continue; */
+/*             } */
+/*             if (dx >= P[i+1].x) { */
+/*                 left = i+1; */
+/*                 i = (left + right) / 2; */
+/*                 continue; */
+/*             } */
+/*             return P[i].m * (dx - P[i].x) + P[i].y; */
+/*         } */
+/*     } */
+/* }; */
