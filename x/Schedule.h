@@ -3,6 +3,10 @@
 /** namespace wrapping all functionality to do with scheduling */
 namespace Schedule {
 //XXX: figure out a way to simplify this whole namespace
+//I'm not satisfied with each schedulable deciding whether it wants to
+//run by itself. That probably belongs into the registries instead.
+//Then we could probably do away with the whole 'Schedulable' concept
+//and just keep 'callable's or smth
 /** represents an object that can be scheduled for later calling
  *
  * is the poor man's closure
