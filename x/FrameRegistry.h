@@ -13,11 +13,12 @@ struct Frame {
      * use `pack<typename>(value)` to be explicit
      **/
     template<typename T>
-    void pack(T value) {
+    Frame &pack(T value) {
         assert(cursor.pack + sizeof(T) < b.size);
         *(T*)&b[cursor.pack] = value;
         cursor.pack += sizeof(T);
         b.len += sizeof(T);
+        return *this;
     }
     /** unpack into value from Frame
      *
