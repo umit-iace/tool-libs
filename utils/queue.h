@@ -1,11 +1,11 @@
-/** @file Queue.h
+/** @file queue.h
  *
  * Copyright (c) 2023 IACE
  */
 #pragma once
+#include "buffer.h"
 
-#include "Interfaces.h"
-#include "Buffer.h"
+#include <core/streams.h>
 
 /** simple Buffer backed queue implementation */
 template <typename T>

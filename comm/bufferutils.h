@@ -1,3 +1,7 @@
+/** @file bufferutils.h
+ *
+ * Copyright (c) 2023 IACE
+ */
 #pragma once
 
 /** stream splitter

@@ -3,12 +3,12 @@
  * Copyright (c) 2020 IACE
  */
 #pragma once
+#include <utils/deadline.h>
+#include <utils/queue.h>
+#include <core/kern.h>
 
-#include "stm/gpio.h"
-#include "stm/registry.h"
-#include "utils/Deadline.h"
-#include "utils/Queue.h"
-#include "x/Kern.h"
+#include "gpio.h"
+#include "registry.h"
 
 /** Character Buffer Sink & Source wrapping UART Peripheral 
  *

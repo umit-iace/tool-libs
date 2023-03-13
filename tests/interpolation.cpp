@@ -4,8 +4,7 @@
  */
 
 #include <doctest/doctest.h>
-#include <cassert>
-#include <utils/Interpolation.h>
+#include <ctrl/trajectory.h>
 
 
 TEST_CASE("tool-libs: interpolation: step") {

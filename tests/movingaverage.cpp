@@ -1,6 +1,5 @@
 #include <doctest/doctest.h>
-#include <cassert>
-#include <utils/MovingAverage.h>
+#include <ctrl/movingaverage.h>
 
 
 TEST_CASE("tool-libs: movingaverage: ConstValueTest") {

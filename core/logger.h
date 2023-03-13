@@ -1,3 +1,7 @@
+/** @file logger.h
+ *
+ * Copyright (c) 2023 IACE
+ */
 #pragma once
 
 #include <cstdio>

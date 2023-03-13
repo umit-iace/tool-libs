@@ -1,9 +1,9 @@
-/** @file Deadline.h
+/** @file deadline.h
  *
  * Copyright (c) 2023 IACE
  */
 #pragma once
-
+#include <cstdint>
 /** simple solution for keeping track of timeouts
  *
  * assign new Deadline to reset, assign 0 to disable

@@ -1,8 +1,7 @@
 #include <doctest/doctest.h>
-#include <cassert>
 #include <utility>
-#include <utils/Buffer.h>
-#include <x/FrameRegistry.h>
+#include <utils/buffer.h>
+#include <comm/frameregistry.h>
 
 void getStart(Frame &f) {
     static bool frst = true;

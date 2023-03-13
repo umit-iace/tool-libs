@@ -1,8 +1,13 @@
+/** @file kern.h
+ *
+ * Copyright (c) 2023 IACE
+ */
 #pragma once
-#include "x/TimedFuncRegistry.h"
-#include "x/Logger.h"
+#include "timed.h"
+#include "logger.h"
 
 /** simple kernel for running tool-libs based applications
+ *
  * also provides logging functionality
  */
 extern class Kernel :

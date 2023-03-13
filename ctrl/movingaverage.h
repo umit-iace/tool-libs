@@ -1,9 +1,9 @@
-/** @file MovingAverage.h
+/** @file movingaverage.h
  *
  * Copyright (c) 2019 IACE
  */
 #pragma once
-#include "Queue.h"
+#include <utils/queue.h>
 
 /**
  * Template class that implements a moving average filter as fifo.

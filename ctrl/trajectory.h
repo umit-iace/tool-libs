@@ -1,16 +1,18 @@
+/** @file trajectory.h
+ *
+ * Copyright (c) 2023 IACE
+ */
 #pragma once
-#include <utils/Buffer.h>
 #include <utility>
+#include <utils/buffer.h>
 
 /** Parametrized Curve
  *
  * useful for trajectory generation
  **/
-/* extern Logger logger; */
 struct Curve {
 public:
     virtual void setData(Buffer<double> &&b) {
-        /* logger.warn("virtual setData wrong"); */
         assert(false); // ups, virtual call didn't work?
     }
     /** virtual destructor */
@@ -21,7 +23,6 @@ public:
     }
 
     virtual double getValue(double) {
-        /* logger.warn("virtual getValue wrong"); */
         assert(false); // ups, virtual call didn't work?
         return 0;
     }

@@ -1,4 +1,10 @@
+/** @file frameregistry.h
+ *
+ * Copyright (c) 2023 IACE
+ */
 #pragma once
+
+#include <utils/buffer.h>
 
 /** pyWisp communication frame */
 struct Frame {

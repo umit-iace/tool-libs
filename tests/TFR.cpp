@@ -1,8 +1,7 @@
 #include <doctest/doctest.h>
-#include <cassert>
 #include <iostream>
-#include <x/TimedFuncRegistry.h>
-#include <x/Schedule.h>
+#include <core/timed.h>
+#include <core/schedule.h>
 using namespace std;
 
 void callme(uint32_t t, uint32_t dt) {

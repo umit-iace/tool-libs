@@ -1,7 +1,6 @@
 #pragma once
-#include <cassert>
-#include <utils/Interfaces.h>
-#include <utils/Buffer.h>
+#include <core/streams.h>
+#include <utils/buffer.h>
 extern struct Host {
     struct {
         Source<Buffer<uint8_t>> &in;

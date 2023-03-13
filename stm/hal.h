@@ -4,7 +4,6 @@
  */
 #ifndef STM_HAL_H
 #define STM_HAL_H
-extern void assert(bool);
 
 #ifdef STM32F4
 	#include "stm32f4xx_hal.h"

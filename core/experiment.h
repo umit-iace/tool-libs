@@ -1,10 +1,14 @@
+/** @file experiment.h
+ *
+ * Copyright (c) 2023 IACE
+ */
 #pragma once
+#include <comm/frameregistry.h>
+#include <utils/deadline.h>
 
-#include "x/Kern.h"
-#include "utils/Deadline.h"
-#include "EventFuncRegistry.h"
-#include "FrameRegistry.h"
-#include "Logger.h"
+#include "kern.h"
+#include "evented.h"
+#include "logger.h"
 
 /** @brief Experiment Controller
  *

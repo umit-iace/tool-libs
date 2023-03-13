@@ -1,8 +1,9 @@
 #include "host.h"
-#include "x/Kern.h"
 
+#include <core/kern.h>
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <fcntl.h>
 #include <poll.h>
 #include <thread>
@@ -19,6 +20,10 @@ void Kernel::idle() {
     next += dt;
     auto runtime = duration_cast<milliseconds>(now-start);
     this->tick(dt.count());
+}
+
+void assert(bool b) {
+    if (!b) abort();
 }
 
 struct impl {

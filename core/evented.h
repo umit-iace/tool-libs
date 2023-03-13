@@ -1,5 +1,9 @@
+/** @file evented.h
+ *
+ * Copyright (c) 2023 IACE
+ */
 #pragma once
-#include "x/Schedule.h"
+#include "schedule.h"
 namespace Schedule {
 /** Oneshot function/method calling infrastructure
  *

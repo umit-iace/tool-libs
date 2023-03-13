@@ -1,4 +1,4 @@
-/** @file Interfaces.h
+/** @file streams.h
  *
  * Copyright (c) 2023 IACE
  * \todo should we provide empty or assert(false) implementations?
@@ -31,5 +31,5 @@ struct Source {
     /// check if source is empty
     virtual bool empty()=0;
     /// pull object from source
-    [[nodiscard]] virtual T pop()=0;
+    virtual T pop()=0;
 };

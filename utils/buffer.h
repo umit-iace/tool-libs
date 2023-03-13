@@ -1,10 +1,11 @@
-/** @file Buffer.h
+/** @file buffer.h
  *
  * Copyright (c) 2023 IACE
  */
 #pragma once
 #include <cstring>
 #include <cstdint>
+extern void assert(bool);
 
 /**
  * dynamically allocated, but fixed-size buffer template

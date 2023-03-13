@@ -1,6 +1,5 @@
 #include <doctest/doctest.h>
-#include <cassert>
-#include <utils/Queue.h>
+#include <utils/queue.h>
 #include <iostream>
 using namespace std;
 struct data {

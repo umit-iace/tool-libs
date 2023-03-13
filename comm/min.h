@@ -1,12 +1,12 @@
-/** @file Min.h
+/** @file min.h
  *
  * Copyright (c) 2023 IACE
  */
 #pragma once
+#include "frameregistry.h"
 
 #include <stdint.h>
-#include "utils/Queue.h"
-#include "x/FrameRegistry.h"
+#include <utils/queue.h>
 
 /** simple CRC32 implementation */
 struct CRC32 {

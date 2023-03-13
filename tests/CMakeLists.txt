@@ -12,13 +12,14 @@ FetchContent_MakeAvailable(doctest)
 
 # Make test executable
 add_executable(tool-libs-tests main.cpp
-    Queue.cpp
     buffer.cpp
-    frameregistry.cpp
     experiment.cpp
+    frameregistry.cpp
     interpolation.cpp
     later.cpp
+    min.cpp
     movingaverage.cpp
+    Queue.cpp
     requestqueue.cpp
     TFR.cpp
     )

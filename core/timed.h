@@ -1,5 +1,9 @@
+/** @file timed.h
+ *
+ * Copyright (c) 2023 IACE
+ */
 #pragma once
-#include "x/Schedule.h"
+#include "schedule.h"
 namespace Schedule {
 /** Recurring function/method calling infrastructure
  *

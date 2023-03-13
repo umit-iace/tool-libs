@@ -1,5 +1,9 @@
+/** @file schedule.h
+ *
+ * Copyright (c) 2023 IACE
+ */
 #pragma once
-#include "utils/Queue.h"
+#include "utils/queue.h"
 /** namespace wrapping all functionality to do with scheduling */
 namespace Schedule {
 //XXX: figure out a way to simplify this whole namespace

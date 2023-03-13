@@ -1,7 +1,10 @@
-#define assert(b) do{if (!(b)) throw("ohno");} while(0)
 #include <doctest/doctest.h>
 #include <cstdio>
-#include <utils/Buffer.h>
+#include <utils/buffer.h>
+
+void assert(bool b) {
+    if (!b) throw("ohno");
+}
 
 TEST_CASE("tool-libs: buffer") {
     Buffer<int> b {256};
