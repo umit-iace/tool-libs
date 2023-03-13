@@ -7,11 +7,13 @@
 #include <cstdio>
 #include <cstdarg>
 template<typename T>
-struct DevNull: Sink<T> {
-    void push(T &&) {
+struct DevNull: Sink<T>, Source<T> {
+    bool empty() override { return true; }
+    T pop() override { return *(T*)nullptr; }
+    void push(T &&) override {
     }
 };
-/** black-hole sink, just drops all input */
+/** black-hole sink & source, just drops all data, provides none */
 template<typename T>
 inline DevNull<T> devnull;
 
