@@ -11,6 +11,7 @@
 #include "stm/gpio.h"
 #include "stm/spi.h"
 
+/** Implementation of MAX31855 thermocouple temperature measurement */
 class MAX31855 : ChipSelect {
     ReqeustQueue<SPIRequest> *bus = nullptr;
 public:

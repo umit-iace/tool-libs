@@ -6,31 +6,59 @@ Control Engineering. It is designed to be used with
 [pyWisp](https://github.com/umit-iace/tool-pywisp), a tool for visualising and
 controlling testing rigs.
 
-# Framework
+# Core
 This framework is designed to simplify the implementation of a simple experiment
-process. Provided are following building blocks:
+process. The core consists of scheduling capabilities for setting up recurring
+and oneshot (Evented) tasks, a batteries-included Experiment structure
 
 ## Kernel
-\todo fix description
-
 The Kernel provides scheduling for regularly recurring tasks. It provides an
 interface for the application to register itself, and has only two invariants:
-its `@tick` method must be called every millisecond, and the `idle`
+its `tick` method must be called to let it know time passed, and the `idle`
 method should be implemented by the platform to not burn through unnecessary
-cycles.
-After setting up the application, call the non-returning `run`.
+cycles. Two backend implementations are provided: for STM microcontrollers,
+actually running the rigs, and for Linux, for simulation purposes.
+The Kernel also provides a simple Logger, that can be routed through any Sink
+provided by the application, making logging to a file (e.g. simulation), or
+through a serial port (on the actual rig) not only possible, but plug-and-play.
 
 ## Experiment
 The Experiment implements a simple state machine, and provides the entry point
 for [pyWisp](https://github.com/umit-iace/tool-pywisp) frame based experiment
 control.
 On top of the scheduling provided by the Kernel, the Experiment provides
-scheduling for tasks during its states, or on the events of state-changes.
+scheduling for tasks during its states, and on the events of state-changes.
 
 ## Minimal example
-A minimal example for this framework can be found in the `examples` directory.
+A minimal example for this framework can be found
+[on GitHub](https://github.com/umit-iace/labor-rig-templates.git).
 It simulates a leaky bucket system including a controller and an observer, and
-can run both on a connected microcontroller, or on the host system. 
+can run both on a connected microcontroller, or on a linux box.
+
+# Utils
+Some other utilities are provided by this collection:
+ - Buffer - buffer template for storing things
+ - Queue - fifo queue template that is used throughout these libraries
+ - Deadline - simple solution for keeping track of timeouts
+ - Later - a poor man's additions and subtractions upon access instead of upon
+ definition
+ 
+# Comm
+Providing a bunch of helpers for communication with pyWisp, but also for
+character streams.
+ - Min - main implementation of packing & unpacking data for transfer to / from
+ pyWisp
+ - FrameRegistry - the place where consumers of Frames can sign up for their
+ respective IDs
+ - SeriesUnpacker - unpack a series of data sent from pyWisp
+ - bufferutils.h & line.h - helpers for manipulating character streams
+ 
+# Control
+Helpers for common problems found in control engineering. Currently only
+provides a MovingAverage filter and a simple LinearTrajectory generator, but has
+aspirations to grow into a more full-fledged toolbox providing implementations
+for PID-, and State feedback controllers, Kalman filter, more sofisticated
+trajectories, etc.
 
 # Sensors
 Drivers for the following sensors are implemented:
@@ -42,7 +70,9 @@ Drivers for the following sensors are implemented:
  the PT100
  
 # STM
-The Hardware Abstraction Layer from STMicroelectronics are unified and wrapped
+An implementation for the Kernel backend that makes integration with
+microcontrollers a breeze.
+The Hardware Abstraction Layers from STMicroelectronics are unified and wrapped
 in (hopefully) easier to use classes.
 Currently only the F4 and F7 families of microcontrollers are supported. The
 following classes are implemented:
@@ -53,16 +83,14 @@ following classes are implemented:
  - HardwareSPI - SPI interface support
  - HardwareTimer - support for the timer peripherals
 
-# Utils
-Some other utilities are provided by this collection:
- - Interpolator - building block for e.g. trajectories
- - MovingAverage - simple sliding window filter
- - SeriesUnpacker - unpack a series of data sent from pyWisp
+# Linux
+An implementation for the Kernel backend for simulation purposes.
 
 # Usage
 This package provides two CMake library targets:
  - `tool-libs` - providing the framework and utilities
  - `tool-libs-stm` - providing microcontroller support
+ - `tool-libs-linux` - providing linux backend
 
 For no-fuss usage include the following lines in your `CMakeLists.txt`:
 ``` cmake

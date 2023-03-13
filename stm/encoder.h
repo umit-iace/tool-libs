@@ -10,6 +10,7 @@
 #include "stm/hal.h"
 #include "stm/timer.h"
 
+/** Quadrature Encoder support */
 class Encoder {
 public:
     /**
