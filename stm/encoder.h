@@ -6,9 +6,9 @@
 #ifndef STM_ENCODER_H
 #define STM_ENCODER_H
 
-#include "stm/gpio.h"
-#include "stm/hal.h"
-#include "stm/timer.h"
+#include "gpio.h"
+#include "hal.h"
+#include "timer.h"
 
 /** Quadrature Encoder support */
 class Encoder {
@@ -42,7 +42,7 @@ public:
             tim(HardwareTimer(conf.tim, 0, 0xffff)),
             dFactor(conf.factor) {
 
-        TIM_HandleTypeDef *htim = tim.handle();
+        TIM_HandleTypeDef *htim = &tim.handle;
         TIM_Encoder_InitTypeDef sConfig = {};
         sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
         sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
@@ -63,7 +63,7 @@ public:
      * do this periodically to update encoder state
      */
     void measure() {
-        int16_t iCurrEnc = __HAL_TIM_GET_COUNTER(tim.handle());
+        int16_t iCurrEnc = __HAL_TIM_GET_COUNTER(&tim.handle);
         uint32_t iCurrTick = HAL_GetTick();
         double dDiff = (int16_t)(iCurrEnc - iLastVal) * dFactor;
         dPosition += dDiff;
@@ -105,7 +105,7 @@ public:
      * @brief reset encoder position
      */
     void zero() {
-        __HAL_TIM_SET_COUNTER(tim.handle(), 0);
+        __HAL_TIM_SET_COUNTER(&tim.handle, 0);
         iLastVal = 0;
         dPosition = 0;
         dSpeed = 0;

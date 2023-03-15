@@ -3,7 +3,7 @@
  * Copyright (c) 2020 IACE
  */
 #pragma once
-#include "stm/hal.h"
+#include "hal.h"
 
 /** wrapper for timer peripheral */
 class HardwareTimer {

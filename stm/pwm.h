@@ -5,8 +5,8 @@
 #ifndef STM_PWM_H
 #define STM_PWM_H
 
-#include "stm/hal.h"
-#include "stm/timer.h"
+#include "hal.h"
+#include "timer.h"
 
 /**
  * @brief Template class for hardware based PWM outputs
@@ -38,7 +38,7 @@ public:
      * @param chan timer channel number (TIM_CHANNEL_x)
      */
     HardwarePWM(HardwareTimer *tim, uint32_t chan) :
-            hTim(tim->handle()), channel(chan), period(hTim->Init.Period) {
+            hTim(&tim->handle), channel(chan), period(hTim->Init.Period) {
         // pwm config of timer
         while (HAL_TIM_PWM_Init(hTim) != HAL_OK);
 
