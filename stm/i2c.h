@@ -5,8 +5,8 @@
 #ifndef STM_I2C_H
 #define STM_I2C_H
 
-#include "stm/hal.h"
-#include "utils/RequestQueue.h"
+#include <utils/RequestQueue.h>
+#include "hal.h"
 
 /**
  * generic I2C device wrapper.
@@ -221,7 +221,12 @@ public:
 
         pThis = this;
     }
-
+    void irqEvHandler() {
+        HAL_I2C_EV_IRQHandler(&handle);
+    }
+    void irqErHandler() {
+        HAL_I2C_ER_IRQHandler(&handle);
+    }
     I2C_HandleTypeDef handle{};
 };
 #endif //STM_I2C_H
