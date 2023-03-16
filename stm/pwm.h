@@ -6,6 +6,7 @@
 #define STM_PWM_H
 
 #include "hal.h"
+#include "gpio.h"
 #include "timer.h"
 
 /**
@@ -26,9 +27,14 @@ public:
      * @param ticks
      */
      void ticks(uint32_t ticks) {
-         __HAL_TIM_SET_COMPARE(hTim, channel, ticks);
+         __HAL_TIM_SET_COMPARE(hTim, chan, ticks);
      }
 
+     struct Config {
+         HardwareTimer *tim;
+         uint32_t chan;
+         AFIO pin;
+     };
     /**
      * Initialize Timer Channel
      *
@@ -37,8 +43,11 @@ public:
      * @param tim pointer to HardwareTimer
      * @param chan timer channel number (TIM_CHANNEL_x)
      */
-    HardwarePWM(HardwareTimer *tim, uint32_t chan) :
-            hTim(&tim->handle), channel(chan), period(hTim->Init.Period) {
+    HardwarePWM(const Config &conf)
+            : hTim(&conf.tim->handle)
+            , chan(conf.chan)
+            , period(hTim->Init.Period)
+    {
         // pwm config of timer
         while (HAL_TIM_PWM_Init(hTim) != HAL_OK);
 
@@ -57,7 +66,7 @@ public:
 private:
     //\cond false
     TIM_HandleTypeDef *hTim = nullptr;
-    uint32_t channel = 0;
+    uint32_t chan= 0;
     uint32_t period = 0;
     //\endcond
 };
