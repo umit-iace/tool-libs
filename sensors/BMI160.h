@@ -8,6 +8,7 @@
 #include <cstdint>
 #include "stm/i2c.h"
 
+/** Implementation of the BMI160 6axis Inertial Measurement Unit */
 struct BMI160 : I2CDevice {
     enum ADDR {
         DEFAULT = 0b1101000,

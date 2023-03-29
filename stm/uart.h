@@ -2,39 +2,75 @@
  *
  * Copyright (c) 2020 IACE
  */
-#ifndef STM_UART_H
-#define STM_UART_H
+#pragma once
+#include <utils/deadline.h>
+#include <utils/queue.h>
+#include <core/kern.h>
 
-#include "stm/hal.h"
+#include "gpio.h"
+#include "registry.h"
 
-/**
- * @brief Template class for hardware based UART derivations
+/** Character Buffer Sink & Source wrapping UART Peripheral 
+ *
+ * \dot
+ * digraph HardwareUART_SINK_SOURCE {
+ *      rankdir=LR;
+ *      size="10"
+ *      subgraph {
+ *           rank=same;
+ *           node [style=dashed, label="Buffer", URL="\ref Buffer"];
+ *           SINK
+ *           SRCE
+ *      }
+ *      HardwareUART [URL="\ref HardwareUART"];
+ *      SINK -> HardwareUART [label="push", URL="\ref push"];
+ *      HardwareUART -> SRCE [label="pop", URL="\ref pop"];
+ *      }
+ * \enddot
  */
-class HardwareUART {
-public:
-    /**
-     * Initialize the peripheral
+struct HardwareUART : public Sink<Buffer<uint8_t>>, public Source<Buffer<uint8_t>> {
+    /** default init struct */
+    struct Default {
+        USART_TypeDef *uart;
+        AFIO rx, tx;
+        uint32_t baudrate;
+    };
+    /** init struct with full control over UART settings */
+    struct Manual {
+        USART_TypeDef *uart;
+        AFIO rx, tx;
+        UART_InitTypeDef init;
+    };
+    /** constructor with default config */
+    HardwareUART(const Default &conf);
+    /** constructor with manually specifiable settings */
+    HardwareUART(const Manual &conf);
+    /** push bytebuffer into sending queue */
+    void push(Buffer<uint8_t> &&tx) override;
+    using Sink<Buffer<uint8_t>>::push;
+    /** pull buffer from receiving queue */
+    Buffer<uint8_t> pop() override;
+    /** check if receiving queue is empty */
+    bool empty() override;
+    /** interrupt handler
      *
-     * make sure to also initialize the corresponding rx/tx AFIO pins
-     *
-     * @param dUsart definition of used UART
-     * @param iBaudRate baud rate
+     * call this directly in interrupt
      */
-    HardwareUART(USART_TypeDef *dUsart, uint32_t iBaudRate) {
-        handle.Instance = dUsart;
-        handle.Init = {
-                .BaudRate = iBaudRate,
-                .WordLength = UART_WORDLENGTH_8B,
-                .StopBits = UART_STOPBITS_1,
-                .Parity = UART_PARITY_NONE,
-                .Mode = UART_MODE_TX_RX,
-                .HwFlowCtl = UART_HWCONTROL_NONE,
-                .OverSampling = UART_OVERSAMPLING_16,
-        };
-        while (HAL_UART_Init(&handle) != HAL_OK);
-    }
+    void irqHandler();
+    /** stm glue registry for internal use */
+    inline static Registry<HardwareUART, UART_HandleTypeDef, 8> reg;
+    /** rx state */
+    struct RX {
+        Queue<Buffer<uint8_t>> q;
+        Buffer<uint8_t> buf{512};
+    } rx{};
+    /** tx state */
+    struct TX {
+        Queue<Buffer<uint8_t>> q;
+        Deadline deadline;
+        bool active;
+    } tx{};
 
+    /** HAL handle for use with unwrapped UART capabilities */
     UART_HandleTypeDef handle{};
 };
-
-#endif //STM_UART_H

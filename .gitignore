@@ -421,3 +421,6 @@ fp-info-cache
 
 *venv*
 *doxyoutput*
+html
+# ctags
+tags

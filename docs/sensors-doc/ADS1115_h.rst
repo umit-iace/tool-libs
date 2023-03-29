@@ -1,5 +1,0 @@
-ADS1115.h
-~~~~~~~~~
-
-.. doxygenfile:: ADS1115.h
-   :project: Sensors

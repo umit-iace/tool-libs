@@ -1,5 +1,0 @@
-IMU3000.h
-~~~~~~~~~
-
-.. doxygenfile:: IMU3000.h
-   :project: Sensors

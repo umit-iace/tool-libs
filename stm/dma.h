@@ -2,30 +2,27 @@
  *
  * Copyright (c) 2022 IACE
  */
-#ifndef STM_DMA_H
-#define STM_DMA_H
+#pragma once
 #include "hal.h"
 
-/**
- * initializing wrapper for circular inbound DMA
- */
+/** initializing wrapper for DMA peripheral */
 class HardwareDMA {
 public:
-    HardwareDMA(DMA_Stream_TypeDef *dma, uint32_t channel) {
-        handle.Instance = dma;
-        handle.Init = {
-                .Channel = channel,
-                .Direction = DMA_PERIPH_TO_MEMORY,
-                .PeriphInc = DMA_PINC_DISABLE,
-                .MemInc = DMA_MINC_ENABLE,
-                .PeriphDataAlignment = DMA_PDATAALIGN_BYTE,
-                .MemDataAlignment = DMA_MDATAALIGN_BYTE,
-                .Mode = DMA_CIRCULAR,
-                .Priority = DMA_PRIORITY_LOW,
-                .FIFOMode = DMA_FIFOMODE_DISABLE,
-        };
+    /** DMA configuration structure */
+    struct Conf {
+        DMA_Stream_TypeDef *stream;
+        DMA_InitTypeDef init;
+    };
+    /** initialize DMA peripheral */
+    HardwareDMA(Conf conf) {
+        handle.Instance = conf.stream;
+        handle.Init = conf.init;
         while (HAL_DMA_Init(&handle) != HAL_OK);
     }
+    /** call directly in interrupt */
+    void irqHandler() {
+        HAL_DMA_IRQHandler(&handle);
+    }
+    /** HAL handle, for use with unwrapped DMA capabilities */
     DMA_HandleTypeDef handle{};
 };
-#endif //STM_DMA_H

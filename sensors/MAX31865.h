@@ -26,6 +26,7 @@
  * for details
  */
 class MAX31865 : ChipSelect {
+    ReqeustQueue<SPIRequest> *bus = nullptr;
 public:
     /// Sensor Type
     enum Type {
@@ -53,16 +54,16 @@ public:
 
     /**
      * configure temperature sensor
-     * @param pin chip select pin number
-     * @param port chip select pin port
+     * @param bus SPI request queue
+     * @param cs Digital In/Out pin of chip select line
      * @param numWires sensor type enum
      * @param Rref reference resistance
      * @param Rnom nominal resistance of sensor at 0°C
      *
      * configures sensor for auto conversion with 50Hz filter
      */
-    MAX31865(uint32_t pin, GPIO_TypeDef *port, enum Type numWires, double Rref, double Rnom)
-            : ChipSelect(pin, port), Rnom(Rnom), Rref(Rref) {
+    MAX31865(RequestQueue<SPIRequest> *bus, DIO cs, enum Type numWires, double Rref, double Rnom)
+            : bus(bus), ChipSelect(cs), Rnom(Rnom), Rref(Rref) {
         this->setConfig(1 << 7 | // bias
                         1 << 6 | // auto conversion
                         numWires << 4 |
@@ -182,7 +183,7 @@ public:
         static uint8_t data[3] = {WRITE | REG_LOW_FAULT_THRESHOLD,
                     (uint8_t)(thr >> 8), (uint8_t)thr};
 
-        HardwareSPI::master()->request(new SPIRequest(this, SPIRequest::MOSI, data, nullptr,
+        bus->request(new SPIRequest(this, SPIRequest::MOSI, data, nullptr,
                     3, (void*)NOREQ));
     }
 
@@ -194,7 +195,7 @@ public:
         static uint8_t data[3] = {WRITE | REG_HIGH_FAULT_THRESHOLD,
                     (uint8_t)(thr >> 8), (uint8_t)thr};
 
-        HardwareSPI::master()->request(new SPIRequest(this, SPIRequest::MOSI, data, nullptr,
+        bus->request(new SPIRequest(this, SPIRequest::MOSI, data, nullptr,
                     3, (void*)NOREQ));
     }
 
@@ -235,7 +236,7 @@ private:
     void setConfig(uint8_t val) {
         this->config = val;
         uint8_t data[2] = {WRITE | REG_CONFIG, config};
-        HardwareSPI::master()->request(new SPIRequest(
+        bus->request(new SPIRequest(
                 this,
                 SPIRequest::MOSI,
                 data,
@@ -247,7 +248,7 @@ private:
 
     void getTempData() {
         uint8_t tx[3] = {READ | REG_RTD, 0, 0};
-        HardwareSPI::master()->request(new SPIRequest(
+        bus->request(new SPIRequest(
                 this,
                 SPIRequest::BOTH,
                 tx,
@@ -259,7 +260,7 @@ private:
 
     void getStatusData() {
         uint8_t tx[2] = {READ | REG_STATUS, 0};
-        HardwareSPI::master()->request(new SPIRequest(
+        bus->request(new SPIRequest(
                 this,
                 SPIRequest::BOTH,
                 tx,
@@ -271,7 +272,7 @@ private:
 
     void getAllData() {
         allData[0] = READ | REG_CONFIG;
-        HardwareSPI::master()->request(new SPIRequest(
+        bus->request(new SPIRequest(
                 this,
                 SPIRequest::BOTH,
                 allData,

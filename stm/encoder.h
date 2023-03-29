@@ -6,10 +6,11 @@
 #ifndef STM_ENCODER_H
 #define STM_ENCODER_H
 
-#include "stm/gpio.h"
-#include "stm/hal.h"
-#include "stm/timer.h"
+#include "gpio.h"
+#include "hal.h"
+#include "timer.h"
 
+/** Quadrature Encoder support */
 class Encoder {
 public:
     /**
@@ -18,14 +19,10 @@ public:
      * make sure the pins for the encoder are on
      * channels 1 and 2 of the used timer.
      *
-     * @param Tim Microcontroller Timer Peripheral (e.g. TIM2)
-     * @param pinA pin number of encoder A pin
-     * @param portA port of encoder A pin
-     * @param alternateA alternate function of encoder A pin
-     * @param pinB pin number of encoder B pin
-     * @param portB port of encoder B pin
-     * @param alternateB alternate function of encoder B pin
-     * @param dFactor all encompassing conversion factor from encoder value
+     * @param tim Microcontroller Timer Peripheral (e.g. TIM2)
+     * @param a Alternate Function initialized pin A
+     * @param b Alternate Function initialized pin B
+     * @param factor all encompassing conversion factor from encoder value
      * to needed unit\n
      * Examples:
      *  * 4-bit/revolution rotary encoder, position in \c degrees:
@@ -36,11 +33,16 @@ public:
      *    a 6cm radius wheel:
      *    \verbatim factor = 1 / pow(2, 10) * M_PI * 0.06; \endverbatim
      */
-    Encoder(TIM_TypeDef *Tim, double dFactor) :
-            tim(HardwareTimer(Tim, 0, 0xffff)),
-            dFactor(dFactor) {
+    struct Conf {
+        TIM_TypeDef *tim;
+        AFIO a, b;
+        double factor;
+    };
+    Encoder(Conf conf) :
+            tim(HardwareTimer(conf.tim, 0, 0xffff)),
+            dFactor(conf.factor) {
 
-        TIM_HandleTypeDef *htim = tim.handle();
+        TIM_HandleTypeDef *htim = &tim.handle;
         TIM_Encoder_InitTypeDef sConfig = {};
         sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
         sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
@@ -61,7 +63,7 @@ public:
      * do this periodically to update encoder state
      */
     void measure() {
-        int16_t iCurrEnc = __HAL_TIM_GET_COUNTER(tim.handle());
+        int16_t iCurrEnc = __HAL_TIM_GET_COUNTER(&tim.handle);
         uint32_t iCurrTick = HAL_GetTick();
         double dDiff = (int16_t)(iCurrEnc - iLastVal) * dFactor;
         dPosition += dDiff;
@@ -103,7 +105,7 @@ public:
      * @brief reset encoder position
      */
     void zero() {
-        __HAL_TIM_SET_COUNTER(tim.handle(), 0);
+        __HAL_TIM_SET_COUNTER(&tim.handle, 0);
         iLastVal = 0;
         dPosition = 0;
         dSpeed = 0;

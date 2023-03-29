@@ -8,16 +8,19 @@
 #include <cmath>
 #include <cstdint>
 
+#include "stm/gpio.h"
 #include "stm/spi.h"
 
+/** Implementation of MAX31855 thermocouple temperature measurement */
 class MAX31855 : ChipSelect {
+    ReqeustQueue<SPIRequest> *bus = nullptr;
 public:
     /**
      * Constructor
-     * @param pin GPIO pin of chip select line
-     * @param port GPIO port of chip select line
+     * @param bus SPI request queue
+     * @param cs Digital In/Out pin of chip select line
      */
-    MAX31855(uint32_t pin, GPIO_TypeDef *port) : ChipSelect(pin, port) { }
+    MAX31855(RequestQueue<SPIRequest> *bus, DIO cs) : bus(bus), ChipSelect(cs) { }
 
     /**
      * measured sensor temperature
@@ -41,7 +44,7 @@ public:
      * request measurement of sensor data
      */
     void sense() {
-        HardwareSPI::master()->request(new SPIRequest(
+        bus->request(new SPIRequest(
                 this,
                 SPIRequest::MISO,
                 nullptr,

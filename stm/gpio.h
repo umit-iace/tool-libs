@@ -5,7 +5,7 @@
 #ifndef STM_GPIO_H
 #define STM_GPIO_H
 
-#include "stm/hal.h"
+#include "hal.h"
 
 /**
  * Wrapper class for simple digital input/output pin
