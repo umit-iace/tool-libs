@@ -20,10 +20,11 @@ struct Frame {
      **/
     template<typename T>
     Frame &pack(T value) {
-        assert(cursor.pack + sizeof(T) < b.size);
-        *(T*)&b[cursor.pack] = value;
-        cursor.pack += sizeof(T);
-        b.len += sizeof(T);
+        const size_t sz = sizeof(T);
+        assert(cursor.pack + sz < b.size);
+        memcpy(b.buf+cursor.pack, &value, sz);
+        cursor.pack += sz;
+        b.len += sz;
         return *this;
     }
     /** unpack into value from Frame
@@ -32,9 +33,10 @@ struct Frame {
      */
     template<typename T>
     void unPack(T &value) {
-        assert(cursor.unpack + sizeof(T) < b.size);
-        value = *(T*)&b[cursor.unpack];
-        cursor.unpack += sizeof(T);
+        const size_t sz = sizeof(T);
+        assert(cursor.unpack + sz < b.size);
+        memcpy(&value, b.buf + cursor.unpack, sz);
+        cursor.unpack += sz;
     }
     /** return unpacked value from Frame
      *
@@ -42,9 +44,11 @@ struct Frame {
      */
     template<typename T>
     T unpack() {
-        assert(cursor.unpack + sizeof(T) < b.size);
-        T ret = *(T*)&b[cursor.unpack];
-        cursor.unpack += sizeof(T);
+        const size_t sz = sizeof(T);
+        assert(cursor.unpack + sz < b.size);
+        T ret{};
+        memcpy(&ret, b.buf + cursor.unpack, sz);
+        cursor.unpack += sz;
         return ret;
     }
 private:
