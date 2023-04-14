@@ -7,11 +7,10 @@ namespace debug {
 namespace i2c {
 }}
 using namespace I2C;
-void start(HW *i2c) {
-    if (i2c->q.empty()) return;
+void _startMaster(HW *i2c) {
+    if (i2c->handle.Init.OwnAddress1) HAL_I2C_DisableListen_IT(&i2c->handle);
     auto& rq = i2c->q.front();
-    /* assert(rq.mem && !rq.opts.slave);// mem op not yet implemented */
-    i2c->active=true;
+    i2c->active = i2c->Q;
     i2c->deadline = Deadline{uwTick+rq.data.size*2};
     switch(rq.opts.type) {
     case Request::Opts::MASTER_WRITE:
@@ -21,12 +20,6 @@ void start(HW *i2c) {
     case Request::Opts::MASTER_READ:
         HAL_I2C_Master_Receive_IT(&i2c->handle, rq.dev->address << 1,
                                   rq.data.buf, rq.data.size);
-        break;
-    case Request::Opts::SLAVE_WRITE:
-        HAL_I2C_Slave_Transmit_IT(&i2c->handle, rq.data.buf, rq.data.len);
-        break;
-    case Request::Opts::SLAVE_READ:
-        HAL_I2C_Slave_Receive_IT(&i2c->handle, rq.data.buf, rq.data.size);
         break;
     case Request::Opts::MEM_WRITE:
         HAL_I2C_Mem_Write_IT(&i2c->handle, rq.dev->address << 1,
@@ -38,69 +31,94 @@ void start(HW *i2c) {
                             rq.mem, I2C_MEMADD_SIZE_8BIT,
                             rq.data.buf, rq.data.size);
         break;
+    default:
+        return;
     }
-    /* if (rq.opts.mem) { */
-    /*     if(rq.opts.read) { */
-    /*         HAL_I2C_Mem_Read_IT(&i2c->handle, rq.dev->address << 1, */
-    /*                             rq.mem, I2C_MEMADD_SIZE_8BIT, */
-    /*                             rq.data.buf, rq.data.size); */
-    /*     } else { */
-    /*         HAL_I2C_Mem_Write_IT(&i2c->handle, rq.dev->address << 1, */
-    /*                              rq.mem, I2C_MEMADD_SIZE_8BIT, */
-    /*                              rq.data.buf, rq.data.len); */
-    /*     } */
-    /* } else { */
-    /*     if (rq.opts.slave) { */
-    /*         if (rq.opts.read){ */
-    /*         HAL_I2C_Slave_Receive_IT(&i2c->handle, rq.data.buf, rq.data.size); */
-    /*         } else { */
-    /*         HAL_I2C_Slave_Transmit_IT(&i2c->handle, rq.data.buf, rq.data.len); */
-    /*         } */
-    /*     } else { */
-    /*         if (rq.opts.read){ */
-    /*         HAL_I2C_Master_Receive_IT(&i2c->handle, rq.dev->address << 1, */
-    /*                                   rq.data.buf, rq.data.size); */
-    /*         } else { */
-    /*         HAL_I2C_Master_Transmit_IT(&i2c->handle, rq.dev->address << 1, */
-    /*                                    rq.data.buf, rq.data.len); */
-    /*         } */
-    /*     } */
-    /* } */
-}
-void _error(I2C_HandleTypeDef *handle) {
-    auto i2c = HW::reg.from(handle);
-    if (i2c->active) {
-        auto& rq = i2c->q.front();
-        if (HAL_I2C_Master_Abort_IT(&i2c->handle, rq.dev->address << 1) != HAL_OK) {
-            i2c->active = false;
-        }
-        i2c->q.pop();
-        i2c->deadline = Deadline{};
-    }
-}
-void _aborted(I2C_HandleTypeDef *handle) {
-    auto i2c = HW::reg.from(handle);
-    i2c->active = false;
 }
 
+void _startSlave(I2C_HandleTypeDef *handle, uint8_t dir, uint16_t addr) {
+    auto i2c = HW::reg.from(handle);
+    assert(addr == handle->Init.OwnAddress1);
+    assert(i2c->active == i2c->NONE);
+    if (dir) {
+        auto& data = i2c->out.data;
+        if (!data.len) return;
+        i2c->active = i2c->OUT;
+        i2c->deadline = Deadline{uwTick + data.len*2};
+        HAL_I2C_DisableListen_IT(handle);
+        HAL_I2C_Slave_Transmit_IT(handle, data.buf, data.len);
+    } else {
+        auto& data = i2c->in.data;
+        if (!data.size) return;
+        i2c->active = i2c->IN;
+        i2c->deadline = Deadline{uwTick + data.size*2};
+        HAL_I2C_DisableListen_IT(handle);
+        HAL_I2C_Slave_Receive_IT(handle, data.buf, data.size);
+    }
+}
+
+void poll(HW *i2c);
+void _error(I2C_HandleTypeDef *handle) {
+    auto i2c = HW::reg.from(handle);
+    if (i2c->active == i2c->Q) {
+        auto& rq = i2c->q.front();
+        HAL_I2C_Master_Abort_IT(handle, rq.dev->address << 1);
+        i2c->active = i2c->NONE;
+        i2c->deadline = Deadline{};
+        i2c->q.pop();
+    } else if (i2c->active) {
+        i2c->active = i2c->NONE;
+        i2c->deadline = Deadline{};
+    } else {
+        assert(false);
+    }
+    __HAL_I2C_DISABLE(handle);
+    __HAL_I2C_ENABLE(handle);
+    if (i2c->handle.Init.OwnAddress1) HAL_I2C_EnableListen_IT(handle);
+    poll(i2c);
+}
 void poll(HW *i2c) {
     if (i2c->active && i2c->deadline(uwTick)) return _error(&i2c->handle);
-    if (!i2c->active) return start(i2c);
+    if (!i2c->active && !i2c->q.empty()) return _startMaster(i2c);
 }
 
 void _complete(I2C_HandleTypeDef *handle) {
     auto i2c = HW::reg.from(handle);
-    auto rq = i2c->q.pop();
-    rq.dev->callback(rq);
-    i2c->active = false;
+    Request rq {};
+    switch (i2c->active) {
+    case i2c->Q:
+        i2c->q.front().dev->callback(i2c->q.pop());
+        break;
+    case i2c->IN:
+        i2c->in.dev->callback(std::move(i2c->in));
+        break;
+    case i2c->OUT:
+        i2c->out.dev->callback(std::move(i2c->out));
+        break;
+    case i2c->NONE:
+        assert(false);
+        break;
+    }
+    i2c->active = i2c->NONE;
     i2c->deadline = Deadline{};
+    if (i2c->handle.Init.OwnAddress1) HAL_I2C_EnableListen_IT(&i2c->handle);
     poll(i2c);
 }
+
 void HW::push(Request &&rq) {
-    q.push(std::move(rq));
+    switch (rq.opts.type) {
+        case Request::Opts::SLAVE_WRITE:
+            out = std::move(rq);
+            break;
+        case Request::Opts::SLAVE_READ:
+            in = std::move(rq);
+            break;
+        default:
+            q.push(std::move(rq));
+            break;
+    }
     poll(this);
 }
-
 
 HW::HW(const HW::Conf &conf) {
     HW::reg.reg(this, &handle);
@@ -118,7 +136,7 @@ HW::HW(const HW::Conf &conf) {
                         21 << 8 | // high period
                         40 << 0, // low period
 #endif
-        .OwnAddress1 = conf.address,
+        .OwnAddress1 = conf.address << 1,
         .AddressingMode = I2C_ADDRESSINGMODE_7BIT,
         .DualAddressMode = I2C_DUALADDRESS_DISABLE,
         .OwnAddress2 = 0,
@@ -126,17 +144,19 @@ HW::HW(const HW::Conf &conf) {
         .NoStretchMode = I2C_NOSTRETCH_DISABLE,
     };
     while (HAL_I2C_Init(&handle) != HAL_OK);
-    timeout = conf.timeout;
 
     HAL_I2C_RegisterCallback(&handle, HAL_I2C_MEM_TX_COMPLETE_CB_ID, _complete);
     HAL_I2C_RegisterCallback(&handle, HAL_I2C_MEM_RX_COMPLETE_CB_ID, _complete);
     HAL_I2C_RegisterCallback(&handle, HAL_I2C_MASTER_TX_COMPLETE_CB_ID, _complete);
     HAL_I2C_RegisterCallback(&handle, HAL_I2C_MASTER_RX_COMPLETE_CB_ID, _complete);
-    HAL_I2C_RegisterCallback(&handle, HAL_I2C_SLAVE_TX_COMPLETE_CB_ID, _complete);
-    HAL_I2C_RegisterCallback(&handle, HAL_I2C_SLAVE_RX_COMPLETE_CB_ID, _complete);
+    if (conf.address) {
+        HAL_I2C_RegisterCallback(&handle, HAL_I2C_SLAVE_TX_COMPLETE_CB_ID, _complete);
+        HAL_I2C_RegisterCallback(&handle, HAL_I2C_SLAVE_RX_COMPLETE_CB_ID, _complete);
+        HAL_I2C_RegisterAddrCallback(&handle, _startSlave);
+        HAL_I2C_EnableListen_IT(&handle);
+    }
 
     HAL_I2C_RegisterCallback(&handle, HAL_I2C_ERROR_CB_ID, _error);
-    HAL_I2C_RegisterCallback(&handle, HAL_I2C_ABORT_CB_ID, _aborted);
 }
 void HW::irqEvHandler() {
     HAL_I2C_EV_IRQHandler(&handle);

@@ -24,21 +24,18 @@ struct Device {
     const uint8_t address;
     Device(Sink<Request> &bus, uint8_t address) : bus(bus), address(address) {}
     /**
-     * callback. is called as soon as requested data arrived over wire.
-     *
-     * @param cbData this can be used to identify the request causing
-     * the callback. This can be anything, pointer is _not_ followed.
+     * callback. is called as soon as transmission completed successfully
      */
-    virtual void callback(const Request &req)=0;
+    virtual void callback(const Request req)=0;
 };
 
 /**
  * struct defining an I2C request.
- * use this when requesting data from the \ref HardwareI2C
+ * use this when transmitting data over the I2C bus
  */
 struct Request {
-    Device *dev;     ///< pointer to the calling \ref I2CDevice instance
-    Buffer<uint8_t> data; ///< transfer data
+    Device *dev; ///< pointer to the calling I2C::Device instance
+    Buffer<uint8_t> data{0}; ///< transfer data
     union Opts {
         struct {
         uint8_t read:1;
@@ -54,23 +51,22 @@ struct Request {
             MEM_READ,
         } type;
     } opts;
-    uint8_t mem; ///< memory address
+    uint8_t mem; ///< memory address for memory transmissions
 };
 
 struct HW : public Sink<Request> {
     inline static Registry<HW, I2C_HandleTypeDef, 4> reg{};
 
-    Queue<Request> q;
+    Queue<Request> q; //< master
+    Request in, out; //< slave
     Deadline deadline{};
-    uint32_t timeout{};
-    bool active{};
+    enum {NONE, IN, OUT, Q} active{};
 
     struct Conf {
-        I2C_TypeDef *i2c;
-        AFIO sda, scl;
-        uint32_t baud;
-        uint32_t timeout;
-        uint32_t address;
+        I2C_TypeDef *i2c; ///< I2C peripheral
+        AFIO sda, scl; ///< initialized (Open-Drain) pins
+        uint32_t baud; ///< baud-rate
+        uint32_t address; ///< unshifted 7-bit address to respond to as slave
     };
     HW(const Conf &conf);
     void push(Request &&rq) override;
