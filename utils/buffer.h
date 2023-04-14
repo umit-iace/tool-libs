@@ -71,7 +71,7 @@ struct Buffer {
             size = b.size;
         }
         assert(buf != nullptr);
-        assert(size > b.len);
+        assert(size >= b.len);
         memcpy(buf, b.buf, b.len * sizeof(T));
         len = b.len;
         return *this;
