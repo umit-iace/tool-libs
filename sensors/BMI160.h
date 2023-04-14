@@ -56,7 +56,7 @@ struct BMI160 : I2C::Device {
         });
     }
 
-    void callback(const I2C::Request &rq) override {
+    void callback(const I2C::Request rq) override {
         if (rq.data.size != 12) return;
         auto view = (int16_t*)rq.data.buf;
         Axes g{
