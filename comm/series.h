@@ -6,6 +6,7 @@
 #include "frameregistry.h"
 /** unpacking helper for data series sent from pywisp */
 struct SeriesUnpacker {
+    size_t bsize {40};
     bool start {true};
     Buffer<double> buf{0};
 
@@ -13,7 +14,7 @@ struct SeriesUnpacker {
      * a Buffer filled with the data sent over the wire
      */
     Buffer<double> *unpack(Frame &f) {
-        constexpr unsigned int LEN = 40 / 8;
+        unsigned int LEN = bsize / 8;
 
         if (start) {
             buf = Buffer<double>{f.unpack<uint32_t>()};
