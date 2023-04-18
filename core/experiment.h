@@ -31,6 +31,21 @@
  * \note implicitly depends on a Kernel object `k` in this namespace to be alive
  */
 extern class Experiment {
+    struct ELog : Logger {
+        const uint32_t &time;
+        virtual Buffer<uint8_t> pre() override {
+            auto ret = Buffer<uint8_t>{256};
+            ret.len = snprintf((char*)ret.buf, ret.size,
+                    "Experiment Logger (@%ldms): ", time);
+            return ret;
+        }
+        ELog(const uint32_t &time, Sink<Buffer<uint8_t>> &underlying)
+                : Logger(underlying), time(time) {
+        }
+        void start(uint32_t) { info("started\n"); }
+        void stop(uint32_t) { info("stopped\n"); }
+        void timeout(uint32_t) { warn("timed out!\n"); }
+    };
 public:
     /// States during which recurring tasks can be called using \ref during
     enum State { 
@@ -53,6 +68,9 @@ public:
     Experiment(FrameRegistry *fr=nullptr) {
         k.every(1, *this, &Experiment::tick);
         if (fr) registerWith(*fr);
+        onEvent(INIT).call(log, &ELog::start);
+        onEvent(STOP).call(log, &ELog::stop);
+        onEvent(TIMEOUT).call(log, &ELog::timeout);
     }
     /// set frame registry from which Experiment will receive frames
     void registerWith(FrameRegistry &reg) {
@@ -90,6 +108,8 @@ public:
                 }};
         timeout.call(new TMP{notify});
     }
+    /// Logging facility
+    ELog log{time, k.log};
 
 private:
     State state_{};
@@ -155,21 +175,3 @@ private:
     }
 } e;
 
-struct ExpLog : public Logger {
-    static constexpr const char msg[] = "Experiment Logger (@%ldms): ";
-    const uint32_t &time;
-    virtual Buffer<uint8_t> pre() override {
-        auto ret = Buffer<uint8_t>{256};
-        ret.len = snprintf((char*)ret.buf, ret.size, msg, time);
-        return ret;
-    }
-    ExpLog(Experiment &e, Sink<Buffer<uint8_t>> &underlying)
-            : Logger(underlying), time(e.time) {
-        e.onEvent(e.INIT).call(*this, &ExpLog::start);
-        e.onEvent(e.STOP).call(*this, &ExpLog::stop);
-        e.onEvent(e.TIMEOUT).call(*this, &ExpLog::timeout);
-    }
-    void start(uint32_t t) { info("started %d", t); }
-    void stop(uint32_t t) { info("stopped %d", t); }
-    void timeout(uint32_t t) { warn("timed out! %d", t); }
-};
