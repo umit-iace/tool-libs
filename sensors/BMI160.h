@@ -2,14 +2,13 @@
  *
  * Copyright (c) 2022 IACE
  */
-#ifndef BMI160_H
-#define BMI160_H
+#pragma once
 
 #include <cstdint>
 #include "stm/i2c.h"
 
 /** Implementation of the BMI160 6axis Inertial Measurement Unit */
-struct BMI160 : I2CDevice {
+struct BMI160 : I2C::Device {
     enum ADDR {
         DEFAULT = 0b1101000,
         ALT = 0b1101001,
@@ -17,66 +16,60 @@ struct BMI160 : I2CDevice {
     struct Axes {
         double x, y, z;
     };
-    RequestQueue<I2CRequest> *bus;
 
-    BMI160(RequestQueue<I2CRequest> *bus, enum ADDR addr=DEFAULT) : I2CDevice(addr), bus(bus) {
+    BMI160(Sink<I2C::Request> &bus, enum ADDR addr=DEFAULT)
+            : I2C::Device(bus, addr) {
         writeReg(0x7e, 0x11);   // enable accelerometer
         writeReg(0x7e, 0x15);   // enable gyroscope
-        uint8_t reg = 0x0c;     // set read pointer to gyro data
-        bus->request(new I2CRequest(
-                this,
-                0,
-                &reg,
-                1,
-                I2CRequest::I2C_DIRECT_WRITE,
-                nullptr)
-        );
+        bus.push({
+            .dev = this,
+            .data = Buffer<uint8_t>{1}
+                .append(0xc), // set read pointer to gyro data
+            });
     }
 
     /**
      * start async read-out of sensor data
      */
     void measure() {
-        bus->request(new I2CRequest(
-                this,
-                0,
-                (uint8_t *) this->raw,
-                12,
-                I2CRequest::I2C_DIRECT_READ,
-                (void *) true)
-        );
+        bus.push({
+            .dev = this,
+            .data = Buffer<uint8_t>{12},
+            .opts = {
+                .read = true,
+                },
+            });
     }
 
-    int16_t raw[6]{};
     Axes acc{}, gyro{};
     // TODO: make ranges configurable
     double factor_a{9.81 / 16384}, factor_g{3.14 / 180 / 16.4};
 
     void writeReg(uint8_t reg, uint8_t val) {
-        bus->request(new I2CRequest(
-                this,
-                reg,
-                &val,
-                1,
-                I2CRequest::I2C_MEM_WRITE,
-                nullptr)
-        );
+        bus.push({
+            .dev = this,
+            .data = Buffer<uint8_t>{1}.append(val),
+            .opts = {
+                .mem = true,
+                },
+            .mem = reg,
+        });
     }
 
-    void callback(void *cbData) override {
+    void callback(const I2C::Request rq) override {
+        if (rq.data.size != 12) return;
+        auto view = (int16_t*)rq.data.buf;
         Axes g{
-                .x = raw[0] * factor_g,
-                .y = raw[1] * factor_g,
-                .z = raw[2] * factor_g,
+                .x = view[0] * factor_g,
+                .y = view[1] * factor_g,
+                .z = view[2] * factor_g,
         };
         Axes a{
-                .x = raw[3] * factor_a,
-                .y = raw[4] * factor_a,
-                .z = raw[5] * factor_a,
+                .x = view[3] * factor_a,
+                .y = view[4] * factor_a,
+                .z = view[5] * factor_a,
         };
         this->gyro = g;
         this->acc = a;
     }
 };
-
-#endif //BMI160_H

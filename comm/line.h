@@ -11,7 +11,7 @@
  * also filters the newline out (both LF and CRLF style newlines)
  */
 class LineFilter : public Source<Buffer<uint8_t>> {
-    static constexpr size_t linelen = 1024;
+    static constexpr size_t linelen = 128;
     Queue<Buffer<uint8_t>> q;
     Buffer<uint8_t> l{linelen}; // stash
     Source<Buffer<uint8_t>> &source;

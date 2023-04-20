@@ -21,9 +21,8 @@
  * http://www.ti.com/lit/ds/symlink/ads1115.pdf
  * for details
  */
-class ADS1115 : I2CDevice {
+class ADS1115 : I2C::Device {
 private:
-    ///\cond false
     enum {
         CONVERSION,
         CONFIG,
@@ -40,8 +39,6 @@ private:
         7.8125
     };
 
-    RequestQueue<I2CRequest> *bus = nullptr;
-    ///\endcond
 public:
     /// full scale range options
     enum range {
@@ -101,11 +98,10 @@ public:
      * @param dr data rate / conversion speed
      * @param mx initial multiplexer setting
      */
-    ADS1115(RequestQueue<I2CRequest> *bus,
+    ADS1115(Sink<I2C::Request> &bus,
             uint8_t address = 0b1001000, enum range fs = FS6144,
             enum dataRate dr = SPS64, enum mux mx = AIN0):
-                bus(bus),
-                I2CDevice(address), eFullScale(fs),
+                I2CDevice(bus, address), eFullScale(fs),
                 eDataRate(dr), eMux(mx) {
         updateConfig();
     }
@@ -140,48 +136,40 @@ public:
      * @return last measured voltage [V]
      */
     double volts() {
-        double adc = (int16_t)((buffer[0] << 8) + buffer[1]);
-        return adc * uV[eFullScale] * 1e-6;
+        return adc;
     }
 
 private:
-    ///\cond false
-    uint8_t buffer[2] = {};
-
+    void callback(const I2C::Request rq) {
+        if (rq.data.size != 2) return;
+        adc = (int16_t)(rq.data[0]<<8 | rq.data[1]) * uV[eFullScale] * 1e-6;
+    }
+    double adc{0};
     void setPointer(uint8_t reg) {
-        bus->request(new I2CRequest(
-                this,
-                0,
-                &reg,
-                1,
-                I2CRequest::I2C_DIRECT_WRITE,
-                nullptr)
-        );
+        bus.push({
+            .dev = this,
+            .data = Buffer<uint8_t>{1}.append(reg),
+        });
     }
 
     void read() {
-        bus->request(new I2CRequest(
-                this,
-                0,
-                buffer,
-                2,
-                I2CRequest::I2C_DIRECT_READ,
-                nullptr)
-        );
+        bus.push({
+            .dev = this,
+            .data = Buffer<uint8_t>{2},
+            .opts = {
+                .read = true,
+                },
+            });
     }
 
     void write(uint8_t reg, uint16_t val) {
         uint8_t data[3] = {reg, (uint8_t) (val >> 8), (uint8_t) val};
-        bus->request(new I2CRequest(
-                this,
-                0,
-                data,
-                3,
-                I2CRequest::I2C_DIRECT_WRITE,
-                nullptr)
-        );
+        bus.push({
+            .dev = this,
+            .data = Buffer<uint8_t>{3}
+                .append(reg).append(val>>8).append(val),
+            });
     }
-    ///\endcond
 };
 
 #endif //ADS1115_H

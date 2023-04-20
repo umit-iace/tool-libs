@@ -15,15 +15,11 @@ struct SeriesUnpacker {
     Buffer<double> *unpack(Frame &f) {
         constexpr unsigned int LEN = 40 / 8;
 
-        double dv;
         if (start) {
-            unsigned int sz;
-            f.unPack(sz);
-            buf = Buffer<double>{sz};
+            buf = Buffer<double>{f.unpack<uint32_t>()};
         }
         for (unsigned int i = 0; i < LEN - start; i++) {
-            f.unPack(dv);
-            buf.append(dv);
+            buf.append(f.unpack<double>());
             if (buf.len == buf.size) {
                 start = true;
                 return &buf;
