@@ -42,14 +42,14 @@ struct Later {
     Later operator+(T &val) {
         return {
             val,
-            new Later{std::move(*this)},
+            ::new Later{std::move(*this)},
             ADD,
         };
     }
     Later operator-(T &val) {
         return {
             val,
-            new Later{std::move(*this)},
+            ::new Later{std::move(*this)},
             SUB,
         };
     }
@@ -64,9 +64,5 @@ struct Later {
     // placement new for copying into place
     void *operator new(size_t sz, Later *where) {
         return where;
-    }
-    // normal new
-    void *operator new(size_t sz) {
-        return ::operator new(sz);
     }
 };

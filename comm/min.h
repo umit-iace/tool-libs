@@ -246,7 +246,7 @@ struct Min {
             stuff((uint8_t) ((sum >> 8) & 0xff));
             stuff((uint8_t) ((sum >> 0) & 0xff));
             nostuff(EOF_BYTE);
-            out.push(req);
+            out.push(std::move(req));
         }
     };
     /** incoming Frame stream */
