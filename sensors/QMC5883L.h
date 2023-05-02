@@ -45,7 +45,7 @@ struct QMC5883L : I2C::Device {
     /**
      * initialize the sensor
      */
-    QMC5883L(Sink<I2C::Request> bus, enum ADDR addr=DEFAULT)
+    QMC5883L(Sink<I2C::Request> &bus, enum ADDR addr=DEFAULT)
         : I2C::Device{bus, addr} {
         // set/reset period
         writeReg(0x0B,0x01);
