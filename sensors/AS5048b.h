@@ -14,8 +14,8 @@ public:
     /**
      * initialize the sensor
      */
-    AS5048B(Sink<I2C::Request> *bus, bool A0, bool A1)
-        : I2C::Device{*bus, (uint8_t)(0x40 | (A1 << 1) | A0)}
+    AS5048B(Sink<I2C::Request> &bus, bool A0, bool A1)
+        : I2C::Device{bus, (uint8_t)(0x40 | (A1 << 1) | A0)}
         , bInit(false)
     { }
 
