@@ -8,51 +8,72 @@
 
 #include "gpio.h"
 #include "registry.h"
+#include "dma.h"
 
 namespace Adc {
 
-    struct HW {
-        inline static Registry<HW, ADC_HandleTypeDef, 4> reg{};
-
-        struct ChannelConf {
-            uint32_t channel;
-            uint8_t rank;
-            uint32_t sampleTime;
+    struct Channel {
+        struct Conf {
+            ADC_ChannelConfTypeDef conf;
             DIO pin;
         };
+        Channel(const Conf &conf) : conf(conf.conf), pin(conf.pin) {}
 
-        struct Conf {
-            ADC_TypeDef *adc;
-            DMA_Stream_TypeDef *dmaStream;
-            uint32_t dmaChannel;
-            IRQn_Type adcDmaInterrupt;
-            uint32_t adcDmaPrePrio;
-            uint32_t adcDmaSubPrio;
-            uint8_t adcChannelCount;
-            ChannelConf channels[2];
-        };
-
-        HW(const Conf &conf);
-
-        void configADC(ADC_TypeDef *dADC);
-        void configDMA(DMA_Stream_TypeDef *dDMA, uint32_t iDMAChannel,
-                       IRQn_Type iAdcDmaInterrupt, uint32_t iAdcDmaPrePrio,
-                       uint32_t iAdcDmaSubPrio);
-        void configChannel(const ChannelConf &conf );
-        void irqHandler(void);
-
-        void measure() {
-            HAL_ADC_Start(&hAdc);
+        uint32_t get() {
+            return *value;
         }
 
-        double getBuffer(uint8_t idx) {
-            return this->iBuffer[idx];
+        ADC_ChannelConfTypeDef conf;
+        uint32_t *value = nullptr;
+        DIO pin;
+    };
+
+    struct HW {
+        struct Conf {
+            ADC_TypeDef *adc;
+            ADC_InitTypeDef init;
+            DMA_HandleTypeDef dmaHandle;
+        };
+
+        HW(const Conf &conf) : dmaHandle(conf.dmaHandle) {
+            handle.Instance = conf.adc;
+            handle.Init = conf.init;
+            while (HAL_ADC_Init(&this->handle) != HAL_OK);
+        }
+
+        void irqHandler() {
+            HAL_ADC_IRQHandler(&handle);
+        }
+
+        void measure() {
+            HAL_ADC_Start(&handle);
+        }
+
+        void init() {
+            __HAL_LINKDMA(&this->handle, DMA_Handle, this->dmaHandle);
+            while (HAL_ADC_Start_DMA(&this->handle, this->iBuffer, this->channelCnt) != HAL_OK);
+        }
+
+        Channel getChannel(Channel::Conf conf){
+            Channel channel = Channel{conf};
+            channel.value = &this->iBuffer[this->channelCnt];
+
+            ADC_ChannelConfTypeDef sConfig = conf.conf;
+            while (HAL_ADC_ConfigChannel(&this->handle, &sConfig) != HAL_OK);
+
+            this->channelCnt++;
+
+            return channel;
+        }
+
+        void configCallback(void (*callback)(ADC_HandleTypeDef *)) {
+            HAL_ADC_RegisterCallback(&handle, HAL_ADC_CONVERSION_COMPLETE_CB_ID, callback);
         }
 
     private:
-        uint8_t adcChannelCount = 0;
-        ADC_HandleTypeDef hAdc{};
-        DMA_HandleTypeDef hDma{};
-        uint32_t *iBuffer;
+        ADC_HandleTypeDef handle{};
+        uint32_t iBuffer[16];
+        uint8_t channelCnt = 0;
+        DMA_HandleTypeDef dmaHandle;
     };
 }

@@ -20,7 +20,8 @@ namespace PWM {
          * @param perc [0..1]
          */
         void pwm(double perc) {
-            ticks(perc * period);
+            this->_perc = perc;
+            ticks(this->_perc * period);
         }
 
         /**
@@ -28,7 +29,8 @@ namespace PWM {
          * @param ticks
          */
         void ticks(uint32_t ticks) {
-            __HAL_TIM_SET_COMPARE(&hTim, chan, ticks);
+            this->_ticks = ticks;
+            __HAL_TIM_SET_COMPARE(&hTim, chan, this->_ticks);
         }
 
         struct Config {
@@ -62,9 +64,18 @@ namespace PWM {
             while (HAL_TIM_PWM_Start(&hTim, chan) != HAL_OK);
         }
 
+    double getpwm(){
+            return this->_perc;
+        }
+    double getticks(){
+            return this->_ticks;
+        }
+
     private:
         TIM_HandleTypeDef hTim{};
         uint32_t chan = 0;
         uint32_t period = 0;
+        double _perc = 0.0;
+        uint32_t _ticks = 0;
     };
 }
