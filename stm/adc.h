@@ -7,73 +7,84 @@
 #include <utils/queue.h>
 
 #include "gpio.h"
-#include "registry.h"
 #include "dma.h"
 
 namespace Adc {
 
     struct Channel {
-        struct Conf {
-            ADC_ChannelConfTypeDef conf;
-            DIO pin;
-        };
-        Channel(const Conf &conf) : conf(conf.conf), pin(conf.pin) {}
-
-        uint32_t get() {
-            return *value;
+        double get() {
+            return raw * lsb;
         }
-
-        ADC_ChannelConfTypeDef conf;
-        uint32_t *value = nullptr;
-        DIO pin;
+        int16_t &raw;
+        const double lsb;
     };
 
     struct HW {
         struct Conf {
             ADC_TypeDef *adc;
-            ADC_InitTypeDef init;
-            DMA_HandleTypeDef dmaHandle;
+            uint32_t prescaler;
+            DMA_Stream_TypeDef *dmaStream;
+            uint32_t dmaChannel;
+        };
+        struct ChannelConf {
+            uint32_t channel;
+            uint32_t samplingTime;
+            double lsb;
+            DIO pin;
         };
 
-        HW(const Conf &conf) : dmaHandle(conf.dmaHandle) {
+        HW(const Conf &conf) 
+                : dma {{
+                    .stream = conf.dmaStream,
+                    .init = {
+                        .Channel = conf.dmaChannel,
+                        .MemInc = DMA_MINC_ENABLE,
+                        .PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD,
+                        .MemDataAlignment = DMA_MDATAALIGN_HALFWORD,
+                        .Mode = DMA_CIRCULAR,
+                    }
+                }}
+        {
             handle.Instance = conf.adc;
-            handle.Init = conf.init;
-            while (HAL_ADC_Init(&this->handle) != HAL_OK);
-        }
-
-        void irqHandler() {
-            HAL_ADC_IRQHandler(&handle);
+            handle.Init = {
+                .ClockPrescaler = conf.prescaler,
+                .ScanConvMode = ENABLE,
+                .ExternalTrigConv = ADC_SOFTWARE_START,
+                .DMAContinuousRequests = ENABLE, //TODO: check if this is correct
+                                                 // also if the 'dma_enbale' is enough to restart
+                                                 // conversions if they even stop with this
+                                                 // config set.
+            };
         }
 
         void measure() {
-            HAL_ADC_Start(&handle);
+            __HAL_DMA_ENABLE(&dma.handle);
         }
 
         void init() {
-            __HAL_LINKDMA(&this->handle, DMA_Handle, this->dmaHandle);
-            while (HAL_ADC_Start_DMA(&this->handle, this->iBuffer, this->channelCnt) != HAL_OK);
+            while (HAL_ADC_Init(&handle) != HAL_OK);
+            __HAL_LINKDMA(&handle, DMA_Handle, dma.handle);
+            while (HAL_ADC_Start_DMA(&handle, (uint32_t*)iBuffer, channelCnt) != HAL_OK);
         }
 
-        Channel getChannel(Channel::Conf conf){
-            Channel channel = Channel{conf};
-            channel.value = &this->iBuffer[this->channelCnt];
+        Channel get(ChannelConf conf){
+            auto ret = Channel{iBuffer[channelCnt], conf.lsb};
 
-            ADC_ChannelConfTypeDef sConfig = conf.conf;
-            while (HAL_ADC_ConfigChannel(&this->handle, &sConfig) != HAL_OK);
+            ADC_ChannelConfTypeDef sConfig {
+                .Channel = conf.channel,
+                .Rank = channelCnt,
+                .SamplingTime = conf.samplingTime,
+            };
+            while (HAL_ADC_ConfigChannel(&handle, &sConfig) != HAL_OK);
 
-            this->channelCnt++;
+            channelCnt++;
 
-            return channel;
+            return ret;
         }
 
-        void configCallback(void (*callback)(ADC_HandleTypeDef *)) {
-            HAL_ADC_RegisterCallback(&handle, HAL_ADC_CONVERSION_COMPLETE_CB_ID, callback);
-        }
-
-    private:
         ADC_HandleTypeDef handle{};
-        uint32_t iBuffer[16];
-        uint8_t channelCnt = 0;
-        DMA_HandleTypeDef dmaHandle;
+        int16_t iBuffer[16];
+        uint32_t &channelCnt = handle.Init.NbrOfConversion;
+        DMA::HW dma;
     };
 }
