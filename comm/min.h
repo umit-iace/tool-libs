@@ -186,6 +186,9 @@ struct Min {
         Frame pop() override {
             return queue.pop();
         }
+        void *operator new(size_t sz, In *where) {
+            return where;
+        }
     };
     /** outgoing Min stream
      * 
@@ -247,6 +250,9 @@ struct Min {
             stuff((uint8_t) ((sum >> 0) & 0xff));
             nostuff(EOF_BYTE);
             out.push(std::move(req));
+        }
+        void *operator new(size_t sz, Out *where) {
+            return where;
         }
     };
     /** incoming Frame stream */
