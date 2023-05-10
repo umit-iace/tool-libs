@@ -50,21 +50,17 @@ namespace Adc {
                 .ClockPrescaler = conf.prescaler,
                 .ScanConvMode = ENABLE,
                 .ExternalTrigConv = ADC_SOFTWARE_START,
-                .DMAContinuousRequests = ENABLE, //TODO: check if this is correct
-                                                 // also if the 'dma_enbale' is enough to restart
-                                                 // conversions if they even stop with this
-                                                 // config set.
+                .DMAContinuousRequests = ENABLE,
             };
         }
 
         void measure() {
-            __HAL_DMA_ENABLE(&dma.handle);
+            while (HAL_ADC_Start_DMA(&handle, (uint32_t*)iBuffer, channelCnt) != HAL_OK);
         }
 
         void init() {
             while (HAL_ADC_Init(&handle) != HAL_OK);
             __HAL_LINKDMA(&handle, DMA_Handle, dma.handle);
-            while (HAL_ADC_Start_DMA(&handle, (uint32_t*)iBuffer, channelCnt) != HAL_OK);
         }
 
         Channel get(ChannelConf conf){
@@ -72,7 +68,7 @@ namespace Adc {
 
             ADC_ChannelConfTypeDef sConfig {
                 .Channel = conf.channel,
-                .Rank = channelCnt,
+                .Rank = channelCnt + 1,
                 .SamplingTime = conf.samplingTime,
             };
             while (HAL_ADC_ConfigChannel(&handle, &sConfig) != HAL_OK);
