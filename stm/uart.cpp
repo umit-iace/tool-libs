@@ -3,6 +3,7 @@
  * Copyright (c) 2023 IACE
  */
 #include "uart.h"
+using namespace UART;
 namespace debug {
     namespace uart {
 // debugging helpers
@@ -93,7 +94,7 @@ struct UART_INST {
 }}
 
 /* General functions hidden from Interface */
-void startTransmit(HardwareUART *uart) {
+void startTransmit(HW *uart) {
     if (uart->tx.q.empty()) return;
     uart->tx.active = true;
     auto &b = uart->tx.q.front();
@@ -108,7 +109,7 @@ void startTransmit(HardwareUART *uart) {
     size_t need = 1000 * b.len * (8+2) / uart->handle.Init.BaudRate;
     uart->tx.deadline = Deadline{k.time + need};
 }
-void startReceive(HardwareUART *uart) {
+void startReceive(HW *uart) {
     auto ret = HAL_OK;
     if ((ret = HAL_UARTEx_ReceiveToIdle_IT(&uart->handle, uart->rx.buf.buf, uart->rx.buf.size))) {
         if (ret != HAL_OK) {
@@ -118,19 +119,19 @@ void startReceive(HardwareUART *uart) {
 }
 
 void _errcallback(UART_HandleTypeDef *handle) {
-    auto uart = HardwareUART::reg.from(handle);
+    auto uart = HW::reg.from(handle);
     HAL_UART_Abort(handle);
     startReceive(uart);
     startTransmit(uart);
 }
 
-void poll(HardwareUART *uart) {
+void poll(HW *uart) {
     if (uart->tx.active && uart->tx.deadline(uwTick)) return _errcallback(&uart->handle);
     if (!uart->tx.active) return startTransmit(uart);
 }
 
 void _rxevent(UART_HandleTypeDef *handle, uint16_t nbs) {
-    auto uart = HardwareUART::reg.from(handle);
+    auto uart = HW::reg.from(handle);
     uart->rx.buf.len = nbs;
     if (!uart->rx.q.full()) {
         uart->rx.q.push(std::move(uart->rx.buf));
@@ -141,19 +142,19 @@ void _rxevent(UART_HandleTypeDef *handle, uint16_t nbs) {
     startReceive(uart);
 }
 void _rxcallback(UART_HandleTypeDef *handle) {
-    auto uart = HardwareUART::reg.from(handle);
+    auto uart = HW::reg.from(handle);
     _rxevent(handle, uart->rx.buf.size);
 }
 void _txcallback(UART_HandleTypeDef *handle) {
-    auto uart = HardwareUART::reg.from(handle);
+    auto uart = HW::reg.from(handle);
     auto& tx = uart->tx;
     tx.q.pop();
     tx.active = false;
     tx.deadline = Deadline{};
     poll(uart);
 }
-void init(HardwareUART *uart, UART_HandleTypeDef *handle) {
-    HardwareUART::reg.reg(uart, handle);
+void init(HW *uart, UART_HandleTypeDef *handle) {
+    HW::reg.reg(uart, handle);
     while (HAL_UART_Init(handle) != HAL_OK);
     HAL_UART_RegisterRxEventCallback(handle, _rxevent);
     HAL_UART_RegisterCallback(handle, HAL_UART_RX_COMPLETE_CB_ID, _rxcallback);
@@ -163,14 +164,14 @@ void init(HardwareUART *uart, UART_HandleTypeDef *handle) {
 }
 
 // class methods
-HardwareUART::HardwareUART(const Manual &conf) {
+HW::HardwareUART(const Manual &conf) {
     handle = {
         .Instance = conf.uart,
         .Init = conf.init,
     };
     init(this, &handle);
 }
-HardwareUART::HardwareUART(const Default &conf) {
+HW::HardwareUART(const Default &conf) {
     handle = {
         .Instance = conf.uart,
         .Init = {
@@ -186,20 +187,20 @@ HardwareUART::HardwareUART(const Default &conf) {
     init(this, &handle);
 }
 
-void HardwareUART::irqHandler() {
+void HW::irqHandler() {
     HAL_UART_IRQHandler(&handle);
     /** workaround for HAL BUG: they still change state _AFTER_ calling */
     /** user callbacks (where we had already set it to what we needed) */
     /** luckily we only ever use this one type of reception */
     handle.ReceptionType = HAL_UART_RECEPTION_TOIDLE;
 }
-void HardwareUART::push(Buffer<uint8_t> &&b) {
+void HW::push(Buffer<uint8_t> &&b) {
     tx.q.push(std::move(b));
     poll(this);
 }
-bool HardwareUART::empty() {
+bool HW::empty() {
     return rx.q.empty();
 }
-Buffer<uint8_t> HardwareUART::pop() {
+Buffer<uint8_t> HW::pop() {
     return rx.q.pop();
 }

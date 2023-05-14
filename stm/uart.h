@@ -28,7 +28,8 @@
  *      }
  * \enddot
  */
-struct HardwareUART : public Sink<Buffer<uint8_t>>, public Source<Buffer<uint8_t>> {
+namespace UART {
+struct HW : public Sink<Buffer<uint8_t>>, public Source<Buffer<uint8_t>> {
     /** default init struct */
     struct Default {
         USART_TypeDef *uart;
@@ -42,9 +43,9 @@ struct HardwareUART : public Sink<Buffer<uint8_t>>, public Source<Buffer<uint8_t
         UART_InitTypeDef init;
     };
     /** constructor with default config */
-    HardwareUART(const Default &conf);
+    HW(const Default &conf);
     /** constructor with manually specifiable settings */
-    HardwareUART(const Manual &conf);
+    HW(const Manual &conf);
     /** push bytebuffer into sending queue */
     void push(Buffer<uint8_t> &&tx) override;
     using Sink<Buffer<uint8_t>>::push;
@@ -58,7 +59,7 @@ struct HardwareUART : public Sink<Buffer<uint8_t>>, public Source<Buffer<uint8_t
      */
     void irqHandler();
     /** stm glue registry for internal use */
-    inline static Registry<HardwareUART, UART_HandleTypeDef, 8> reg;
+    inline static Registry<HW, UART_HandleTypeDef, 8> reg;
     /** rx state */
     struct RX {
         Queue<Buffer<uint8_t>> q;
@@ -74,3 +75,4 @@ struct HardwareUART : public Sink<Buffer<uint8_t>>, public Source<Buffer<uint8_t
     /** HAL handle for use with unwrapped UART capabilities */
     UART_HandleTypeDef handle{};
 };
+}
