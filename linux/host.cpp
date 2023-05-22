@@ -6,6 +6,8 @@
 #include <cstdlib>
 #include <fcntl.h>
 #include <poll.h>
+#include <signal.h>
+#include <sys/wait.h>
 #include <thread>
 #include <unistd.h>
 using namespace std::chrono;
@@ -26,9 +28,46 @@ void assert(bool b) {
     if (!b) abort();
 }
 
+void sighandler(int signum);
+
 struct impl {
-    FILE *tty = fopen("/dev/tty", "r+");
-    ~impl() {fclose(tty);}
+    struct Pipe {
+        union {
+            struct {
+                int read, write;
+            };
+            int fd[2];
+        };
+        Pipe() {
+            pipe(fd);
+        }
+    } p_in{}, p_out{};
+    int c_pid {fork()};
+    impl() {
+        if (!c_pid) {
+            // make child communicate with parent through pipes
+            close(STDIN_FILENO); close(STDOUT_FILENO); close(STDERR_FILENO);
+            dup2(p_in.write, STDOUT_FILENO);
+            dup2(p_out.read, STDIN_FILENO);
+            close(p_in.read); close(p_in.write);
+            close(p_out.read); close(p_out.write);
+            while (true) {
+                system("ncat -lui1 127.0.0.1 45670");
+            }
+        }
+        close(p_in.write); close(p_out.read);
+        struct sigaction act{};
+        act.sa_handler = sighandler;
+        sigfillset(&act.sa_mask);
+        sigaction(SIGINT, &act, NULL);
+    }
+    ~impl() {
+        if (c_pid) {
+            kill(c_pid, 15);
+            int stat;
+            waitpid(c_pid, &stat, 0);
+        }
+    }
     struct READ: Source<Buffer<uint8_t>> {
         Queue<Buffer<uint8_t>> q{30};
         Buffer<uint8_t> b{512};
@@ -68,9 +107,14 @@ struct impl {
         }
     };
 
-    READ readSock{fileno(stdin)}, readTTY{fileno(tty)};
-    WRITE writeSock{fileno(stdout)}, writeTTY{fileno(tty)};
+    READ readSock{p_in.read}, readTTY{STDIN_FILENO};
+    WRITE writeSock{p_out.write}, writeTTY{STDOUT_FILENO};
 } impl;
+
+void sighandler(int signum) {
+    exit(EXIT_SUCCESS);
+}
+
 Host host{
     .socket{
         .in = impl.readSock,
