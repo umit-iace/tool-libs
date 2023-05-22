@@ -48,6 +48,8 @@ Providing a bunch of helpers for communication with pyWisp, but also for
 character streams.
  - Min - main implementation of packing & unpacking data for transfer to / from
  pyWisp
+ - ODrive - main implementation of communication between ODrive High performance 
+ motor control to / from  microcontroller
  - FrameRegistry - the place where consumers of Frames can sign up for their
  respective IDs
  - SeriesUnpacker - unpack a series of data sent from pyWisp
@@ -63,11 +65,14 @@ trajectories, etc.
 # Sensors
 Drivers for the following sensors are implemented:
  - ADS1115 - external analog to digital voltage converter
+ - AS5048b - 14-bit rotary position sensor with digital angle
  - AS5145 - hall effect based angular position measurement
  - BMI160 - 6axis Inertial Measurement Unit
+ - HMC5883L - multi-chip three-axis magnetic sensor
  - MAX31855 - temperature measurement using thermocouples
  - MAX31865 - temperature measurement using temperature dependent resistors like
  the PT100
+ - QMC5883L - multi-chip three-axis magnetic sensor
  
 # STM
 An implementation for the Kernel backend that makes integration with
@@ -76,12 +81,13 @@ The Hardware Abstraction Layers from STMicroelectronics are unified and wrapped
 in (hopefully) easier to use classes.
 Currently only the F4 and F7 families of microcontrollers are supported. The
 following classes are implemented:
- - Encoder - quadrature encoder support
  - gpio.h - DIO & AFIO classes encapsulating digital pins
- - HardwareI2C - I2C interface support
- - HardwarePWM - support for outputting Pulse Width Modulated signals on a pin
+ - ADC::HW - ADC interface support
+ - I2C::HW - I2C interface support
+ - TIMER::HW - support for the timer peripherals
+ - TIMER::PWM - support for outputting Pulse Width Modulated signals on a pin
+ - TIMER::Encoder - quadrature encoder support
  - HardwareSPI - SPI interface support
- - HardwareTimer - support for the timer peripherals
 
 # Linux
 An implementation for the Kernel backend for simulation purposes.

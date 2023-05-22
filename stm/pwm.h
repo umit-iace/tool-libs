@@ -11,9 +11,9 @@
 /**
  * @brief Template class for hardware based PWM outputs
  */
-namespace PWM {
+namespace TIMER {
 
-    class HW {
+    class PWM {
     public:
         /**
          * set pwm in percent
@@ -34,7 +34,7 @@ namespace PWM {
         }
 
         struct Config {
-            HardwareTimer tim;
+            TIMER::HW tim;
             uint32_t chan;
             AFIO pin;
         };
@@ -47,7 +47,7 @@ namespace PWM {
          * @param tim pointer to HardwareTimer
          * @param chan timer channel number (TIM_CHANNEL_x)
          */
-        HW(const Config &conf)
+        PWM(const Config &conf)
                 : hTim(conf.tim.handle), chan(conf.chan), period(hTim.Init.Period) {
             // pwm config of timer
             while (HAL_TIM_PWM_Init(&hTim) != HAL_OK);
