@@ -132,3 +132,22 @@ struct __attribute((packed)) BigStruct {
 
     CHECK(sizeof(bigrecv) == 100);
 }
+
+TEST_CASE("tool-libs: frame: bool double bug") {
+    struct __attribute__((packed)) Data {
+        bool b;
+        double d;
+    } snd {
+        .b = true,
+        .d = 3.14,
+    }, rcv {};
+    auto f = Frame{0}.pack(snd);
+    rcv = f.unpack<Data>();
+    CHECK(snd.b == rcv.b);
+    CHECK(snd.d - rcv.d == doctest::Approx(0));
+    f = Frame{0}.pack(snd);
+    bool b = f.unpack<bool>();
+    double d = f.unpack<double>();
+    CHECK(snd.b == b);
+    CHECK(snd.d - d == doctest::Approx(0));
+}
