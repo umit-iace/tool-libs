@@ -34,7 +34,7 @@ namespace TIMER {
         }
 
         struct Config {
-            TIMER::HW tim;
+            TIMER::HW *tim;
             uint32_t chan;
             AFIO pin;
         };
@@ -48,7 +48,7 @@ namespace TIMER {
          * @param chan timer channel number (TIM_CHANNEL_x)
          */
         PWM(const Config &conf)
-                : hTim(conf.tim.handle), chan(conf.chan), period(hTim.Init.Period) {
+                : hTim(conf.tim->handle), chan(conf.chan), period(hTim.Init.Period) {
             // pwm config of timer
             while (HAL_TIM_PWM_Init(&hTim) != HAL_OK);
 
