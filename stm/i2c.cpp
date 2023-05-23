@@ -7,6 +7,12 @@ namespace debug {
 namespace i2c {
 }}
 using namespace I2C;
+uint32_t when(size_t datasize) {
+    constexpr uint32_t baudrate = 400000;
+    uint32_t ret = (datasize+1)*9./baudrate*1000.;
+    return ret?ret:1;
+}
+
 void _startMaster(HW *i2c) {
     if (i2c->handle.Init.OwnAddress1) HAL_I2C_DisableListen_IT(&i2c->handle);
     auto& rq = i2c->q.front();
