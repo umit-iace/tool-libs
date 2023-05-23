@@ -5,7 +5,7 @@
 
 struct Printer : Sink<Buffer<uint8_t>> {
     void push(Buffer<uint8_t> &&b) override {
-        printf("%*s\n", b.len, b.buf);
+        printf("%.*s\n", b.len, b.buf);
     }
 }p;
 Hexify hex{p};
