@@ -164,14 +164,14 @@ void init(HW *uart, UART_HandleTypeDef *handle) {
 }
 
 // class methods
-HW::HardwareUART(const Manual &conf) {
+HW::HW(const Manual &conf) {
     handle = {
         .Instance = conf.uart,
         .Init = conf.init,
     };
     init(this, &handle);
 }
-HW::HardwareUART(const Default &conf) {
+HW::HW(const Default &conf) {
     handle = {
         .Instance = conf.uart,
         .Init = {
