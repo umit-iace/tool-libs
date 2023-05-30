@@ -24,10 +24,6 @@ void Kernel::idle() {
     this->tick(dt.count());
 }
 
-void assert(bool b) {
-    if (!b) abort();
-}
-
 void sighandler(int signum);
 
 struct impl {

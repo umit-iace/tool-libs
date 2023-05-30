@@ -5,7 +5,7 @@
 #pragma once
 #include <cstring>
 #include <cstdint>
-extern void assert(bool);
+#include <cassert>
 
 /**
  * dynamically allocated, but fixed-size buffer template

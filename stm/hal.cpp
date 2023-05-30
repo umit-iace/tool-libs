@@ -10,8 +10,9 @@ void HAL_IncTick() {
     k.tick(uwTickFreq);
     uwTick += uwTickFreq;
 }
-void assert(bool b) {
-    if (!b) asm("bkpt");
+void __assert_func(const char *file, int line, const char *func, const char *assert) {
+    asm("bkpt");
+    while (true);
 }
 
 extern "C" {
