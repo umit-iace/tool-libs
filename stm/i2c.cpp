@@ -37,24 +37,20 @@ void _startMaster(HW *i2c) {
     }
 }
 
-void _startSlave(I2C_HandleTypeDef *handle, uint8_t dir, uint16_t addr) {
+void _startSlave(I2C_HandleTypeDef *handle, uint8_t recv, uint16_t addr) {
     auto i2c = HW::reg.from(handle);
     assert(addr == handle->Init.OwnAddress1);
     assert(i2c->active == i2c->NONE);
-    if (dir) {
-        auto& data = i2c->out.data;
-        if (!data.len) return;
-        i2c->active = i2c->OUT;
-        i2c->deadline = Deadline{uwTick + data.len*2};
-        HAL_I2C_DisableListen_IT(handle);
-        HAL_I2C_Slave_Transmit_IT(handle, data.buf, data.len);
+    HAL_I2C_DisableListen_IT(handle);
+    auto & data = recv ? i2c->in.data : i2c->out.data;
+    size_t sz = recv ? data.size : data.len;
+    if (!sz) return;
+    i2c->active = recv ? i2c->IN : i2c->OUT;
+    i2c->deadline = Deadline{uwTick + sz*2};
+    if (recv) {
+        HAL_I2C_Slave_Receive_IT(handle, data.buf, sz);
     } else {
-        auto& data = i2c->in.data;
-        if (!data.size) return;
-        i2c->active = i2c->IN;
-        i2c->deadline = Deadline{uwTick + data.size*2};
-        HAL_I2C_DisableListen_IT(handle);
-        HAL_I2C_Slave_Receive_IT(handle, data.buf, data.size);
+        HAL_I2C_Slave_Transmit_IT(handle, data.buf, sz);
     }
 }
 
