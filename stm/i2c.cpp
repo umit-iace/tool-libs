@@ -10,8 +10,9 @@ using namespace I2C;
 void _startMaster(HW *i2c) {
     if (i2c->handle.Init.OwnAddress1) HAL_I2C_DisableListen_IT(&i2c->handle);
     auto& rq = i2c->q.front();
+    size_t sz = rq.opts.read ? rq.data.size : rq.data.len;
     i2c->active = i2c->Q;
-    i2c->deadline = Deadline{uwTick+rq.data.size*2};
+    i2c->deadline = Deadline{uwTick + sz};
     switch(rq.opts.type) {
     case Request::Opts::MASTER_WRITE:
         HAL_I2C_Master_Transmit_IT(&i2c->handle, rq.dev->address << 1,
