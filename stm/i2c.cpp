@@ -75,10 +75,9 @@ void _error(I2C_HandleTypeDef *handle) {
     __HAL_I2C_DISABLE(handle);
     __HAL_I2C_ENABLE(handle);
     if (i2c->handle.Init.OwnAddress1) HAL_I2C_EnableListen_IT(handle);
-    poll(i2c);
 }
 void poll(HW *i2c) {
-    if (i2c->active && i2c->deadline(uwTick)) return _error(&i2c->handle);
+    if (i2c->active && i2c->deadline(uwTick)) _error(&i2c->handle);
     if (!i2c->active && !i2c->q.empty()) return _startMaster(i2c);
 }
 
