@@ -84,7 +84,6 @@ void poll(HW *i2c) {
 
 void _complete(I2C_HandleTypeDef *handle) {
     auto i2c = HW::reg.from(handle);
-    Request rq {};
     switch (i2c->active) {
     case i2c->Q:
         i2c->q.front().dev->callback(i2c->q.pop());
