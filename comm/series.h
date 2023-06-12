@@ -8,7 +8,7 @@
 struct SeriesUnpacker {
     size_t bsize {40};
     bool start {true};
-    Buffer<double> buf{0};
+    Buffer<double> buf;
 
     /** call this with incoming frames until it returns
      * a Buffer filled with the data sent over the wire
@@ -17,7 +17,7 @@ struct SeriesUnpacker {
         unsigned int LEN = bsize / 8;
 
         if (start) {
-            buf = Buffer<double>{f.unpack<uint32_t>()};
+            buf = f.unpack<uint32_t>();
         }
         for (unsigned int i = 0; i < LEN - start; i++) {
             buf.append(f.unpack<double>());

@@ -30,7 +30,7 @@ class Queue : public Sink<T>, public Source<T> {
 public:
     ~Queue() { space.~Buffer(); }
     /** create Queue with constant size */
-    Queue(size_t size=30) : space{size * sizeof(T)}, head{size}, tail{size} {
+    Queue(size_t size=30) : space(size * sizeof(T)), head{size}, tail{size} {
         memset(space.buf, 0, size * sizeof(T));
         // now that we allocated enough space,
         // we can use the size & len for our own purposes

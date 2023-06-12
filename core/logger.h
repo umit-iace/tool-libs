@@ -24,10 +24,10 @@ struct Logger : Sink<Buffer<uint8_t>> {
     Sink<Buffer<uint8_t>> &out;
 
     virtual Buffer<uint8_t> pre() {
-        return Buffer<uint8_t>{256};
+        return Buffer<uint8_t>(256);
     }
     void mklog(Lvl lvl, const char *fmt, va_list args) {
-        Buffer<uint8_t> b{pre()};
+        Buffer<uint8_t> b = pre();
         if (lvl != NONE) {
             b.len += snprintf((char*)b.buf+b.len, b.size-b.len, color[lvl]);
         }
@@ -61,7 +61,7 @@ public:
     }
     /** push otherwisely prepared Buffer through Logger */
     void push(Buffer<uint8_t> &&b) {
-        Buffer<uint8_t> tmp{pre()};
+        Buffer<uint8_t> tmp = pre();
         for (auto &c : b) { tmp.append(c); }
         out.push(std::move(tmp));
     }

@@ -32,11 +32,11 @@ class StepTrajectory : public Curve {
     struct Vec {
         double x, y;
     };
-    Buffer<Vec> P{0};
+    Buffer<Vec> P;
 public:
     void setData(Buffer<double> &&b) override {
         size_t i{0}, off{b.size/2};
-        P = Buffer<Vec>{off};
+        P = Buffer<Vec>(off);
         P.len = off;
         for (auto &v : P) {
             v = {b[i], b[i+off]};
@@ -71,11 +71,11 @@ class LinearTrajectory : public Curve {
     struct Vec {
         double x, y, m;
     };
-    Buffer<Vec> P{0};
+    Buffer<Vec> P;
 public:
     void setData(Buffer<double> &&b) override {
         size_t off{b.size/2};
-        P = Buffer<Vec>{off};
+        P = Buffer<Vec>(off);
         P.len = off;
         double slope;
         for (size_t i = 0; i < off; ++i) {
@@ -114,11 +114,11 @@ public:
 /*     struct Vec { */
 /*         double x, y; */
 /*     }; */
-/*     Buffer<Vec> P{0}; */
+/*     Buffer<Vec> P; */
 /* public: */
 /*     void setData(Buffer<double> &&b) override { */
 /*         size_t off{b.size/2}; */
-/*         P = Buffer<Vec>{off}; */
+/*         P = Buffer<Vec>(off); */
 /*         P.len = off; */
 /*         double slope; */
 /*         for (size_t i = 0; i < off; ++i) { */

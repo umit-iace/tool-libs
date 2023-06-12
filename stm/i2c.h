@@ -35,7 +35,7 @@ struct Device {
  */
 struct Request {
     Device *dev; ///< pointer to the calling I2C::Device instance
-    Buffer<uint8_t> data{0}; ///< transfer data
+    Buffer<uint8_t> data; ///< transfer data
     union Opts {
         struct {
         uint8_t read:1;

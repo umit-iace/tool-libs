@@ -41,7 +41,7 @@ struct ODrive {
         uint8_t side;
         double pos{0}, vel{0};
         void setSpeed(double speed) {
-            Buffer<uint8_t> cmd{32};
+            Buffer<uint8_t> cmd = 32;
             cmd.len = snprintf((char*)cmd.buf, cmd.size, cmds.velocity, side, speed, 0);
             drive->q.push({
                     .cmd = VELO,
@@ -51,7 +51,7 @@ struct ODrive {
             drive->poll();
         }
         void measure() {
-            Buffer<uint8_t> cmd{32};
+            Buffer<uint8_t> cmd = 32;
             cmd.len = snprintf((char*)cmd.buf, cmd.size, cmds.get, side);
             drive->q.push({
                     .cmd = GET,

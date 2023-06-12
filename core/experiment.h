@@ -34,7 +34,7 @@ extern class Experiment {
     struct ELog : Logger {
         const uint32_t &time;
         virtual Buffer<uint8_t> pre() override {
-            auto ret = Buffer<uint8_t>{256};
+            Buffer<uint8_t> ret = 256;
             ret.len = snprintf((char*)ret.buf, ret.size,
                     "Experiment Logger (@%ldms): ", time);
             return ret;

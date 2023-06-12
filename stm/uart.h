@@ -63,7 +63,7 @@ struct HW : public Sink<Buffer<uint8_t>>, public Source<Buffer<uint8_t>> {
     /** rx state */
     struct RX {
         Queue<Buffer<uint8_t>> q;
-        Buffer<uint8_t> buf{512};
+        Buffer<uint8_t> buf = 512;
     } rx{};
     /** tx state */
     struct TX {
