@@ -152,7 +152,7 @@ struct Min {
                     if (frame_crc == crc.finalize()) {
                         // Frame received OK, pass up data to handler
                         queue.push(std::move(frame));
-                        frame = Frame{};
+                        frame = {};
                     }
                     // Either the frame failed, or we already handled it
                     // anyway we can start looking for the next frame,
@@ -207,7 +207,7 @@ struct Min {
      **/
     class Out : public Sink<Frame> {
         CRC32 crc{};
-        Buffer<uint8_t> req{128};
+        Buffer<uint8_t> req = 128;
         Sink<Buffer<uint8_t>> &out;
         uint8_t header_countdown = 2;
         void stuff(uint8_t b) {
@@ -233,7 +233,7 @@ struct Min {
         using Sink<Frame>::push;
         /** push Frame through to underlying Buffer stream */
         void push(Frame &&f) override {
-            req = Buffer<uint8_t>{128};
+            req = 128;
             crc.init();
             nostuff(HEADER_BYTE);
             nostuff(HEADER_BYTE);

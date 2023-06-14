@@ -73,7 +73,7 @@ struct HMC5883L : I2C::Device {
     void measure() {
         bus.push({
             .dev = this,
-            .data = Buffer<uint8_t>{6},
+            .data = 6,
             .opts = {
                 .read = true,
                 .mem = true,
@@ -85,7 +85,7 @@ struct HMC5883L : I2C::Device {
     void writeReg(uint8_t reg, uint8_t val) {
         bus.push({
             .dev = this,
-            .data = Buffer<uint8_t>{1}.append(val),
+            .data = {val},
             .opts = {
                 .mem = true,
             },

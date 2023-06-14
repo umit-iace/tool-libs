@@ -9,7 +9,7 @@
 /** pyWisp communication frame */
 struct Frame {
     /** buffer containing the Frame payload */
-    Buffer<uint8_t> b{128};
+    Buffer<uint8_t> b = 128;
     /** buffer id: [0..63] */
     uint8_t id{};
     /** construct Frame with given id */

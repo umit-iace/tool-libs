@@ -23,8 +23,7 @@ struct BMI160 : I2C::Device {
         writeReg(0x7e, 0x15);   // enable gyroscope
         bus.push({
             .dev = this,
-            .data = Buffer<uint8_t>{1}
-                .append(0xc), // set read pointer to gyro data
+            .data = {0xc}, // set read pointer to gyro data
             });
     }
 
@@ -34,7 +33,7 @@ struct BMI160 : I2C::Device {
     void measure() {
         bus.push({
             .dev = this,
-            .data = Buffer<uint8_t>{12},
+            .data = 12,
             .opts = {
                 .read = true,
                 },
@@ -48,7 +47,7 @@ struct BMI160 : I2C::Device {
     void writeReg(uint8_t reg, uint8_t val) {
         bus.push({
             .dev = this,
-            .data = Buffer<uint8_t>{1}.append(val),
+            .data = {val},
             .opts = {
                 .mem = true,
                 },

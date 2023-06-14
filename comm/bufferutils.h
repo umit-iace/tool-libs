@@ -131,13 +131,13 @@ struct Hexify : Sink<Buffer<uint8_t>> {
     static constexpr uint8_t map[]="0123456789abcdef";
     static constexpr size_t blen = 512*3;
     Sink<Buffer<uint8_t>> &down;
-    Buffer<uint8_t> work{blen};
+    Buffer<uint8_t> work = blen;
     void push(Buffer<uint8_t> &&in) override {
         for (auto b: in) {
-            work.append('\\').append(map[b >> 4]).append(map[b & 0xf]);
+            work.append({'\\', map[b >> 4], map[b & 0xf]});
         }
         down.push(std::move(work));
-        work = Buffer<uint8_t>{blen};
+        work = blen;
     }
     Hexify(Sink<Buffer<uint8_t>> &down) : down(down) {}
 };

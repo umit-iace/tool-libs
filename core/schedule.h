@@ -34,7 +34,7 @@ struct Schedulable {
  * where scheduling is necessary. see Experiment for inspiration
  */
 struct Registry {
-    Buffer<Schedulable *> list{20};
+    Buffer<Schedulable *> list = 20;
     ~Registry() {
         for (auto &entry: list) {
             delete entry;

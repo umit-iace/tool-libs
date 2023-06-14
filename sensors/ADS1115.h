@@ -148,14 +148,14 @@ private:
     void setPointer(uint8_t reg) {
         bus.push({
             .dev = this,
-            .data = Buffer<uint8_t>{1}.append(reg),
+            .data = {reg},
         });
     }
 
     void read() {
         bus.push({
             .dev = this,
-            .data = Buffer<uint8_t>{2},
+            .data = 2,
             .opts = {
                 .read = true,
                 },
@@ -163,11 +163,9 @@ private:
     }
 
     void write(uint8_t reg, uint16_t val) {
-        uint8_t data[3] = {reg, (uint8_t) (val >> 8), (uint8_t) val};
         bus.push({
             .dev = this,
-            .data = Buffer<uint8_t>{3}
-                .append(reg).append(val>>8).append(val),
+            .data = {reg, val>>8, val},
             });
     }
 };

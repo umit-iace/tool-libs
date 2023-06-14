@@ -66,7 +66,7 @@ struct impl {
     }
     struct READ: Source<Buffer<uint8_t>> {
         Queue<Buffer<uint8_t>> q{30};
-        Buffer<uint8_t> b{512};
+        Buffer<uint8_t> b = 512;
         int fd;
         READ(int fd) : fd(fd) { }
         bool empty() override {
@@ -83,7 +83,7 @@ struct impl {
                 b.len = l;
                 if (l) {
                     q.push(std::move(b));
-                    b = Buffer<uint8_t>{512};
+                    b = 512;
                 }
             } while (l == b.size);
             return q.empty();

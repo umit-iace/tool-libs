@@ -13,7 +13,7 @@
 class LineFilter : public Source<Buffer<uint8_t>> {
     static constexpr size_t linelen = 128;
     Queue<Buffer<uint8_t>> q;
-    Buffer<uint8_t> l{linelen}; // stash
+    Buffer<uint8_t> l = linelen; // stash
     Source<Buffer<uint8_t>> &source;
     void recv(uint8_t b) {
         // handle both \n and \r\n newlines
@@ -24,13 +24,13 @@ class LineFilter : public Source<Buffer<uint8_t>> {
             } else {
                 // fallthrough: Drop Line, queue was full
             }
-            l = Buffer<uint8_t>{linelen};
+            l = linelen;
             return;
         }
         if (l.len + 1 > linelen) {
             // XXX: failure: line was longer than our buffer
             // Drop Line
-            l = Buffer<uint8_t>{linelen};
+            l = linelen;
         }
         l.append(b);
     }

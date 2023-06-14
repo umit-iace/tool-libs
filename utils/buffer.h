@@ -6,6 +6,7 @@
 #include <cstring>
 #include <cstdint>
 #include <cassert>
+#include <initializer_list>
 
 /**
  * dynamically allocated, but fixed-size buffer template
@@ -37,6 +38,11 @@ struct Buffer {
         buf[len++] = b;
         return *this;
     }
+    /** append multiple items */
+    Buffer& append(std::initializer_list<T> list) {
+        for (auto v: list) append(v);
+        return *this;
+    }
     /** begin method for range-based for loops */
     T* begin() { return &buf[0]; }
     T* begin() const { return &buf[0]; }
@@ -55,9 +61,12 @@ struct Buffer {
         buf = new T[size];
         memcpy(buf, src, len * sizeof(T));
     }
-    /** constructor with fixed size */
-    Buffer(size_t sz) : buf{new T[sz]}, len(0), size(sz) {
+    /** initializer list constructor */
+    Buffer(std::initializer_list<T> list) : buf{new T[list.size()]}, len(0), size(list.size()) {
+        append(list);
     }
+    /** constructor with fixed size */
+    Buffer(size_t sz=0) : buf{new T[sz]}, len(0), size(sz) { }
     /** copy constructor */
     Buffer(const Buffer &b) : buf{new T[b.size]}, len(b.len), size(b.size) {
         memcpy(buf, b.buf, len * sizeof(T));
