@@ -7,10 +7,10 @@ namespace debug {
 namespace i2c {
 }}
 using namespace I2C;
-uint32_t when(size_t datasize) {
-    constexpr uint32_t baudrate = 400000;
-    uint32_t ret = (datasize+1)*9./baudrate*1000.;
-    return ret?ret:1;
+Deadline until(size_t datasize) {
+    constexpr uint32_t cpms = 100000 / 1000; // fixed at 100kHz, noone is going slower
+    uint32_t ret = (datasize+1)*9/cpms;
+    return {ret?ret:2}; // allow minimum of 2ms
 }
 
 void _startMaster(HW *i2c) {
@@ -18,7 +18,7 @@ void _startMaster(HW *i2c) {
     auto& rq = i2c->q.front();
     size_t sz = rq.opts.read ? rq.data.size : rq.data.len;
     i2c->active = i2c->Q;
-    i2c->deadline = Deadline{uwTick + sz};
+    i2c->deadline = until(sz);
     switch(rq.opts.type) {
     case Request::Opts::MASTER_WRITE:
         HAL_I2C_Master_Transmit_IT(&i2c->handle, rq.dev->address << 1,
@@ -54,7 +54,7 @@ void _startSlave(I2C_HandleTypeDef *handle, uint8_t recv, uint16_t addr) {
     size_t sz = recv ? data.size : data.len;
     if (!sz) return;
     i2c->active = recv ? i2c->IN : i2c->OUT;
-    i2c->deadline = Deadline{uwTick + sz*2};
+    i2c->deadline = until(sz);
     if (recv) {
         HAL_I2C_Slave_Receive_IT(handle, data.buf, sz);
         data.len = sz;
