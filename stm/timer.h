@@ -14,14 +14,10 @@ namespace TIMER {
          * Initialize Timer Peripheral
          *
          * @param dTim Timer instance
-         * @param prescaler value to write into prescaler register
+         * @param prescaler value to write into prescaler register. Actual freq = f/(presc + 1)
          * @param period value to write into period register
          */
-        HW(TIM_TypeDef
-           *dTim,
-           uint32_t prescaler, uint32_t
-           period) {
-            TIM_MasterConfigTypeDef sMasterConfig = {};
+        HW(TIM_TypeDef *dTim, uint32_t prescaler, uint32_t period) {
             handle = {
                 .Instance = dTim,
                 .Init = {
@@ -34,8 +30,10 @@ namespace TIMER {
             };
             while (HAL_TIM_Base_Init(&handle) != HAL_OK);
 
-            sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-            sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+            TIM_MasterConfigTypeDef sMasterConfig = {
+                .MasterOutputTrigger = TIM_TRGO_RESET,
+                .MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE,
+            };
             while (HAL_TIMEx_MasterConfigSynchronization(&handle, &sMasterConfig) != HAL_OK);
         }
 

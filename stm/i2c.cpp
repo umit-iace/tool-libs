@@ -7,11 +7,18 @@ namespace debug {
 namespace i2c {
 }}
 using namespace I2C;
+Deadline until(size_t datasize) {
+    constexpr uint32_t cpms = 100000 / 1000; // fixed at 100kHz, noone is going slower
+    uint32_t ret = (datasize+1)*9/cpms;
+    return {ret?ret:2}; // allow minimum of 2ms
+}
+
 void _startMaster(HW *i2c) {
     if (i2c->handle.Init.OwnAddress1) HAL_I2C_DisableListen_IT(&i2c->handle);
     auto& rq = i2c->q.front();
+    size_t sz = rq.opts.read ? rq.data.size : rq.data.len;
     i2c->active = i2c->Q;
-    i2c->deadline = Deadline{uwTick+rq.data.size*2};
+    i2c->deadline = until(sz);
     switch(rq.opts.type) {
     case Request::Opts::MASTER_WRITE:
         HAL_I2C_Master_Transmit_IT(&i2c->handle, rq.dev->address << 1,
@@ -20,6 +27,7 @@ void _startMaster(HW *i2c) {
     case Request::Opts::MASTER_READ:
         HAL_I2C_Master_Receive_IT(&i2c->handle, rq.dev->address << 1,
                                   rq.data.buf, rq.data.size);
+        rq.data.len = rq.data.size;
         break;
     case Request::Opts::MEM_WRITE:
         HAL_I2C_Mem_Write_IT(&i2c->handle, rq.dev->address << 1,
@@ -30,30 +38,28 @@ void _startMaster(HW *i2c) {
         HAL_I2C_Mem_Read_IT(&i2c->handle, rq.dev->address << 1,
                             rq.mem, I2C_MEMADD_SIZE_8BIT,
                             rq.data.buf, rq.data.size);
+        rq.data.len = rq.data.size;
         break;
     default:
         return;
     }
 }
 
-void _startSlave(I2C_HandleTypeDef *handle, uint8_t dir, uint16_t addr) {
+void _startSlave(I2C_HandleTypeDef *handle, uint8_t recv, uint16_t addr) {
     auto i2c = HW::reg.from(handle);
     assert(addr == handle->Init.OwnAddress1);
     assert(i2c->active == i2c->NONE);
-    if (dir) {
-        auto& data = i2c->out.data;
-        if (!data.len) return;
-        i2c->active = i2c->OUT;
-        i2c->deadline = Deadline{uwTick + data.len*2};
-        HAL_I2C_DisableListen_IT(handle);
-        HAL_I2C_Slave_Transmit_IT(handle, data.buf, data.len);
+    HAL_I2C_DisableListen_IT(handle);
+    auto & data = recv ? i2c->in.data : i2c->out.data;
+    size_t sz = recv ? data.size : data.len;
+    if (!sz) return;
+    i2c->active = recv ? i2c->IN : i2c->OUT;
+    i2c->deadline = until(sz);
+    if (recv) {
+        HAL_I2C_Slave_Receive_IT(handle, data.buf, sz);
+        data.len = sz;
     } else {
-        auto& data = i2c->in.data;
-        if (!data.size) return;
-        i2c->active = i2c->IN;
-        i2c->deadline = Deadline{uwTick + data.size*2};
-        HAL_I2C_DisableListen_IT(handle);
-        HAL_I2C_Slave_Receive_IT(handle, data.buf, data.size);
+        HAL_I2C_Slave_Transmit_IT(handle, data.buf, sz);
     }
 }
 
@@ -75,16 +81,14 @@ void _error(I2C_HandleTypeDef *handle) {
     __HAL_I2C_DISABLE(handle);
     __HAL_I2C_ENABLE(handle);
     if (i2c->handle.Init.OwnAddress1) HAL_I2C_EnableListen_IT(handle);
-    poll(i2c);
 }
 void poll(HW *i2c) {
-    if (i2c->active && i2c->deadline(uwTick)) return _error(&i2c->handle);
+    if (i2c->active && i2c->deadline(uwTick)) _error(&i2c->handle);
     if (!i2c->active && !i2c->q.empty()) return _startMaster(i2c);
 }
 
 void _complete(I2C_HandleTypeDef *handle) {
     auto i2c = HW::reg.from(handle);
-    Request rq {};
     switch (i2c->active) {
     case i2c->Q:
         i2c->q.front().dev->callback(i2c->q.pop());
