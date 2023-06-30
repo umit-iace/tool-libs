@@ -21,6 +21,7 @@ void _startMaster(HW *i2c) {
     case Request::Opts::MASTER_READ:
         HAL_I2C_Master_Receive_IT(&i2c->handle, rq.dev->address << 1,
                                   rq.data.buf, rq.data.size);
+        rq.data.len = rq.data.size;
         break;
     case Request::Opts::MEM_WRITE:
         HAL_I2C_Mem_Write_IT(&i2c->handle, rq.dev->address << 1,
@@ -31,6 +32,7 @@ void _startMaster(HW *i2c) {
         HAL_I2C_Mem_Read_IT(&i2c->handle, rq.dev->address << 1,
                             rq.mem, I2C_MEMADD_SIZE_8BIT,
                             rq.data.buf, rq.data.size);
+        rq.data.len = rq.data.size;
         break;
     default:
         return;
@@ -49,6 +51,7 @@ void _startSlave(I2C_HandleTypeDef *handle, uint8_t recv, uint16_t addr) {
     i2c->deadline = Deadline{uwTick + sz*2};
     if (recv) {
         HAL_I2C_Slave_Receive_IT(handle, data.buf, sz);
+        data.len = sz;
     } else {
         HAL_I2C_Slave_Transmit_IT(handle, data.buf, sz);
     }
