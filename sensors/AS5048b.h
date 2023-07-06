@@ -1,4 +1,4 @@
-/** @file AS5048B_H.h
+/** @file AS5048b.h
  *
  * Copyright (c) 2023 IACE
  */
@@ -8,11 +8,13 @@
 #include <cstdint>
 #include "stm/i2c.h"
 
+/** 14-bit rotary position sensor */
 class AS5048B : I2C::Device {
 public:
 
     /**
-     * initialize the sensor
+     * initialize the sensor. A0 & A1 change its I2C address,
+     * see datasheet for details
      */
     AS5048B(Sink<I2C::Request> &bus, bool A0, bool A1)
         : I2C::Device{bus, (uint8_t)(0x40 | (A1 << 1) | A0)}

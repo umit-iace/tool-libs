@@ -65,7 +65,7 @@ trajectories, etc.
 # Sensors
 Drivers for the following sensors are implemented:
  - ADS1115 - external analog to digital voltage converter
- - AS5048b - 14-bit rotary position sensor with digital angle
+ - AS5048B - 14-bit rotary position sensor with digital angle
  - AS5145 - hall effect based angular position measurement
  - BMI160 - 6axis Inertial Measurement Unit
  - HMC5883L - multi-chip three-axis magnetic sensor
