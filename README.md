@@ -87,6 +87,7 @@ following classes are implemented:
  - TIMER::HW - support for the timer peripherals
  - TIMER::PWM - support for outputting Pulse Width Modulated signals on a pin
  - TIMER::Encoder - quadrature encoder support
+ - UART::HW - UART interface
  - HardwareSPI - SPI interface support
 
 # Linux
