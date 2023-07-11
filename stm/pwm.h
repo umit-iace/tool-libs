@@ -19,8 +19,9 @@ namespace TIMER {
          * @param perc [0..1]
          */
         void pwm(double perc) {
-            this->_perc = perc;
-            ticks(this->_perc * period);
+            _perc = perc;
+            _ticks = perc * period;
+            __HAL_TIM_SET_COMPARE(&hTim, chan, _ticks);
         }
 
         /**
@@ -28,8 +29,9 @@ namespace TIMER {
          * @param ticks [0..TIMER::HW period]
          */
         void ticks(uint32_t ticks) {
-            this->_ticks = ticks;
-            __HAL_TIM_SET_COMPARE(&hTim, chan, this->_ticks);
+            _perc = ticks / period;
+            _ticks = ticks;
+            __HAL_TIM_SET_COMPARE(&hTim, chan, _ticks);
         }
 
         /** PWM configuration */
@@ -64,7 +66,7 @@ namespace TIMER {
             return _perc;
         }
         /** get currently set pwm value in timer ticks */
-        double getticks(){
+        uint32_t getticks(){
             return _ticks;
         }
 
