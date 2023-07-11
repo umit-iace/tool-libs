@@ -8,10 +8,11 @@
 struct SeriesUnpacker {
     size_t bsize {40};
     bool start {true};
-    Buffer<double> buf;
+    Buffer<double> buf; ///< Buffer of data received. only
+                        ///valid after unpack returns non-null
 
     /** call this with incoming frames until it returns
-     * a Buffer filled with the data sent over the wire
+     * a Buffer filled with the data sent over the wire.
      */
     Buffer<double> *unpack(Frame &f) {
         unsigned int LEN = bsize / 8;
