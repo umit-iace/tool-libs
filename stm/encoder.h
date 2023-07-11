@@ -8,8 +8,8 @@
 #include "hal.h"
 #include "timer.h"
 
-/** Quadrature Encoder support */
 namespace TIMER {
+    /** Quadrature Encoder support */
     class Encoder {
     public:
         /**
@@ -112,7 +112,6 @@ namespace TIMER {
         }
 
     private:
-        ///\cond false
         TIMER::HW tim;
         double dFactor = 1;
         int16_t iLastVal = 0;
@@ -120,6 +119,5 @@ namespace TIMER {
 
         double dPosition = 0;
         double dSpeed = 0;
-        ///\endcond
     };
 }
