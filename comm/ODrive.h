@@ -10,6 +10,7 @@
 #include <utils/queue.h>
 
 
+/** support for the odriverobotics.com v3 Motor Driver UART interface */
 struct ODrive {
     /* incoming stream */
     Source<Buffer<uint8_t>> &in;
@@ -36,10 +37,13 @@ struct ODrive {
     };
     /* queue of pending requests */
     Queue<REQ> q{8};
+    /** single motor controlled by the ODrive interface */
     struct Motor {
-        ODrive *drive;
-        uint8_t side;
-        double pos{0}, vel{0};
+        ODrive *drive; ///< pointer to controlling ODrive
+        uint8_t side; ///< the ODrive hardware supports 2 Motors
+        double pos{0}; ///< last measured position
+        double vel{0}; ///< last measured velocity [rot/s]
+        /** set speed in rot/s */
         void setSpeed(double speed) {
             Buffer<uint8_t> cmd = 32;
             cmd.len = snprintf((char*)cmd.buf, cmd.size, cmds.velocity, side, speed, 0);
@@ -50,6 +54,7 @@ struct ODrive {
                     });
             drive->poll();
         }
+        /** get new measurements from motor */
         void measure() {
             Buffer<uint8_t> cmd = 32;
             cmd.len = snprintf((char*)cmd.buf, cmd.size, cmds.get, side);
@@ -69,7 +74,7 @@ struct ODrive {
             vel = strtod(next, nullptr);
         }
     };
-
+    /** call this regularly to check for updates */
     void poll() {
         while (!in.empty()) {
             assert(!q.empty()); // can't receive things without requesting them first
