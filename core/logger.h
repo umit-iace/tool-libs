@@ -9,7 +9,7 @@
 template<typename T>
 struct DevNull: Sink<T>, Source<T> {
     bool empty() override { return true; }
-    T pop() override { return *(T*)nullptr; }
+    T pop() override { return T{}; }
     void push(T &&) override {
     }
 };
@@ -29,11 +29,11 @@ struct Logger : Sink<Buffer<uint8_t>> {
     void mklog(Lvl lvl, const char *fmt, va_list args) {
         Buffer<uint8_t> b = pre();
         if (lvl != NONE) {
-            b.len += snprintf((char*)b.buf+b.len, b.size-b.len, color[lvl]);
+            b.len += snprintf((char*)b.buf+b.len, b.size-b.len, "%s", color[lvl]);
         }
         b.len += vsnprintf((char*)b.buf+b.len, b.size-b.len, fmt, args);
         if (lvl != NONE) {
-            b.len += snprintf((char*)b.buf+b.len, b.size-b.len, color[NONE]);
+            b.len += snprintf((char*)b.buf+b.len, b.size-b.len, "%s", color[NONE]);
         }
         out.push(std::move(b));
     }
