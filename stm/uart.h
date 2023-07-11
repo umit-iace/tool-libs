@@ -32,15 +32,15 @@ namespace UART {
 struct HW : public Sink<Buffer<uint8_t>>, public Source<Buffer<uint8_t>> {
     /** default init struct */
     struct Default {
-        USART_TypeDef *uart;
-        AFIO rx, tx;
-        uint32_t baudrate;
+        USART_TypeDef *uart; ///< UART peripheral
+        AFIO rx, tx; ///< alternate function initialized pins
+        uint32_t baudrate; ///< baudrate
     };
     /** init struct with full control over UART settings */
     struct Manual {
-        USART_TypeDef *uart;
-        AFIO rx, tx;
-        UART_InitTypeDef init;
+        USART_TypeDef *uart; ///< UART peripheral
+        AFIO rx, tx; ///< alternate function initialized pins
+        UART_InitTypeDef init; ///< HAL Init configuration
     };
     /** constructor with default config */
     HW(const Default &conf);
