@@ -32,20 +32,17 @@ struct Device {
 
 /**
  * struct defining an I2C request.
- * use this when transmitting data over the I2C bus
+ * use this for transmitting data over an I2C::HW bus
  */
 struct Request {
     Device *dev; ///< pointer to the calling I2C::Device instance
     Buffer<uint8_t> data; ///< transfer data
-
-    /** options for this Request */
-    union Opts {
-        /// options
+    union Type {
         struct {
         uint8_t read:1; ///< read transmission
         uint8_t slave:1; ///< as slave
         uint8_t mem:1; ///< memory transmission
-        }; 
+        };
         enum {
             MASTER_WRITE,
             MASTER_READ,
@@ -54,7 +51,13 @@ struct Request {
             MEM_WRITE,
             MEM_READ,
         } type;
-    } opts; ///< options/settings for this Request
+    } opts; /**< transfer options. bitfield with fields
+              *  name | comment
+              * ------|------------------
+              *  read | read transmission
+              *  slave| as slave
+              *  mem  | memory transmission
+              */
     uint8_t mem; ///< memory address for memory transmissions
 };
 
