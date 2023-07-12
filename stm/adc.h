@@ -9,6 +9,13 @@
 #include "gpio.h"
 #include "dma.h"
 
+#if defined(ADC)
+// workaround for Legacy HAL defining 'ADC' as the common base between the
+// different ADCs. current HAL defines and uses it as 'ADC123_COMMON', so
+// we can safely discard it
+#undef ADC
+#endif
+
 namespace ADC {
     /** Class representing one measured pin/value. */
     struct Channel {
