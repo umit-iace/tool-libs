@@ -189,9 +189,9 @@ HW::HW(const Default &conf) {
 
 void HW::irqHandler() {
     HAL_UART_IRQHandler(&handle);
-    /** workaround for HAL BUG: they still change state _AFTER_ calling */
-    /** user callbacks (where we had already set it to what we needed) */
-    /** luckily we only ever use this one type of reception */
+    /* workaround for HAL BUG: they still change state _AFTER_ calling */
+    /* user callbacks (where we had already set it to what we needed) */
+    /* luckily we only ever use this one type of reception */
     handle.ReceptionType = HAL_UART_RECEPTION_TOIDLE;
 }
 void HW::push(Buffer<uint8_t> &&b) {

@@ -20,21 +20,21 @@ void _startMaster(HW *i2c) {
     i2c->active = i2c->Q;
     i2c->deadline = until(sz);
     switch(rq.opts.type) {
-    case Request::Opts::MASTER_WRITE:
+    case Request::Type::MASTER_WRITE:
         HAL_I2C_Master_Transmit_IT(&i2c->handle, rq.dev->address << 1,
                                    rq.data.buf, rq.data.len);
         break;
-    case Request::Opts::MASTER_READ:
+    case Request::Type::MASTER_READ:
         HAL_I2C_Master_Receive_IT(&i2c->handle, rq.dev->address << 1,
                                   rq.data.buf, rq.data.size);
         rq.data.len = rq.data.size;
         break;
-    case Request::Opts::MEM_WRITE:
+    case Request::Type::MEM_WRITE:
         HAL_I2C_Mem_Write_IT(&i2c->handle, rq.dev->address << 1,
                              rq.mem, I2C_MEMADD_SIZE_8BIT,
                              rq.data.buf, rq.data.len);
         break;
-    case Request::Opts::MEM_READ:
+    case Request::Type::MEM_READ:
         HAL_I2C_Mem_Read_IT(&i2c->handle, rq.dev->address << 1,
                             rq.mem, I2C_MEMADD_SIZE_8BIT,
                             rq.data.buf, rq.data.size);
@@ -111,10 +111,10 @@ void _complete(I2C_HandleTypeDef *handle) {
 
 void HW::push(Request &&rq) {
     switch (rq.opts.type) {
-        case Request::Opts::SLAVE_WRITE:
+        case Request::Type::SLAVE_WRITE:
             out = std::move(rq);
             break;
-        case Request::Opts::SLAVE_READ:
+        case Request::Type::SLAVE_READ:
             in = std::move(rq);
             break;
         default:

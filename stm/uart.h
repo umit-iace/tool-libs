@@ -10,10 +10,11 @@
 #include "gpio.h"
 #include "registry.h"
 
+namespace UART {
 /** Character Buffer Sink & Source wrapping UART Peripheral 
  *
  * \dot
- * digraph HardwareUART_SINK_SOURCE {
+ * digraph UART_SINK_SOURCE {
  *      rankdir=LR;
  *      size="10"
  *      subgraph {
@@ -22,25 +23,24 @@
  *           SINK
  *           SRCE
  *      }
- *      HardwareUART [URL="\ref HardwareUART"];
- *      SINK -> HardwareUART [label="push", URL="\ref push"];
- *      HardwareUART -> SRCE [label="pop", URL="\ref pop"];
+ *      UART [URL="\ref HW"];
+ *      SINK -> UART [label="push", URL="\ref push"];
+ *      UART -> SRCE [label="pop", URL="\ref pop"];
  *      }
  * \enddot
  */
-namespace UART {
 struct HW : public Sink<Buffer<uint8_t>>, public Source<Buffer<uint8_t>> {
     /** default init struct */
     struct Default {
-        USART_TypeDef *uart;
-        AFIO rx, tx;
-        uint32_t baudrate;
+        USART_TypeDef *uart; ///< UART peripheral
+        AFIO rx, tx; ///< alternate function initialized pins
+        uint32_t baudrate; ///< baudrate
     };
     /** init struct with full control over UART settings */
     struct Manual {
-        USART_TypeDef *uart;
-        AFIO rx, tx;
-        UART_InitTypeDef init;
+        USART_TypeDef *uart; ///< UART peripheral
+        AFIO rx, tx; ///< alternate function initialized pins
+        UART_InitTypeDef init; ///< HAL Init configuration
     };
     /** constructor with default config */
     HW(const Default &conf);

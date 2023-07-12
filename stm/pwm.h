@@ -8,11 +8,10 @@
 #include "gpio.h"
 #include "timer.h"
 
-/**
- * @brief Template class for hardware based PWM outputs
- */
 namespace TIMER {
-
+    /**
+     * @brief Template class for hardware based PWM outputs
+     */
     class PWM {
     public:
         /**
@@ -20,32 +19,30 @@ namespace TIMER {
          * @param perc [0..1]
          */
         void pwm(double perc) {
-            this->_perc = perc;
-            ticks(this->_perc * period);
+            _perc = perc;
+            _ticks = perc * period;
+            __HAL_TIM_SET_COMPARE(&hTim, chan, _ticks);
         }
 
         /**
          * set pwm as value of timer ticks
-         * @param ticks
+         * @param ticks [0..TIMER::HW period]
          */
         void ticks(uint32_t ticks) {
-            this->_ticks = ticks;
-            __HAL_TIM_SET_COMPARE(&hTim, chan, this->_ticks);
+            _perc = ticks / period;
+            _ticks = ticks;
+            __HAL_TIM_SET_COMPARE(&hTim, chan, _ticks);
         }
 
+        /** PWM configuration */
         struct Config {
-            TIMER::HW *tim;
-            uint32_t chan;
-            AFIO pin;
+            TIMER::HW *tim; ///< TIMER::HW peripheral
+            uint32_t chan; ///< Timer channel
+            AFIO pin; ///< pin in alternate function mode
         };
 
         /**
          * Initialize Timer Channel
-         *
-         * make sure to initialize the corresponding AFIO pin
-         *
-         * @param tim pointer to HardwareTimer
-         * @param chan timer channel number (TIM_CHANNEL_x)
          */
         PWM(const Config &conf)
                 : hTim(conf.tim->handle), chan(conf.chan), period(hTim.Init.Period) {
@@ -64,11 +61,13 @@ namespace TIMER {
             while (HAL_TIM_PWM_Start(&hTim, chan) != HAL_OK);
         }
 
-    double getpwm(){
-            return this->_perc;
+        /** get currently set pwm value in percent */
+        double getpwm(){
+            return _perc;
         }
-    double getticks(){
-            return this->_ticks;
+        /** get currently set pwm value in timer ticks */
+        uint32_t getticks(){
+            return _ticks;
         }
 
     private:

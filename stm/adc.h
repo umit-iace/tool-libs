@@ -9,30 +9,36 @@
 #include "gpio.h"
 #include "dma.h"
 
-namespace Adc {
-
+namespace ADC {
+    /** Class representing one measured pin/value. */
     struct Channel {
+        /** return measured value */
         double get() {
             return raw * lsb;
         }
+        /** raw value from adc */
         int16_t &raw;
         const double lsb;
     };
 
+    /** Analog to Digital Converter Peripheral Driver */
     struct HW {
+        /** driver configuration */
         struct Conf {
-            ADC_TypeDef *adc;
-            uint32_t prescaler;
-            DMA_Stream_TypeDef *dmaStream;
-            uint32_t dmaChannel;
+            ADC_TypeDef *adc; ///< ADC Peripheral
+            uint32_t prescaler; ///< Peripheral clock prescaler
+            DMA_Stream_TypeDef *dmaStream; ///< DMA Stream for reading out raw values
+            uint32_t dmaChannel; ///< DMA Channel
         };
+        /** channel configuration */
         struct ChannelConf {
-            uint32_t channel;
-            uint32_t samplingTime;
-            double lsb;
-            DIO pin;
+            uint32_t channel; ///< ADC Channel number [i.e. Pin]
+            uint32_t samplingTime; ///< sampling time
+            double lsb; ///< Least Significant Bit value factor
+            DIO pin; ///< Analog configured pin
         };
 
+        /** create Driver with given Conf */
         HW(const Conf &conf) 
                 : dma {{
                     .stream = conf.dmaStream,
@@ -54,15 +60,20 @@ namespace Adc {
             };
         }
 
+        /** start measuring all registered channels/pins */
         void measure() {
             while (HAL_ADC_Start_DMA(&handle, (uint32_t*)iBuffer, channelCnt) != HAL_OK);
         }
 
+        /** initialize driver.
+         * call _after_ registering/creating all the needed Channel&zwj;s
+         */
         void init() {
             while (HAL_ADC_Init(&handle) != HAL_OK);
             __HAL_LINKDMA(&handle, DMA_Handle, dma.handle);
         }
 
+        /** register/create pin/channel for analog measurement */
         Channel get(ChannelConf conf){
             auto ret = Channel{iBuffer[channelCnt], conf.lsb};
 

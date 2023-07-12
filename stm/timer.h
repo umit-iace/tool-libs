@@ -6,8 +6,8 @@
 
 #include "hal.h"
 
-/** wrapper for timer peripheral */
 namespace TIMER {
+    /** wrapper for timer peripheral */
     class HW {
     public:
         /**
