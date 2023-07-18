@@ -83,6 +83,7 @@ struct HW : public Sink<Request> {
     using Sink<Request>::push;
     void irqEvHandler();
     void irqErHandler();
+    void poll();
     I2C_HandleTypeDef handle{};
 };
 }
