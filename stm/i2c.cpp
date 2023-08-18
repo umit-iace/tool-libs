@@ -68,18 +68,15 @@ void _startSlave(I2C_HandleTypeDef *handle, uint8_t recv, uint16_t addr) {
 void poll(HW *i2c);
 void _error(I2C_HandleTypeDef *handle) {
     auto i2c = HW::reg.from(handle);
-    if (i2c->active == i2c->Q) {
+    if (!i2c->active) {
+        assert(false);
+    } else if (i2c->active == i2c->Q) {
         auto& rq = i2c->q.front();
         HAL_I2C_Master_Abort_IT(handle, rq.dev->address << 1);
-        i2c->active = i2c->NONE;
-        i2c->deadline = Deadline{};
         i2c->q.pop();
-    } else if (i2c->active) {
-        i2c->active = i2c->NONE;
-        i2c->deadline = Deadline{};
-    } else {
-        assert(false);
     }
+    i2c->active = i2c->NONE;
+    i2c->deadline = Deadline{};
     __HAL_I2C_DISABLE(handle);
     __HAL_I2C_ENABLE(handle);
     if (i2c->handle.Init.OwnAddress1) HAL_I2C_EnableListen_IT(handle);
