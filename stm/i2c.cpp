@@ -83,7 +83,7 @@ void _error(I2C_HandleTypeDef *handle) {
     i2c->poll();
 }
 void HW::poll() {
-    if (active && deadline(uwTick)) _error(&handle);
+    if (active && deadline(uwTick)) return _error(&handle);
     if (!active && !q.empty()) return _startMaster(this);
 }
 
@@ -121,7 +121,6 @@ void HW::push(Request &&rq) {
             q.push(std::move(rq));
             break;
     }
-    poll();
 }
 
 HW::HW(const HW::Conf &conf) {
