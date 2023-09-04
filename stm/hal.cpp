@@ -6,6 +6,9 @@ HAL_StatusTypeDef hal = HAL_Init();
 void Kernel::idle() {
     asm("wfi");
 }
+void Kernel::setTimeStep(uint16_t dt_us) {
+    assert(false); // impossible to change physical time
+}
 void HAL_IncTick() {
     k.tick(uwTickFreq);
     uwTick += uwTickFreq;

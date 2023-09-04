@@ -51,6 +51,12 @@ public:
      * call `tick()` in this method to advance the time
      */
     void idle();
+
+    /** implement in simulation backend to be able to speed up time.
+     *
+     * takes step size in microseconds. default is 1000
+     */
+    void setTimeStep(uint16_t dt_us);
 private:
     uint32_t time_{};
 } k;
