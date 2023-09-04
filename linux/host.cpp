@@ -1,9 +1,7 @@
 #include "host.h"
 
-#include <core/kern.h>
 #include <chrono>
 #include <cstdio>
-#include <cstdlib>
 #include <fcntl.h>
 #include <poll.h>
 #include <signal.h>
