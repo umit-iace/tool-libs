@@ -13,7 +13,7 @@
 using namespace std::chrono;
 
 time_point start{steady_clock::now()};
-auto dt{milliseconds{1}};
+auto dt{microseconds{1000}};
 time_point next{steady_clock::now() + dt};
 
 void Kernel::idle() {
@@ -21,7 +21,11 @@ void Kernel::idle() {
     auto now = steady_clock::now();
     next += dt;
     auto runtime = duration_cast<milliseconds>(now-start);
-    this->tick(dt.count());
+    this->tick(1);
+}
+
+void Kernel::setTimeStep(uint16_t dt_us) {
+    dt = microseconds{dt_us};
 }
 
 void sighandler(int signum);
