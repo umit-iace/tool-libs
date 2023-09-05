@@ -44,14 +44,17 @@ struct impl {
     impl() {
         if (!c_pid) {
             // make child communicate with parent through pipes
-            close(STDIN_FILENO); close(STDOUT_FILENO); close(STDERR_FILENO);
+            close(STDIN_FILENO); close(STDOUT_FILENO);
             dup2(p_in.write, STDOUT_FILENO);
             dup2(p_out.read, STDIN_FILENO);
             close(p_in.read); close(p_in.write);
             close(p_out.read); close(p_out.write);
-            while (true) {
-                system("ncat -lui1 127.0.0.1 45670");
+            int ret = 0;
+            while (ret != 0x7f00) {
+                fprintf(stderr, "starting ncat\n");
+                ret = system("ncat -lui1 127.0.0.1 45670");
             }
+            exit(EXIT_FAILURE);
         }
         close(p_in.write); close(p_out.read);
         struct sigaction act{};
@@ -69,9 +72,12 @@ struct impl {
     struct READ: Source<Buffer<uint8_t>> {
         Queue<Buffer<uint8_t>> q{30};
         Buffer<uint8_t> b = 512;
-        int fd;
-        READ(int fd) : fd(fd) { }
+        const int fd, pid;
+        READ(int fd, int pid) : fd(fd), pid(pid) { }
         bool empty() override {
+            int stat = 0;
+            if (pid == waitpid(pid, &stat, WNOHANG) && WIFEXITED(stat))
+                exit(EXIT_FAILURE);
             struct pollfd fds[1];
             int ret{};
             fds[0].fd = fd;
@@ -95,7 +101,7 @@ struct impl {
         }
     };
     struct WRITE: Sink<Buffer<uint8_t>> {
-        int fd{};
+        const int fd{};
         WRITE(int fd) : fd{fd} { }
         void push(Buffer<uint8_t> &&b) override {
             size_t off{};
@@ -105,7 +111,7 @@ struct impl {
         }
     };
 
-    READ readSock{p_in.read}, readTTY{STDIN_FILENO};
+    READ readSock{p_in.read, c_pid}, readTTY{STDIN_FILENO, c_pid};
     WRITE writeSock{p_out.write}, writeTTY{STDOUT_FILENO};
 } impl;
 
