@@ -2,14 +2,14 @@
  *
  * Copyright (c) 2019 IACE
  */
-#ifndef MAX31865_H
-#define MAX31865_H
+#pragma once
 
 #include <cmath>
 #include <cstdint>
 
 #include "stm/hal.h"
 #include "stm/spi.h"
+using namespace SPI;
 
 /**
  * Implementation of MAX31865 based temperature sensor.
@@ -25,17 +25,14 @@
  * https://analog.com/media/en/technical-documentation/application-notes/AN709_0.pdf
  * for details
  */
-class MAX31865 : ChipSelect {
-    ReqeustQueue<SPIRequest> *bus = nullptr;
-public:
+struct MAX31865 : Device {
     /// Sensor Type
     enum Type {
-        PT2WIRE = 0,
-        PT3WIRE = 1,
-        PT4WIRE = 0
+        PT2WIRE = 0, ///< 2 wire
+        PT3WIRE = 1, ///< 3 wire
+        PT4WIRE = 0, ///< 4 wire
     };
 
-    ///\cond false
     // Register Addresses
     enum {
         REG_CONFIG = 0,
@@ -50,28 +47,38 @@ public:
         READ = 0,
         WRITE = 0x80
     };
-    ///\endcond
+    /// Sensor configuration
+    struct Config {
+        Type wires; ///< number of wires
+        double Rnom; ///< nominal resistance
+        double Rref; ///< reference resistor
+    };
 
     /**
      * configure temperature sensor
      * @param bus SPI request queue
      * @param cs Digital In/Out pin of chip select line
-     * @param numWires sensor type enum
-     * @param Rref reference resistance
-     * @param Rnom nominal resistance of sensor at 0°C
+     * @param c Hardware configuration of sensor
      *
      * configures sensor for auto conversion with 50Hz filter
      */
-    MAX31865(RequestQueue<SPIRequest> *bus, DIO cs, enum Type numWires, double Rref, double Rnom)
-            : bus(bus), ChipSelect(cs), Rnom(Rnom), Rref(Rref) {
-        this->setConfig(1 << 7 | // bias
-                        1 << 6 | // auto conversion
-                        numWires << 4 |
-                        1 << 1 | // clear faults
-                        1 << 0 // 50Hz filter
-        );
-        this->setLThr(0);
-        this->setHThr(0xffff);
+    MAX31865(Sink<Request> &bus,
+            DIO cs,
+            Config c = {
+                .wires = PT2WIRE,
+                .Rnom = 100,
+                .Rref = 430,
+                })
+            : Device(bus, cs, {Mode::M3, FirstBit::MSB}), Rnom(c.Rnom), Rref(c.Rref) {
+        setConfig(1 << 7 | // bias
+                    1 << 6 | // auto conversion
+                    c.wires << 4 |
+                    1 << 1 | // clear faults
+                    1 << 0 // 50Hz filter
+                    );
+        /* setLThr(0); */
+        /* setHThr(0xffff); */
+        getAllData();
     }
 
     /**
@@ -79,7 +86,11 @@ public:
      * @return temperature in °C, NAN if sensor fault
      */
     double tempLin() {
-        return dTempLin;
+        if (data.rtd & 1) {
+            clearFaults();
+            return NAN;
+        }
+        return lin();
     }
 
     /**
@@ -88,7 +99,11 @@ public:
      * @return temperature in °C, NAN if sensor fault
      */
     double temp() {
-        return dTemp;
+        if (data.rtd & 1) {
+            clearFaults();
+            return NAN;
+        }
+        return nonlin();
     }
 
     /**
@@ -112,79 +127,55 @@ public:
         getAllData();
     }
 
-    ///\cond false
-    /**
+    /*
      * callback when async read is finished
      */
-    void callback(void *userData) override {
-        auto reqType = (enum callbackUserData &)userData;
-        uint16_t rtd;
-        switch (reqType) {
-            case ALLDATAREQ:
-                sensorData[1] = allData[2];
-                sensorData[2] = allData[3];
-                hThr = allData[4]<<8 | allData[5];
-                lThr = allData[6]<<8 | allData[7];
-                statusData[1] = allData[8];
-                iFault = statusData[1];
-                /* fallthrough */
-            case TEMPREQ:
-                rtd = (sensorData[1] << 8) | sensorData[2];
-                if (rtd & 1) { // fault
-                    clearFaults();
-                    dTemp = NAN;
-                    dTempLin = NAN;
-                } else {
-                    // resistance
-                    double Rrtd = (double) (rtd >> 1) / (1 << 15) * Rref;
-                    // linear: R(t) = R0 (1 + alpha*T)
-                    dTempLin = (Rrtd - Rnom)/(Rnom * alpha);
-                    // quadratic:
-                    // from
-                    // R(t) = R0 (1 + aT + bT^2)
-                    // !! ONLY for temperatures > 0°C !!
-                    dTemp = -a2b - sqrt(a2b*a2b - (Rnom - Rrtd)/(b*Rnom));
-                    /* dTemp = (Z1 + sqrt(Z2 + Z3 * Rrtd)) / Z4; */
-                }
-                break;
-            case STATUSREQ:
-                iFault = statusData[1];
-                break;
-            case CONFIGREQ:
-                // maybe do something
-                break;
-            case NOREQ:
-                // intentionally empty
-                break;
+    void callback(const Request rq) override {
+        if (rq.dir == Request::MOSI) return;
+        const uint8_t *raw = rq.data.buf;
+        switch (rq.data.len) {
+        case 2: // STATUS
+            data.fault = raw[1];
+            break;
+        case 9: // All Data
+            data.rtd = raw[2] << 8 | raw[3];
+            data.threshold.high = raw[4]<<8 | raw[5];
+            data.threshold.low  = raw[6]<<8 | raw[7];
+            data.fault = raw[8];
+            break;
+        case 3: // resistance data
+            data.rtd = raw[1] << 8 | raw[2];
+            break;
         }
     }
-    ///\endcond
 
     /**
      * @return fault byte read from sensor
      */
     uint8_t fault() {
-        return this->iFault;
+        return data.fault;
     }
 
     /**
      * clear faults on sensor
      */
     void clearFaults() {
-        config |= 1 << 1;
-        setConfig(config);
+        data.rtd = data.rtd >> 1 << 1;
+        getStatusData();
+        setConfig(data.config | 1 << 1);
     }
+
 
     /**
      * set low fault threshold value
      * @param thr threshold
      */
     void setLThr(uint16_t thr) {
-        static uint8_t data[3] = {WRITE | REG_LOW_FAULT_THRESHOLD,
-                    (uint8_t)(thr >> 8), (uint8_t)thr};
-
-        bus->request(new SPIRequest(this, SPIRequest::MOSI, data, nullptr,
-                    3, (void*)NOREQ));
+        bus.push({
+                .dev = this,
+                .data = {WRITE | REG_LOW_FAULT_THRESHOLD, (uint8_t)(thr>>8), (uint8_t)thr},
+                .dir = Request::MOSI,
+                });
     }
 
     /**
@@ -192,15 +183,14 @@ public:
      * @param thr threshold
      */
     void setHThr(uint16_t thr) {
-        static uint8_t data[3] = {WRITE | REG_HIGH_FAULT_THRESHOLD,
-                    (uint8_t)(thr >> 8), (uint8_t)thr};
-
-        bus->request(new SPIRequest(this, SPIRequest::MOSI, data, nullptr,
-                    3, (void*)NOREQ));
+        bus.push({
+                .dev = this,
+                .data = {WRITE | REG_HIGH_FAULT_THRESHOLD, (uint8_t)(thr>>8), (uint8_t)thr},
+                .dir = Request::MOSI,
+                });
     }
 
 private:
-    ///\cond false
     const double Rnom = 1000;
     const double Rref = 0;
     // from MAX31865 datasheet
@@ -214,74 +204,62 @@ private:
     /* const double Z3 = 4 * b / Rnom; */
     /* const double Z4 = 2*b; */
 
-    uint8_t config = 0;
-    double dTempLin = 0;
-    double dTemp = 0;
-    uint8_t iFault = 0;
-    uint16_t hThr = 0;
-    uint16_t lThr = 0;
-
-    uint8_t sensorData[3] = {};
-    uint8_t statusData[2] = {};
-    uint8_t allData[9] = {};
-
-    enum callbackUserData {
-        NOREQ,
-        ALLDATAREQ,
-        TEMPREQ,
-        STATUSREQ,
-        CONFIGREQ
-    };
+    struct sensor {
+        uint8_t config;
+        uint8_t fault;
+        struct threshold {
+            uint16_t high, low;
+        } threshold;
+        int16_t rtd;
+    } data;
 
     void setConfig(uint8_t val) {
-        this->config = val;
-        uint8_t data[2] = {WRITE | REG_CONFIG, config};
-        bus->request(new SPIRequest(
-                this,
-                SPIRequest::MOSI,
-                data,
-                nullptr,
-                2,
-                (void *) CONFIGREQ)
-        );
+        data.config = val;
+        bus.push({
+                .dev = this,
+                .data = {WRITE|REG_CONFIG, data.config},
+                .dir = Request::MOSI,
+                });
     }
 
     void getTempData() {
-        uint8_t tx[3] = {READ | REG_RTD, 0, 0};
-        bus->request(new SPIRequest(
-                this,
-                SPIRequest::BOTH,
-                tx,
-                sensorData,
-                sizeof tx,
-                (void *) TEMPREQ)
-        );
+        bus.push({
+                .dev = this,
+                .data = {READ|REG_RTD, 0, 0},
+                .dir = Request::BOTH,
+                });
     }
 
     void getStatusData() {
-        uint8_t tx[2] = {READ | REG_STATUS, 0};
-        bus->request(new SPIRequest(
-                this,
-                SPIRequest::BOTH,
-                tx,
-                statusData,
-                sizeof tx,
-                (void *) STATUSREQ)
-        );
+        bus.push({
+                .dev = this,
+                .data = {READ|REG_STATUS, 0},
+                .dir = Request::BOTH,
+                });
     }
 
     void getAllData() {
-        allData[0] = READ | REG_CONFIG;
-        bus->request(new SPIRequest(
-                this,
-                SPIRequest::BOTH,
-                allData,
-                allData,
-                9,
-                (void *) ALLDATAREQ)
-        );
+        bus.push({
+                .dev = this,
+                .data = {READ|REG_CONFIG, 0,0,0,0,0,0,0,0},
+                .dir = Request::BOTH,
+                });
     }
-    ///\endcond
+    double lin() {
+        // resistance
+        double Rrtd = (double) (data.rtd >> 1) / (1 << 15) * Rref;
+        // linear: R(t) = R0 (1 + alpha*T)
+        return (Rrtd - Rnom)/(Rnom * alpha);
+    }
+    double nonlin() {
+        // resistance
+        double Rrtd = (double) (data.rtd >> 1) / (1 << 15) * Rref;
+        // quadratic:
+        // from
+        // R(t) = R0 (1 + aT + bT^2)
+        // !! ONLY for temperatures > 0°C !!
+        double dTemp = -a2b - sqrt(a2b*a2b - (Rnom - Rrtd)/(b*Rnom));
+        /* double dTemp = (Z1 + sqrt(Z2 + Z3 * Rrtd)) / Z4; */
+        return dTemp;
+    }
 };
-
-#endif //MAX31865_H
