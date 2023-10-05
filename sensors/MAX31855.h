@@ -2,25 +2,24 @@
  *
  * Copyright (c) 2019 IACE
  */
-#ifndef MAX31855_H
-#define MAX31855_H
+#pragma once
 
 #include <cmath>
 #include <cstdint>
 
 #include "stm/gpio.h"
 #include "stm/spi.h"
+using namespace SPI;
 
 /** Implementation of MAX31855 thermocouple temperature measurement */
-class MAX31855 : ChipSelect {
-    ReqeustQueue<SPIRequest> *bus = nullptr;
-public:
+struct MAX31855 : Device {
     /**
      * Constructor
-     * @param bus SPI request queue
-     * @param cs Digital In/Out pin of chip select line
+     * @param bus SPI bus
+     * @param cs chip select pin
      */
-    MAX31855(RequestQueue<SPIRequest> *bus, DIO cs) : bus(bus), ChipSelect(cs) { }
+    MAX31855(Sink<Request> &bus, DIO cs)
+        : Device(bus, cs, {Mode::M0, FirstBit::MSB}) { }
 
     /**
      * measured sensor temperature
@@ -28,7 +27,8 @@ public:
      * @return temperature in °C, NAN if sensor fault
      */
     double temp() {
-        return sTemp;
+        if (data.FAULT) return NAN;
+        return data.TEMP * 0.25;
     }
 
     /**
@@ -37,44 +37,26 @@ public:
      * @return temperature in °C, NAN if sensor fault
      */
     double internal() {
-        return iTemp;
+        if (data.FAULT) return NAN;
+        return data.INTERNAL * 0.0625;
     }
 
     /**
      * request measurement of sensor data
      */
     void sense() {
-        bus->request(new SPIRequest(
-                this,
-                SPIRequest::MISO,
-                nullptr,
-                buffer,
-                sizeof(buffer),
-                (void*)true)
-        );
+        bus.push({
+            .dev = this,
+            .data = 4,
+            .dir = Request::MISO,
+            });
     }
 
-    ///\cond false
-    /**
-     * callback when data is successfully measured
-     *
-     * copy data from buffer into struct.
-     */
-    void callback(void *cbData) override {
-        flip(buffer, sizeof buffer);
-        sensorData = (struct sensor &)buffer;
-        if (!sensorData.FAULT) {
-            sTemp = sensorData.TEMP * 0.25;
-            iTemp =  sensorData.INTERNAL * 0.0625;
-        } else {
-            sTemp = NAN;
-            iTemp = NAN;
-        }
+    void callback(const Request rq) override {
+        int32_t raw = rq.data.buf[0]<<24 | rq.data.buf[1]<<16 | rq.data.buf[2]<<8 | rq.data.buf[3];
+        data = *(sensor *)&raw;
     }
-    ///\endcond
 
-private:
-    ///\cond false
     struct sensor {
         uint8_t OC:1;                               ///< \b error: open circuit
         uint8_t SCG:1;                              ///< \b error: short to GND
@@ -84,11 +66,5 @@ private:
         uint8_t FAULT:1;                            ///< \b error: fault in thermocouple reading
         uint8_t :1;
         int16_t TEMP:14;                           ///< thermocouple measured temperature in 0.25°C steps
-    } sensorData = {};                              ///< sensor data struct. lsb to msb order.
-    uint8_t buffer[4] = {};
-    double sTemp = 0;
-    double iTemp = 0;
-    ///\endcond
+    } data = {};                              ///< sensor data struct. lsb to msb order.
 };
-
-#endif //MAX31855_H
