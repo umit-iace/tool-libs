@@ -18,6 +18,7 @@ struct SeriesUnpacker {
     Buffer<T> *unpack(Frame &f) {
         if (start) {
             buf = f.unpack<uint32_t>();
+            if (buf.size == 0) return nullptr;
         }
         for (unsigned int i = 0; i < LEN - start; i++) {
             buf.append(f.unpack<T>());
