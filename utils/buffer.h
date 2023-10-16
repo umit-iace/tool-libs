@@ -32,6 +32,11 @@ struct Buffer {
         assert(ix < size);
         return buf[ix];
     }
+    /** access into known size of buffer */
+    T& operator[](size_t ix) const {
+        assert(ix < size);
+        return buf[ix];
+    }
     /** simple append single item */
     Buffer& append(T b) {
         assert(len < size);
