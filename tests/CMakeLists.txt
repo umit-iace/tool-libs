@@ -31,3 +31,11 @@ add_custom_target(tool-libs-tests-run
     DEPENDS tool-libs-tests
     COMMAND valgrind -s --leak-check=full "${CMAKE_CURRENT_BINARY_DIR}/tool-libs-tests"
     )
+
+add_executable(bitstream bitstream.cpp)
+target_link_libraries(bitstream PUBLIC tool-libs doctest::doctest)
+add_custom_target(bitstream-test
+    DEPENDS bitstream
+    COMMAND ./bitstream
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
