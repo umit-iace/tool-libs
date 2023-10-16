@@ -2,20 +2,23 @@
  *
  * Copyright (c) 2019 IACE
  */
-#ifndef AS5145_H
-#define AS5145_H
+#pragma once
 
 #include "stm/spi.h"
+#include "utils/bitstream.h"
+using namespace SPI;
 
 /**
  * Class describing a chain of AS5145 Hall sensors
  */
-class AS5145 : ChipSelect {
-private:
-    ///\cond false
-    RequestQueue<SPIRequest> *bus;
+template<int chainlength>
+struct AS5145 : Device {
+    static constexpr uint8_t BITS = 19; // number of bits in sensor data struct
+    static constexpr uint8_t TOTALBITS = BITS*chainlength; // number of bits in sensor data struct
+    // total bytes required for chain
+    static constexpr uint8_t BYTES = (TOTALBITS+7) / 8;
     // sensor data struct. lsb to msb order.
-    struct __packed SensorData {
+    struct sensor {
         uint8_t EVEN:1;
         uint8_t DEC:1;
         uint8_t INC:1;
@@ -24,60 +27,48 @@ private:
         uint8_t OCF:1;
         int16_t POS:12;
         uint8_t :1;
-    } *sensor = nullptr;
-    const unsigned short NUMBITS = 19;  // number of bits in sensor data struct
-    uint8_t *buffer = nullptr;          // temporary data buffer
-    const unsigned int BUFLEN;          // needed length of buffer to store data from all sensors
-    int num = 0;                        // number of sensors attached to daisy-chain
-    ///\endcond
+    } chain[chainlength];
 
-public:
     /**
      * Constructor
      * @param bus SPI bus
      * @param cs ChipSelect pin
-     * @param n number of sensors attached to daisy-chain
      */
-    AS5145(RequestQueue<SPIRequest> *bus, DIO cs, int n) : ChipSelect(cs),
-            bus(bus),
-            BUFLEN((n * NUMBITS) / 8UL + (n * NUMBITS % 8 ? 1 : 0)) // calculate bytes needed for n sensors
-            {
-        buffer = new uint8_t[BUFLEN]();
-        sensor = new SensorData[n]();
-        num = n;
-    }
+    AS5145(Sink<Request> &bus, DIO cs)
+            : Device(bus, cs, {Mode::M2, FirstBit::MSB}) { }
 
     /**
      * @param i index of sensor in chain
      * @return measured sensor angle
      */
     int16_t getVal(int i = 0) {
-        return sensor[i].POS;
+        return chain[i].POS;
     }
 
     /**
      * request measurement of sensor data
      */
     void sense() {
-        bus->request(new SPIRequest{
-                this,
-                SPIRequest::MISO,
-                nullptr,
-                buffer,
-                BUFLEN,
-                (void *)true}
-        );
+        bus.push({
+            .dev = this,
+            .data = BYTES,
+            .dir = Request::MISO,
+            });
     }
 
-    ///\cond false
-    /**
+    /*
      * callback when data is successfully measured
      *
      * copy data from buffer into struct.
      */
-    void callback(void *cbData) override {
-        bitwisecopy((uint8_t *)sensor, buffer, NUMBITS, num);
+    void callback(const Request rq) override {
+        BitStream bs{rq.data.buf};
+        for (int i = 0, n=0; i < chainlength; ++i, n+=BITS) {
+            chain[i].COF = bs.range<decltype(sensor::COF)>(n + 14, n + 15);
+            if (chain[i].COF) { // out of range error
+                continue;
+            }
+            chain[i].POS = bs.range<decltype(sensor::POS)>(n + 1, n + 13);
+        }
     }
-    ///\endcond
 };
-#endif //AS5145_H
