@@ -7,7 +7,7 @@ namespace debug {
 namespace i2c {
 }}
 using namespace I2C;
-Deadline until(size_t datasize) {
+static Deadline until(size_t datasize) {
     constexpr uint32_t cpms = 100000 / 1000; // fixed at 100kHz, noone is going slower
     uint32_t ret = (datasize+1)*9/cpms;
     return {ret?ret:2}; // allow minimum of 2ms
