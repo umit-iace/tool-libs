@@ -101,7 +101,7 @@ public:
     ADS1115(Sink<I2C::Request> &bus,
             uint8_t address = 0b1001000, enum range fs = FS6144,
             enum dataRate dr = SPS64, enum mux mx = AIN0):
-                I2CDevice(bus, address), eFullScale(fs),
+                I2C::Device(bus, address), eFullScale(fs),
                 eDataRate(dr), eMux(mx) {
         updateConfig();
     }
@@ -165,7 +165,7 @@ private:
     void write(uint8_t reg, uint16_t val) {
         bus.push({
             .dev = this,
-            .data = {reg, val>>8, val},
+            .data = {reg, (uint8_t)(val>>8), (uint8_t)val},
             });
     }
 };
