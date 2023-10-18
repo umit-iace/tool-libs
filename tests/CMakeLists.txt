@@ -20,7 +20,6 @@ add_executable(tool-libs-tests main.cpp
     min.cpp
     movingaverage.cpp
     Queue.cpp
-    requestqueue.cpp
     TFR.cpp
     )
 target_compile_features(tool-libs-tests PRIVATE cxx_std_17)
