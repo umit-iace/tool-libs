@@ -5,8 +5,10 @@
 #include "spi.h"
 
 using namespace SPI;
-static Deadline until(size_t datasize) {
+namespace SPI {
+Deadline until(size_t datasize) {
     return {};
+}
 }
 
 void switchmode(HW *spi, Device::Conf newconf) {
