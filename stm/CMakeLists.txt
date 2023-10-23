@@ -23,3 +23,9 @@ target_sources(tool-libs-stm-uart INTERFACE uart.cpp)
 target_link_libraries(tool-libs-stm-uart INTERFACE tool-libs-stm)
 target_compile_definitions(tool-libs-stm-uart INTERFACE
     HAL_UART_MODULE_ENABLED USE_HAL_UART_REGISTER_CALLBACKS=1)
+
+add_library(tool-libs-stm-can INTERFACE)
+target_sources(tool-libs-stm-can INTERFACE can.cpp)
+target_link_libraries(tool-libs-stm-can INTERFACE tool-libs-stm)
+target_compile_definitions(tool-libs-stm-can INTERFACE
+    HAL_CAN_MODULE_ENABLED USE_HAL_CAN_REGISTER_CALLBACKS=1)
