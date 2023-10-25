@@ -27,7 +27,7 @@ struct Device {
     Sink<Request> &out;
 
     struct State {
-        Queue<Request> q{};
+        Queue<Request> q{60};
         bool waiting{};
     } state;
     /** implement the callback method to handle incoming data */
