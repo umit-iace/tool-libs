@@ -61,6 +61,7 @@ struct impl {
         act.sa_handler = sighandler;
         sigfillset(&act.sa_mask);
         sigaction(SIGINT, &act, NULL);
+        sigaction(SIGSEGV, &act, NULL);
     }
     ~impl() {
         if (c_pid) {
