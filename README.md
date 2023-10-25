@@ -42,19 +42,17 @@ Some other utilities are provided by this collection:
  - Deadline - simple solution for keeping track of timeouts
  - Later - a poor man's additions and subtractions upon access instead of upon
  definition
- 
-# Comm
+
+# Communication
 Providing a bunch of helpers for communication with pyWisp, but also for
 character streams.
  - Min - main implementation of packing & unpacking data for transfer to / from
  pyWisp
- - ODrive - main implementation of communication between ODrive High performance 
- motor control to / from  microcontroller
  - FrameRegistry - the place where consumers of Frames can sign up for their
  respective IDs
  - SeriesUnpacker - unpack a series of data sent from pyWisp
  - bufferutils.h & line.h - helpers for manipulating character streams
- 
+
 # Control
 Helpers for common problems found in control engineering. Currently only
 provides a MovingAverage filter and a simple LinearTrajectory generator, but has
@@ -62,7 +60,7 @@ aspirations to grow into a more full-fledged toolbox providing implementations
 for PID-, and State feedback controllers, Kalman filter, more sofisticated
 trajectories, etc.
 
-# Sensors
+# Device Drivers
 Drivers for the following sensors are implemented:
  - ADS1115 - external analog to digital voltage converter
  - AS5048B - 14-bit rotary position sensor with digital angle
@@ -73,7 +71,10 @@ Drivers for the following sensors are implemented:
  - MAX31865 - temperature measurement using temperature dependent resistors like
  the PT100
  - QMC5883L - multi-chip three-axis magnetic sensor
- 
+Additionally supported devices include:
+ - ODrive - main implementation of communication between ODrive High performance
+ motor control to / from  microcontroller
+
 # STM
 An implementation for the Kernel backend that makes integration with
 microcontrollers a breeze.
