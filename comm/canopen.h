@@ -177,7 +177,8 @@ struct Dispatch : Sink<Request> {
         return {
             .data = rq.cmd | rq.ix << 8 | rq.sub << 24 | (uint64_t)rq.data << 32,
             .id = id,
-            .opts = { .rtr = 0, .ide = 0, .dlc = (uint8_t)(len + 4)},
+            /* .opts = { .rtr = 0, .ide = 0, .dlc = (uint8_t)(len + 4)}, */
+            .opts = { .rtr = 0, .ide = 0, .dlc = 8},
         };
     }
 
