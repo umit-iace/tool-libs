@@ -1,7 +1,25 @@
+
 add_library(tool-libs-stm INTERFACE)
-target_sources(tool-libs-stm INTERFACE
-    hal.cpp
-    i2c.cpp
-    spi.cpp
-    uart.cpp
-)
+target_sources(tool-libs-stm INTERFACE hal.cpp)
+target_link_libraries(tool-libs-stm INTERFACE tool-libs)
+target_compile_definitions(tool-libs-stm INTERFACE
+    HAL_TIM_MODULE_ENABLED USE_HAL_TIM_REGISTER_CALLBACKS=1
+    )
+
+add_library(tool-libs-stm-i2c INTERFACE)
+target_sources(tool-libs-stm-i2c INTERFACE i2c.cpp)
+target_link_libraries(tool-libs-stm-i2c INTERFACE tool-libs-stm)
+target_compile_definitions(tool-libs-stm-i2c INTERFACE
+    HAL_I2C_MODULE_ENABLED USE_HAL_I2C_REGISTER_CALLBACKS=1)
+
+add_library(tool-libs-stm-spi INTERFACE)
+target_sources(tool-libs-stm-spi INTERFACE spi.cpp)
+target_link_libraries(tool-libs-stm-spi INTERFACE tool-libs-stm)
+target_compile_definitions(tool-libs-stm-spi INTERFACE
+    HAL_SPI_MODULE_ENABLED USE_HAL_SPI_REGISTER_CALLBACKS=1)
+
+add_library(tool-libs-stm-uart INTERFACE)
+target_sources(tool-libs-stm-uart INTERFACE uart.cpp)
+target_link_libraries(tool-libs-stm-uart INTERFACE tool-libs-stm)
+target_compile_definitions(tool-libs-stm-uart INTERFACE
+    HAL_UART_MODULE_ENABLED USE_HAL_UART_REGISTER_CALLBACKS=1)
