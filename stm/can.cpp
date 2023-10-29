@@ -94,6 +94,13 @@ HW::HW(const Config &c) {
     /* CLEAR_BIT(c.can->MCR, 1 << 16); // freeze CAN during debug */
     while (HAL_CAN_Init(&handle) != HAL_OK);
 
+    /* accept _all_ received messages i.e. activate empty filters */
+    CAN_FilterTypeDef FilterConfig = {
+        .FilterActivation = true,
+    };
+    while (HAL_CAN_ConfigFilter(&handle, &FilterConfig) != HAL_OK) ;
+
+
     HAL_CAN_RegisterCallback(&handle, HAL_CAN_TX_MAILBOX0_COMPLETE_CB_ID, _tx_complete<0>);
     HAL_CAN_RegisterCallback(&handle, HAL_CAN_TX_MAILBOX1_COMPLETE_CB_ID, _tx_complete<1>);
     HAL_CAN_RegisterCallback(&handle, HAL_CAN_TX_MAILBOX2_COMPLETE_CB_ID, _tx_complete<2>);
