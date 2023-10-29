@@ -1,6 +1,6 @@
 /** @file mcDSA-B60.h
  *
- * Copyright (c) 2019 IACE
+ * Copyright (c) 2023 IACE
  */
 #pragma once
 
@@ -8,25 +8,19 @@
 #include <comm/canopen.h>
 
 /**
- * Represents the side of motor driver
- */
-enum MotorSide {
-    MotorSideLeft = 0,          ///< left side
-    MotorSideRight = 1          ///< right side
-};
-
-
-/**
- * @brief General description of a motor driver
+ * @brief Driver for the mcDSA-B60 CANOpen Motor driver
  */
 struct mcDSA : CAN::Open::Device {
-    mcDSA(Sink<CAN::Open::Request> &out, uint8_t id, bool invert) : CAN::Open::Device(out, id) {
-        init(invert);
-        Device::enable(RPDO{
+    CAN::Open::RPDO speedPDO = {
             .N = 1,
-            .type = RPDO::CHANGE,
+            .type = CAN::Open::RPDO::CHANGE,
             .map = {{.ix = 0x3300, .sub = 0, .len = 32}},
-            });
+            };
+    mcDSA(CAN::Open::Dispatch &out, uint8_t id, bool invert) : CAN::Open::Device(out, id) {
+        enable(false);
+        init(invert);
+        enablepdo(speedPDO);
+        enable(true);
     }
 
     /** Enable or Disable the motor driver */
@@ -39,10 +33,13 @@ struct mcDSA : CAN::Open::Device {
      * Capped at +- 1m/s
      */
     void speed(double speed) {
-        speed = fmin(1, fmax(-1, speed));
+        /* speed = fmin(1, fmax(-1, speed)); */
         /* int iSpeed = (int) (6000 / M_PI / CAR_WHEEL_DIAMETER * dSpeed); // calculates from m/s to (U/100) / min */
-        int iSpeed;
-        w32(0x3300, 0, iSpeed);
+        /* int iSpeed; */
+        wpdo(speedPDO, speed);
+    }
+    void speed() {
+        read(0x3361, 0);//, &this->tData.tSpeedDes);
     }
 
     /**
@@ -85,24 +82,11 @@ struct mcDSA : CAN::Open::Device {
         /* return ((int) this->tData.tCurrent.u32); */
     }
 
-    /**
-     * Set the maximum Acceleration
-     * TODO
-     * @param dAccel in m/s^2
-     */
-    void setMaxAccel(double dAccel) {
+    void callback(CAN::Open::SDO rq) {
 
     }
-
-    /**
-     * Set the maximum Deceleration
-     * TODO
-     * @param dDecel in m/s^2
-     */
-    void setMaxDecel(double dDecel) {
-
+    void callback(CAN::Open::TPDO rq) {
     }
-    void callback(Request rq) {}
 
     //TODO: this needs to happen on a higher level: heartbeat
     //   out.push({.data = 0x5, .id = 0x701, .opts = {.dlc = 1}}); // send heartbeat
@@ -118,7 +102,6 @@ struct mcDSA : CAN::Open::Device {
     /*     canData tError;     ///< current motor error state */
     /* } tData;                ///< instance of motor driver data */
     void init(bool invert) {
-		w8(0x3004, 0, 0); // lock motor driver
 		w8(0x3000, 0, 1); // clear errors
 		//w32(0x3000, 0, 0x82); // reset to defaults
 
@@ -175,6 +158,5 @@ struct mcDSA : CAN::Open::Device {
 		w8(0x1029, 1, 0); // reaction to error
         // motor controller startup settings
 		w8(0x3003, 0, 3); // motor driver mode
-		w8(0x3004, 0, 1); // release motor driver
     }
 };
