@@ -6,13 +6,10 @@
 
 #include "stm/spi.h"
 #include "utils/bitstream.h"
-using namespace SPI;
 
-/**
- * Class describing a chain of AS5145 Hall sensors
- */
+/** Class describing a chain of AS5145 Hall sensors */
 template<int chainlength>
-struct AS5145 : Device {
+struct AS5145 : SPI::Device {
     static constexpr uint8_t BITS = 19; // number of bits in sensor data struct
     static constexpr uint8_t TOTALBITS = BITS*chainlength; // number of bits in sensor data struct
     // total bytes required for chain
@@ -34,8 +31,8 @@ struct AS5145 : Device {
      * @param bus SPI bus
      * @param cs ChipSelect pin
      */
-    AS5145(Sink<Request> &bus, DIO cs)
-            : Device(bus, cs, {Mode::M2, FirstBit::MSB}) { }
+    AS5145(Sink<SPI::Request> &bus, DIO cs)
+            : SPI::Device(bus, cs, {SPI::Mode::M2, SPI::FirstBit::MSB}) { }
 
     /**
      * @param i index of sensor in chain
@@ -52,7 +49,7 @@ struct AS5145 : Device {
         bus.push({
             .dev = this,
             .data = BYTES,
-            .dir = Request::MISO,
+            .dir = SPI::Request::MISO,
             });
     }
 
@@ -61,7 +58,7 @@ struct AS5145 : Device {
      *
      * copy data from buffer into struct.
      */
-    void callback(const Request rq) override {
+    void callback(const SPI::Request rq) override {
         BitStream bs{rq.data.buf};
         for (int i = 0, n=0; i < chainlength; ++i, n+=BITS) {
             chain[i].COF = bs.range<decltype(sensor::COF)>(n + 14, n + 15);

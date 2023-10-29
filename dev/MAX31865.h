@@ -7,9 +7,7 @@
 #include <cmath>
 #include <cstdint>
 
-#include "stm/hal.h"
 #include "stm/spi.h"
-using namespace SPI;
 
 /**
  * Implementation of MAX31865 based temperature sensor.
@@ -25,7 +23,7 @@ using namespace SPI;
  * https://analog.com/media/en/technical-documentation/application-notes/AN709_0.pdf
  * for details
  */
-struct MAX31865 : Device {
+struct MAX31865 : SPI::Device {
     /// Sensor Type
     enum Type {
         PT2WIRE = 0, ///< 2 wire
@@ -62,14 +60,14 @@ struct MAX31865 : Device {
      *
      * configures sensor for auto conversion with 50Hz filter
      */
-    MAX31865(Sink<Request> &bus,
+    MAX31865(Sink<SPI::Request> &bus,
             DIO cs,
             Config c = {
                 .wires = PT2WIRE,
                 .Rnom = 100,
                 .Rref = 430,
                 })
-            : Device(bus, cs, {Mode::M3, FirstBit::MSB}), Rnom(c.Rnom), Rref(c.Rref) {
+            : SPI::Device(bus, cs, {SPI::Mode::M3, SPI::FirstBit::MSB}), Rnom(c.Rnom), Rref(c.Rref) {
         setConfig(1 << 7 | // bias
                     1 << 6 | // auto conversion
                     c.wires << 4 |
@@ -130,8 +128,8 @@ struct MAX31865 : Device {
     /*
      * callback when async read is finished
      */
-    void callback(const Request rq) override {
-        if (rq.dir == Request::MOSI) return;
+    void callback(const SPI::Request rq) override {
+        if (rq.dir == SPI::Request::MOSI) return;
         const uint8_t *raw = rq.data.buf;
         switch (rq.data.len) {
         case 2: // STATUS
@@ -174,7 +172,7 @@ struct MAX31865 : Device {
         bus.push({
                 .dev = this,
                 .data = {WRITE | REG_LOW_FAULT_THRESHOLD, (uint8_t)(thr>>8), (uint8_t)thr},
-                .dir = Request::MOSI,
+                .dir = SPI::Request::MOSI,
                 });
     }
 
@@ -186,7 +184,7 @@ struct MAX31865 : Device {
         bus.push({
                 .dev = this,
                 .data = {WRITE | REG_HIGH_FAULT_THRESHOLD, (uint8_t)(thr>>8), (uint8_t)thr},
-                .dir = Request::MOSI,
+                .dir = SPI::Request::MOSI,
                 });
     }
 
@@ -218,7 +216,7 @@ private:
         bus.push({
                 .dev = this,
                 .data = {WRITE|REG_CONFIG, data.config},
-                .dir = Request::MOSI,
+                .dir = SPI::Request::MOSI,
                 });
     }
 
@@ -226,7 +224,7 @@ private:
         bus.push({
                 .dev = this,
                 .data = {READ|REG_RTD, 0, 0},
-                .dir = Request::BOTH,
+                .dir = SPI::Request::BOTH,
                 });
     }
 
@@ -234,7 +232,7 @@ private:
         bus.push({
                 .dev = this,
                 .data = {READ|REG_STATUS, 0},
-                .dir = Request::BOTH,
+                .dir = SPI::Request::BOTH,
                 });
     }
 
@@ -242,7 +240,7 @@ private:
         bus.push({
                 .dev = this,
                 .data = {READ|REG_CONFIG, 0,0,0,0,0,0,0,0},
-                .dir = Request::BOTH,
+                .dir = SPI::Request::BOTH,
                 });
     }
     double lin() {

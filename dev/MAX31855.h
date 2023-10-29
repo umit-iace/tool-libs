@@ -7,19 +7,17 @@
 #include <cmath>
 #include <cstdint>
 
-#include "stm/gpio.h"
 #include "stm/spi.h"
-using namespace SPI;
 
 /** Implementation of MAX31855 thermocouple temperature measurement */
-struct MAX31855 : Device {
+struct MAX31855 : SPI::Device {
     /**
      * Constructor
      * @param bus SPI bus
      * @param cs chip select pin
      */
-    MAX31855(Sink<Request> &bus, DIO cs)
-        : Device(bus, cs, {Mode::M0, FirstBit::MSB}) { }
+    MAX31855(Sink<SPI::Request> &bus, DIO cs)
+        : SPI::Device(bus, cs, {SPI::Mode::M0, SPI::FirstBit::MSB}) { }
 
     /**
      * measured sensor temperature
@@ -48,11 +46,11 @@ struct MAX31855 : Device {
         bus.push({
             .dev = this,
             .data = 4,
-            .dir = Request::MISO,
+            .dir = SPI::Request::MISO,
             });
     }
 
-    void callback(const Request rq) override {
+    void callback(const SPI::Request rq) override {
         int32_t raw = rq.data.buf[0]<<24 | rq.data.buf[1]<<16 | rq.data.buf[2]<<8 | rq.data.buf[3];
         data = *(sensor *)&raw;
     }
