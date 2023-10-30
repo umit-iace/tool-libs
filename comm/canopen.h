@@ -43,7 +43,7 @@ struct SDO {
 struct RPDO {
     uint8_t N;
     enum : uint8_t {SYNC, CHANGE=255} type;
-    uint32_t COB {};
+    uint32_t COB {}; // CAN OBject ID
     struct MAP {
         uint16_t ix;
         uint8_t sub;
@@ -56,7 +56,10 @@ struct RPDO {
 };
 /** CANOpen Transmit Process Data Object Type */
 struct TPDO {
-    uint32_t COB;
+    uint8_t N;
+    enum : uint8_t {SYNC, CHANGE=255} type;
+    uint32_t COB; // CAN OBject ID
+    uint64_t data;
     static TPDO fromCanMsg(Message msg) {
         return {.COB = msg.id};
     }
@@ -69,6 +72,7 @@ struct TPDO {
  * call this class' `process` directly after the CAN irqHandler
  *
  * cf. https://www.microcontrol.net/wp-content/uploads/2021/10/td-03011e.pdf
+ * cf. https://www.can-cia.org/fileadmin/resources/documents/brochures/co_poster.pdf
  */
 struct Dispatch : Sink<SDO>, Sink<Message> {
     Dispatch(CAN &can) : can(can) { }
@@ -79,7 +83,7 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
     Sink<SDO> *ids[128] {};
     struct PDO {
         Sink<TPDO> *dev[8] {};
-        uint16_t cobs[8] {};
+        TPDO *pdo[8] {};
         uint8_t n {};
     } pdo;
 
@@ -96,46 +100,47 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
         assert(ids[nodeID] == nullptr);
         ids[nodeID] = dev;
     }
-    void registerpdo(uint16_t COB, Sink<TPDO> *dev) {
+    void registerpdo(TPDO *tpdo, Sink<TPDO> *dev) {
         assert ( pdo.n < 8 );
         pdo.dev[pdo.n] = dev;
-        pdo.cobs[pdo.n] = COB;
+        pdo.pdo[pdo.n] = tpdo;
         pdo.n += 1;
     }
 
-    Sink<TPDO> *isPDO(uint32_t cob) {
+    bool handlePDO(Message msg) {
         for (int i = 0; i < pdo.n; ++i) {
-            if (pdo.cobs[i] == cob) return pdo.dev[i];
+            auto tpdo = pdo.pdo[i];
+            if (tpdo->COB == msg.id) {
+                tpdo->data = msg.data;
+                pdo.dev[i]->push(*tpdo);
+                return true;
+            }
         }
-        return nullptr;
+        return false;
     }
-    Sink<SDO> *isSDO(uint32_t cob) {
-        uint16_t service = cob & ~0x7f;
-        uint8_t id = cob & 0x7f;
-        if (id == 0) return nullptr;
-        if (service == 0x80 ||
-            service == 0x580 ||
-            service == 0x600 ||
-            service == 0x700) {
-            return ids[id];
+    bool handleSDO(Message msg) {
+        uint16_t service = msg.id & ~0x7f;
+        uint8_t id = msg.id & 0x7f;
+        if (id == 0) return false;
+        if (service == 0x80 ||  // SYNC
+            service == 0x580 || // SDO server-to-client
+            service == 0x600 || // SDO client-to-server
+            service == 0x700 || // NMT control
+            false) {
+            if (ids[id]) {
+                ids[id]->push(SDO::fromCanMsg(msg));
+            }
+            return true;
         }
-        return nullptr;
+        return false;
     }
 
     void process() {
         // TODO: what to do to CAN messages that _aren't_ CanOpen
         while (!can.empty()) {
             auto msg = can.pop();
-            auto pdo = isPDO(msg.id);
-            if (pdo != nullptr) {
-                pdo->push(TPDO::fromCanMsg(msg));
-                continue;
-            }
-            auto sdo = isSDO(msg.id);
-            if (sdo != nullptr) {
-                sdo->push(SDO::fromCanMsg(msg));
-                continue;
-            }
+            if (handlePDO(msg)) continue;
+            if (handleSDO(msg)) continue;
 #if defined(DEBUG)
             // don't know what to do with received message!
             log.warn("COdispatch: [id: %d] [x%2x x%2x x%2x x%2x x%2x x%2x x%2x x%2x]\n",
@@ -222,7 +227,7 @@ struct Device : Sink<TPDO>, Sink<SDO> {
     /** enable sending PDO on device */
     void enablepdo(TPDO &pdo) {
         //TODO: enable sending on device
-        out.registerpdo(pdo.COB, this);
+        out.registerpdo(&pdo, this);
     };
     void disablepdo(TPDO &pdo) {
     };
