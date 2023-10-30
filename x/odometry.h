@@ -5,16 +5,18 @@ namespace Odometry {
 
 template<typename FLOAT>
 struct State {
-    FLOAT x, y, theta;
+    FLOAT x, y, t;
+    State operator+(State s) { return { x+s.x, y+s.y, t+s.t };}
+    State operator-(State s) { return { x-s.x, y-s.y, t-s.t };}
 };
 
 template<typename FLOAT>
 struct Euler {
     State<FLOAT> s;
     State<FLOAT> step(FLOAT v, FLOAT w, FLOAT dt) {
-        s.x += dt * v * std::cos(s.theta);
-        s.y += dt * v * std::sin(s.theta);
-        s.theta += dt * w;
+        s.x += dt * v * std::cos(s.t);
+        s.y += dt * v * std::sin(s.t);
+        s.t+= dt * w;
         return s;
     }
     void reset(FLOAT x, FLOAT y, FLOAT theta) {
@@ -27,9 +29,9 @@ struct RungeKutta {
     State<FLOAT> s;
     State<FLOAT> step(FLOAT v, FLOAT w, FLOAT dt) {
         FLOAT Dth = dt * w;
-        s.x += dt * v * std::cos(s.theta + Dth/2);
-        s.y += dt * v * std::sin(s.theta + Dth/2);
-        s.theta += Dth;
+        s.x += dt * v * std::cos(s.t + Dth/2);
+        s.y += dt * v * std::sin(s.t + Dth/2);
+        s.t += Dth;
         return s;
     }
     void reset(FLOAT x, FLOAT y, FLOAT theta) {
@@ -46,9 +48,9 @@ struct Exact {
             s.x += dt * v;
             s.y += dt * v;
         } else {
-            s.theta += w * dt;
-            FLOAT sk1 = std::sin(s.theta);
-            FLOAT ck1 = std::cos(s.theta);
+            s.t += w * dt;
+            FLOAT sk1 = std::sin(s.t);
+            FLOAT ck1 = std::cos(s.t);
             s.x += v / w * (sk1 - sk);
             s.y -= v / w * (ck1 - ck);
             ck = ck1;
