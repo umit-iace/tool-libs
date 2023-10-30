@@ -22,6 +22,10 @@ struct mcDSA : CAN::Open::Device {
         enablepdo(speedPDO);
         enable(true);
     }
+    struct Measurements {
+        double speed, speedDes, current, position;
+        uint32_t error;
+    } meas;
 
     /** Enable or Disable the motor driver */
     void enable(bool en) {
@@ -38,8 +42,8 @@ struct mcDSA : CAN::Open::Device {
         /* int iSpeed; */
         wpdo(speedPDO, speed);
     }
-    void speed() {
-        read(0x3361, 0);//, &this->tData.tSpeedDes);
+    double speed() {
+        return meas.speed;
     }
 
     /**
@@ -83,7 +87,13 @@ struct mcDSA : CAN::Open::Device {
     }
 
     void callback(CAN::Open::SDO rq) {
-
+        switch(rq.ix) {
+        case 0x3a04: assert(rq.sub == 1); meas.speed = rq.data; break;
+        case 0x3361: assert(rq.sub == 0); meas.speedDes = rq.data; break;
+        case 0x3262: assert(rq.sub == 1); meas.current = rq.data; break;
+        case 0x394a: assert(rq.sub == 0); meas.position = rq.data; break;
+        case 0x3001: assert(rq.sub == 0); meas.error = rq.data; break;
+        }
     }
     void callback(CAN::Open::TPDO rq) {
     }
