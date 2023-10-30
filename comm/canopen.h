@@ -157,6 +157,17 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
 #endif
         }
     }
+    enum NMT : uint8_t {
+        OPERATIONAL = 1,
+        PREPARED = 2,
+        PREOP = 0x80,
+        RESET = 0x81,
+        RESET_COMM = 0x82,
+    };
+    void nmt(NMT command, uint8_t nodeid) {
+        can.push({.data = (uint64_t)(nodeid & 0x7f) << 8 | command,
+                .id = 0, .opts = {.dlc = 2}});
+    }
 };
 
 /** CANOpen device wrapper class
