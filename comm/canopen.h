@@ -16,16 +16,9 @@ struct SDO {
     uint8_t nodeID; ///< node ID of device
 
     Message toCanMsg() {
-        uint32_t id{};
-        uint8_t len{};
-        switch (cmd>>4 & 0xf) {
-        case 0x2: id = nodeID + 0x600; len = 8; break;
-        /* case 0x4: id = nodeID + 0x580; len = 4; break; */
-        case 0x4: id = nodeID + 0x600; len = 8; break;
-        }
         return {
             .data = cmd | ix << 8 | sub << 24 | (uint64_t)data << 32,
-            .id = id,
+            .id = (uint32_t)0x600 + nodeID,
             .opts = { .rtr = 0, .ide = 0, .dlc = 8},
         };
     }
