@@ -80,10 +80,10 @@ void _error(I2C_HandleTypeDef *handle) {
     __HAL_I2C_DISABLE(handle);
     __HAL_I2C_ENABLE(handle);
     if (i2c->handle.Init.OwnAddress1) HAL_I2C_EnableListen_IT(handle);
-    i2c->poll();
+    i2c->poll(uwTick, 0);
 }
-void HW::poll() {
-    if (active && deadline(uwTick)) return _error(&handle);
+void HW::poll(uint32_t now, uint32_t dt) {
+    if (active && deadline(now)) return _error(&handle);
     if (!active && !q.empty()) return _startMaster(this);
 }
 
@@ -106,7 +106,7 @@ void _complete(I2C_HandleTypeDef *handle) {
     i2c->active = i2c->NONE;
     i2c->deadline = Deadline{};
     if (i2c->handle.Init.OwnAddress1) HAL_I2C_EnableListen_IT(&i2c->handle);
-    i2c->poll();
+    i2c->poll(uwTick, 0);
 }
 
 void HW::push(Request &&rq) {
