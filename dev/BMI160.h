@@ -21,10 +21,6 @@ struct BMI160 : I2C::Device {
             : I2C::Device(bus, addr) {
         writeReg(0x7e, 0x11);   // enable accelerometer
         writeReg(0x7e, 0x15);   // enable gyroscope
-        bus.push({
-            .dev = this,
-            .data = {0xc}, // set read pointer to gyro data
-            });
     }
 
     /**
@@ -36,7 +32,9 @@ struct BMI160 : I2C::Device {
             .data = 12,
             .opts = {
                 .read = true,
+                .mem = true,
                 },
+            .mem = 0xc,
             });
     }
 
