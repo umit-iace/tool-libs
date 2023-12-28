@@ -2,6 +2,7 @@
 #include "can.h"
 
 namespace CAN {
+/** cf. https://www.can-cia.org/fileadmin/resources/documents/brochures/co_poster.pdf */
 namespace Open {
 /** CANOpen Service Data Object xfer request
  *
@@ -180,9 +181,9 @@ struct Device : Sink<TPDO>, Sink<SDO> {
         bool waiting{};
     } state;
     /** implement the callback method to handle incoming data */
-    virtual void callback(SDO rq) = 0;
+    virtual void callback(SDO rq) { assert(false); };
     /** implement the callback method to handle incoming data */
-    virtual void callback(TPDO rq) = 0;
+    virtual void callback(TPDO rq) { assert(false); };
     void process() {
         if (state.waiting || state.q.empty()) return;
         out.push(state.q.pop());
