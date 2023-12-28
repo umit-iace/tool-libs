@@ -101,16 +101,6 @@ struct mcDSA : CAN::Open::Device {
     //TODO: this needs to happen on a higher level: heartbeat
     //   out.push({.data = 0x5, .id = 0x701, .opts = {.dlc = 1}}); // send heartbeat
 
-    /**
-     * Struct containing the data collected from motor driver
-     */
-    /* struct _data{ */
-    /*     canData tSpeed;     ///< current measured speed */
-    /*     canData tSpeedDes;  ///< current desired speed */
-    /*     canData tCurrent;   ///< current measured motor current */
-    /*     canData tPosition;  ///< current measured motor position */
-    /*     canData tError;     ///< current motor error state */
-    /* } tData;                ///< instance of motor driver data */
     void init(bool invert) {
 		w8(0x3000, 0, 1); // clear errors
 		//w32(0x3000, 0, 0x82); // reset to defaults
