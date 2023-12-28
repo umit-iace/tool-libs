@@ -45,8 +45,9 @@ struct Exact {
     FLOAT sk{0}, ck{1};
     State<FLOAT> step(FLOAT v, FLOAT w, FLOAT dt) {
         if (std::abs(w) < 0.001) {
-            s.x += dt * v;
-            s.y += dt * v;
+            // l'Hopital
+            s.x += dt * v * ck;
+            s.y += dt * v * sk;
         } else {
             s.t += w * dt;
             FLOAT sk1 = std::sin(s.t);
