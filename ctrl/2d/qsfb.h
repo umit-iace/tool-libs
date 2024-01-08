@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cmath>
+#include <utils/later.h>
 #include "types.h"
 
 namespace Ctrl2D {
@@ -36,7 +37,7 @@ struct QSFB {
     }
 
     Input step(const double ds, const Invariant ref, const Loc l) {
-        double delta = l.theta - ref.theta[0];
+        double delta = l.t - ref.theta[0];
         double xtau = l.x*cos(ref.theta[0])+l.y*sin(ref.theta[0]);
         double xnu = -l.x*sin(ref.theta[0])+l.y*cos(ref.theta[0]);
         double omegatau = ref.tau[1] - k.tau*(xtau - ref.tau[0]);
@@ -61,10 +62,10 @@ struct QSFB {
         return out;
     }
     void step(uint32_t, uint32_t dt) {
-        auto ref = ref.get();
+        auto r = ref.get();
         auto vel = ds.get();
         auto loc = state.get();
-        out = step(vel, ref, loc);
+        out = step(vel, r, loc);
     }
 };
 }

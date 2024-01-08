@@ -4,6 +4,7 @@
  */
 #pragma once
 
+#include <utils/later.h>
 #include "types.h"
 
 namespace Ctrl2D {
@@ -13,15 +14,15 @@ namespace Ctrl2D {
  */
 struct UniCyMo {
     const double wheelRadius, bodyWidth;
-    Later<Input> in;
+    Later<Input> input;
 
     Wheels measurement; ///< m/s
 
-    static constexpr Input inputFromWheels(Wheels w) { return {
+    constexpr Input inputFromWheels(Wheels w) { return {
         (w.r + w.l) / 2,
         (w.r - w.l) / bodyWidth,
     };}
-    static constexpr Wheels wheelsFromInput(Input i) { return {
+    constexpr Wheels wheelsFromInput(Input i) { return {
         (i.v - bodyWidth / 2 * i.w),
         (i.v + bodyWidth / 2 * i.w),
     };}

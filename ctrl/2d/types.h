@@ -3,6 +3,7 @@
  * Copyright (c) 2024 IACE
  */
 #pragma once
+#include <cmath>
 
 namespace Ctrl2D {
 
@@ -48,6 +49,36 @@ struct Reference {
 /** reference in Invariant coordinates */
 struct Invariant {
     double tau[3], nu[3], theta[3];
+    friend Invariant operator+(Invariant a, Invariant b) { return {
+        .tau = {
+            a.tau[0] + b.tau[0],
+            a.tau[1] + b.tau[1],
+            a.tau[2] + b.tau[2],
+        }, .nu = {
+            a.nu[0] + b.nu[0],
+            a.nu[1] + b.nu[1],
+            a.nu[2] + b.nu[2],
+        }, .theta = {
+            a.theta[0] + b.theta[0],
+            a.theta[1] + b.theta[1],
+            a.theta[2] + b.theta[2],
+        }};
+    }
+    friend Invariant operator-(Invariant a, Invariant b) { return {
+        .tau = {
+            a.tau[0] - b.tau[0],
+            a.tau[1] - b.tau[1],
+            a.tau[2] - b.tau[2],
+        }, .nu = {
+            a.nu[0] - b.nu[0],
+            a.nu[1] - b.nu[1],
+            a.nu[2] - b.nu[2],
+        }, .theta = {
+            a.theta[0] - b.theta[0],
+            a.theta[1] - b.theta[1],
+            a.theta[2] - b.theta[2],
+        }};
+    }
 };
 
 /** in m/s */

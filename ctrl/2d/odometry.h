@@ -4,6 +4,7 @@
  */
 #pragma once
 #include <utils/later.h>
+#include "types.h"
 
 namespace Ctrl2D {
 namespace Odometry {
@@ -17,7 +18,7 @@ struct Euler {
         s.t+= dt * u.w;
         return s;
     }
-    void reset(State) {}
+    void reset(Loc) {}
 };
 
 /** Dead-Reckoning using the Runge-Kutta Method
@@ -31,7 +32,7 @@ struct RungeKutta {
         s.t += Dth;
         return s;
     }
-    void reset(State) {}
+    void reset(Loc) {}
 };
 
 /** Dead-Reckoning using the Exact Approach
@@ -40,7 +41,7 @@ struct RungeKutta {
 struct Exact {
     double sk{0}, ck{1};
     Loc step(Loc s, Input u, double dt) {
-        if (std::abs(w) < 0.001) {
+        if (std::abs(u.w) < 0.001) {
             // l'Hopital
             s.x += dt * u.v * ck;
             s.y += dt * u.v * sk;
@@ -55,13 +56,13 @@ struct Exact {
         }
         return s;
     }
-    void reset(State s) {
-        sk = std::sin(s.theta);
-        ck = std::cos(s.theta);
+    void reset(Loc l) {
+        sk = std::sin(l.t);
+        ck = std::cos(l.t);
     }
 };
 }
-template <typename T> {
+template <typename T>
 struct Odometer {
     Loc loc;
     T odom;
