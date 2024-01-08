@@ -1,20 +1,26 @@
+/** @file qsfb.h
+ *
+ * Copyright (c) 2024 IACE
+ */
 #pragma once
 
 #include <cmath>
+#include "types.h"
 
-namespace CTRL {
+namespace Ctrl2D {
 /** implementation of the flatness-based quasi-static state-feedback controller
- * cf. Rudolph 2021
- */
-template <typename FLOAT, typename OUT>
+ * cf. Rudolph 2021 */
 struct QSFB {
+    Later<Invariant> ref;
+    Later<double> ds;
+    Later<Loc> state;
     /** controller gains */
     struct Gains {
-        FLOAT tau;  ///< gain in tangential direction
-        FLOAT nu[2];///< gain in normal direction
+        double tau;  ///< gain in tangential direction
+        double nu[2];///< gain in normal direction
     } k;
 
-    OUT out{};          ///< output values v, w
+    Input out{};          ///< output values v, w
 
     void reset() { out = {}; }
 
@@ -23,41 +29,42 @@ struct QSFB {
      * @param tau gain value for the tau error
      * @param nu0,nu1 gain values for the nu error
      */
-    void setGains(const FLOAT tau, const FLOAT nu0, const FLOAT nu1) {
+    void setGains(const double tau, const double nu0, const double nu1) {
         k.tau = tau;
         k.nu[0] = nu0;
         k.nu[1] = nu1;
     }
 
-    struct Ref {
-        FLOAT tau[3], nu[3], theta[3];
-    };
-
-    OUT step(const FLOAT ds, const Ref r,
-                    const FLOAT x, const FLOAT y, const FLOAT theta) {
-        FLOAT delta = theta - r.theta[0];
-        FLOAT xtau = x*cos(r.theta[0])+y*sin(r.theta[0]);
-        FLOAT xnu = -x*sin(r.theta[0])+y*cos(r.theta[0]);
-        FLOAT omegatau = r.tau[1] - k.tau*(xtau - r.tau[0]);
-        FLOAT omegatau1 = r.tau[2] - k.tau*(omegatau - r.tau[1]);
-        FLOAT u = (omegatau - r.theta[1]*xnu)/cos(delta);
-        FLOAT xnu1 = u*sin(delta) - r.theta[1]*xtau;
-        FLOAT enu[2] = {
-            xnu - r.nu[0],
-            xnu1 - r.nu[1],
+    Input step(const double ds, const Invariant ref, const Loc l) {
+        double delta = l.theta - ref.theta[0];
+        double xtau = l.x*cos(ref.theta[0])+l.y*sin(ref.theta[0]);
+        double xnu = -l.x*sin(ref.theta[0])+l.y*cos(ref.theta[0]);
+        double omegatau = ref.tau[1] - k.tau*(xtau - ref.tau[0]);
+        double omegatau1 = ref.tau[2] - k.tau*(omegatau - ref.tau[1]);
+        double u = (omegatau - ref.theta[1]*xnu)/cos(delta);
+        double xnu1 = u*sin(delta) - ref.theta[1]*xtau;
+        double enu[2] = {
+            xnu - ref.nu[0],
+            xnu1 - ref.nu[1],
         };
-        FLOAT omeganu = r.nu[2] - k.nu[1]*enu[1] - k.nu[0]*enu[0];
+        double omeganu = ref.nu[2] - k.nu[1]*enu[1] - k.nu[0]*enu[0];
 
-        FLOAT upper = (-xnu*r.theta[2] - xnu1  *  r.theta[1]) + omegatau1;
-        FLOAT lower = (xtau*r.theta[2] + omegatau*r.theta[1]) + omeganu;
-        /* FLOAT du = cos(delta)*upper + sin(delta)*lower; */
-        FLOAT w = -sin(delta)*upper + cos(delta)*lower;
+        double upper = (-xnu*ref.theta[2] - xnu1  *  ref.theta[1]) + omegatau1;
+        double lower = (xtau*ref.theta[2] + omegatau*ref.theta[1]) + omeganu;
+        /* double du = cos(delta)*upper + sin(delta)*lower; */
+        double w = -sin(delta)*upper + cos(delta)*lower;
 
         out = {
             ds * u,
-            ds * (w / u + r.theta[1]),
+            ds * (w / u + ref.theta[1]),
         };
         return out;
+    }
+    void step(uint32_t, uint32_t dt) {
+        auto ref = ref.get();
+        auto vel = ds.get();
+        auto loc = state.get();
+        out = step(vel, ref, loc);
     }
 };
 }
