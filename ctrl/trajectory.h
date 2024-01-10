@@ -144,6 +144,10 @@ public:
         }
     }
 
+    double diff(size_t order){
+        return diffs[order];
+    }
+
     double polyVal(double dx) {
         double res = 0;
         diffs = {};
