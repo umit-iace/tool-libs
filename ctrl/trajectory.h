@@ -147,12 +147,14 @@ public:
     }
 
     double polyVal(double dx) {
-        double res = 0;
-        diffs[0] = 0;
+        for (int j = 0; j < n - len; j++) diffs[j] = 0;
+
         for (int i = n; i >= 0; i --) {
-            diffs[0] = diffs[0] * dx + res;
-            res = res * dx + coeffs[i - len];
+            for (int i = n - len; i > 0; i--) {
+                diffs[i] = diffs[i] * dx + diffs[i - 1];
+            }
+            diffs[0] = diffs[0] * dx + coeffs[i - len];
         }
-        return res;
+        return diffs[0];
     }
 };
