@@ -131,10 +131,8 @@ public:
     }
     double getValue(double x) override {
         if (x < cfg.x0) {
-            diffs = {};
             return cfg.y0;
         } else if (x > cfg.x1) {
-            diffs = {};
             return cfg.y1;
         } else {
             double dy = cfg.y1 - cfg.y0;
@@ -150,7 +148,7 @@ public:
 
     double polyVal(double dx) {
         double res = 0;
-        diffs = {};
+        diffs[0] = 0;
         for (int i = n; i >= 0; i --) {
             diffs[0] = diffs[0] * dx + res;
             res = res * dx + coeffs[i - len];
