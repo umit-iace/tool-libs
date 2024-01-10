@@ -123,8 +123,8 @@ public:
             this->coeffs[len++] = v;
     }
     void setData(Buffer<double> &&b) override {
-        assert(b.size > 4);
-        cfg = {b[0], b[2], b[1], b[3]};
+        assert(b.size <= 4);
+        cfg = {b[0], b[1], b[2], b[3]};
     }
     double getValue(double x) override {
         if (x < cfg.x0)
