@@ -113,12 +113,15 @@ public:
 class SmoothTrajectory : public Curve {
     size_t n, len;
     double *coeffs;
+    double *diffs;
     struct {
         double x0, x1;
         double y0, y1;
     } cfg;
 public:
-    SmoothTrajectory(std::initializer_list<double> coeffs, size_t n) : coeffs{new double [n]}, len(0), n(n){
+    SmoothTrajectory(std::initializer_list<double> coeffs, size_t n) : coeffs{new double [coeffs.size()]},
+                                                                       diffs{new double [n - coeffs.size()]},
+                                                                       len(0), n(n){
         for (auto v: coeffs)
             this->coeffs[len++] = v;
     }
@@ -127,11 +130,13 @@ public:
         cfg = {b[0], b[1], b[2], b[3]};
     }
     double getValue(double x) override {
-        if (x < cfg.x0)
+        if (x < cfg.x0) {
+            diffs = {};
             return cfg.y0;
-        else if (x > cfg.x1)
+        } else if (x > cfg.x1) {
+            diffs = {};
             return cfg.y1;
-        else {
+        } else {
             double dy = cfg.y1 - cfg.y0;
             double tau = (x - cfg.x0) / (cfg.x1 - cfg.x0);
 
@@ -141,7 +146,9 @@ public:
 
     double polyVal(double dx) {
         double res = 0;
+        diffs = {};
         for (int i = n; i >= 0; i --) {
+            diffs[0] = diffs[0] * dx + res;
             res = res * dx + coeffs[i - len];
         }
         return res;
