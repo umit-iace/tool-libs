@@ -17,7 +17,10 @@
 template<typename T>
 struct Buffer {
     T *buf;
-    size_t len, size;
+    /** number of items stored in buffer */
+    size_t len;
+    /** total capacity of buffer */
+    size_t size;
     /** implicit cast to pointer to T */
     operator T*() { return buf; }
     //XXX: how about a slice into a buffer?
