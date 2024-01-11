@@ -136,10 +136,11 @@ public:
             return cfg.y1;
         } else {
             double dy = cfg.y1 - cfg.y0;
-            double tau = (x - cfg.x0) / (cfg.x1 - cfg.x0);
-            polyVal(tau);
+            double dx = cfg.x1 - cfg.x0;
+            double tau = (x - cfg.x0) / dx;
+            polyVal(tau, dx, dy);
 
-            return cfg.y0 + dy * diffs[0];
+            return cfg.y0 + diffs[0];
         }
     }
 
@@ -147,16 +148,23 @@ public:
         return diffs[order];
     }
 
-    void polyVal(double dx) {
-        for (int l = 0; l < n - len + 1; ++l) {
+    void polyVal(double x, double dx, double dy) {
+        for (int l = 0; l < len; ++l) {
             diffs[l] = 0;
         }
 
         for (int i = n; i >= 0; --i) {
             for (int j = n - len; j > 0; --j) {
-                diffs[j] = diffs[j] * dx + diffs[j - 1];
+                diffs[j] = diffs[j] * x + diffs[j - 1] / dx;
             }
-            diffs[0] = diffs[0] * dx + coeffs[i - len];
+            if (n - i > len)
+                diffs[0] = diffs[0] * x;
+            else
+                diffs[0] = diffs[0] * x + coeffs[i - len];
+        }
+
+        for (int l = 0; l < len; ++l) {
+            diffs[l] *= dy;
         }
     }
 };
