@@ -11,7 +11,8 @@
  *
  * useful for trajectory generation
  **/
-struct Curve {
+class Curve {
+protected:
     Buffer<double> diffs;
 public:
     virtual void setData(Buffer<double> &&b) {
@@ -30,14 +31,14 @@ public:
         return getValue(dx);
     }
 
-    virtual Buffer<double>  getValue(double) {
+    virtual Buffer<double> getValue(double) {
         assert(false); // ups, virtual call didn't work?
         return 0;
     }
 };
 
 /** Class implementing linear interpolation */
-class LinearTrajectory : Curve {
+class LinearTrajectory : public Curve {
     Buffer<double> diffs;
     struct Vec {
         double x, y, m;
@@ -93,7 +94,7 @@ public:
 };
 
 /** Class implementing polynom interpolation */
-class SmoothTrajectory : Curve {
+class SmoothTrajectory : public Curve {
     size_t n;
     Buffer<double> coeffs;
     struct {
