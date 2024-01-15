@@ -13,7 +13,7 @@ namespace Ctrl2D {
  * cf. Rudolph 2021 */
 struct QSFB {
     Later<Invariant> ref;
-    Later<double> ds;
+    Later<double> sdot;
     Later<Loc> state;
     /** controller gains */
     struct Gains {
@@ -36,7 +36,7 @@ struct QSFB {
         k.nu[1] = nu1;
     }
 
-    Input step(const double ds, const Invariant ref, const Loc l) {
+    Input step(const double sdot, const Invariant ref, const Loc l) {
         double delta = l.t - ref.theta[0];
         double xtau = l.x*cos(ref.theta[0])+l.y*sin(ref.theta[0]);
         double xnu = -l.x*sin(ref.theta[0])+l.y*cos(ref.theta[0]);
@@ -56,14 +56,14 @@ struct QSFB {
         double w = -sin(delta)*upper + cos(delta)*lower;
 
         out = {
-            ds * u,
-            ds * (w / u + ref.theta[1]),
+            sdot * u,
+            sdot * (w / u + ref.theta[1]),
         };
         return out;
     }
     void step(uint32_t, uint32_t dt) {
         auto r = ref.get();
-        auto vel = ds.get();
+        auto vel = sdot.get();
         auto loc = state.get();
         out = step(vel, r, loc);
     }
