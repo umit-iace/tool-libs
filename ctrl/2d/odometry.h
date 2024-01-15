@@ -68,7 +68,7 @@ struct Odometer {
     T odom;
     Later<Input> track;
     void step(uint32_t, uint32_t dt) {
-        odom.step(loc, track.get(), dt*0.001);
+        loc = odom.step(loc, track.get(), dt*0.001);
     }
     void reset(Loc l) {
         loc = l;
