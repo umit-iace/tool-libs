@@ -39,14 +39,13 @@ public:
 
 /** Class implementing linear interpolation */
 class LinearTrajectory : public Curve {
-    Buffer<double> diffs;
     struct Vec {
         double x, y, m;
     };
     Buffer<Vec> P;
 public:
-    LinearTrajectory() : diffs(2) {}
-    LinearTrajectory(size_t diffs) : diffs(diffs) {}
+    LinearTrajectory() : Curve(2) {}
+    LinearTrajectory(size_t diffs) : Curve(diffs) {}
 
     void setData(Buffer<double> &&b) override {
         size_t off{b.size/2};
@@ -74,6 +73,7 @@ public:
             if (left == right) {
                 diffs[0] =  P[right].y;
                 diffs[1] = 0;
+                break;
             }
             if (dx < P[i].x) {
                 right = i;
@@ -104,7 +104,7 @@ class SmoothTrajectory : public Curve {
 public:
     SmoothTrajectory(Buffer<double> coeffs, size_t n) : coeffs{coeffs}, n(n), Curve(coeffs.len) {}
     void setData(Buffer<double> &&b) override {
-        assert(b.size <= 4);
+        assert(b.size == 4);
         cfg = {b[0], b[1], b[2], b[3]};
     }
     Buffer<double> getValue(double x) override {
