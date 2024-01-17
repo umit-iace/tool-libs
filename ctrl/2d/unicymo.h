@@ -17,13 +17,28 @@ struct UniCyMo {
     Later<Input> input;
     Later<Wheels> ff;
 
+
+    constexpr WheelRad wheelRadFromWheels(Wheels w) {
+        auto tmp = 1 / wheelRadius * w;
+        return {tmp.l, tmp.r};
+    }
+    constexpr Wheels wheelsFromWheelRad(WheelRad w) {
+        auto tmp =  wheelRadius * w;
+        return {tmp.l, tmp.r};
+    }
     constexpr Input inputFromWheels(Wheels w) { return {
-        (w.r + w.l) / 2,
-        (w.r - w.l) / bodyWidth,
+        .v = (w.r + w.l) / 2,
+        .w = (w.r - w.l) / bodyWidth,
     };}
+    constexpr Input inputFromWheelRad(WheelRad w) {
+        return inputFromWheels(wheelsFromWheelRad(w));
+    }
     constexpr Wheels wheelsFromInput(Input i) { return {
-        (i.v - bodyWidth / 2 * i.w),
-        (i.v + bodyWidth / 2 * i.w),
+        .l = (i.v - bodyWidth / 2 * i.w),
+        .r = (i.v + bodyWidth / 2 * i.w),
     };}
+    constexpr WheelRad wheelRadFromInput(Input i) {
+        return wheelRadFromWheels(wheelsFromInput(i));
+    }
 };
 }

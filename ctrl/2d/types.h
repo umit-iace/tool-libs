@@ -88,6 +88,13 @@ struct Wheels {
     constexpr friend Wheels operator+(Wheels a, Wheels b) { return { a.l+b.l, a.r+b.r };}
     constexpr friend Wheels operator-(Wheels a, Wheels b) { return { a.l-b.l, a.r-b.r };}
 };
+/** in rad/s */
+struct WheelRad {
+    double l, r;
+    constexpr friend WheelRad operator*(float v, WheelRad w) { return { v*w.l, v*w.r };}
+    constexpr friend WheelRad operator+(WheelRad a, WheelRad b) { return { a.l+b.l, a.r+b.r };}
+    constexpr friend WheelRad operator-(WheelRad a, WheelRad b) { return { a.l-b.l, a.r-b.r };}
+};
 
 /** in m/s, rad/s */
 struct Input {
