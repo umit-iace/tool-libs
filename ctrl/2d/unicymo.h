@@ -15,8 +15,7 @@ namespace Ctrl2D {
 struct UniCyMo {
     const double wheelRadius, bodyWidth;
     Later<Input> input;
-
-    Wheels measurement; ///< m/s
+    Later<Wheels> ff;
 
     constexpr Input inputFromWheels(Wheels w) { return {
         (w.r + w.l) / 2,
