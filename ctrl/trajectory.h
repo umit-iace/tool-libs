@@ -3,6 +3,7 @@
  * Copyright (c) 2023 IACE
  */
 #pragma once
+
 #include <utility>
 #include <utils/buffer.h>
 
@@ -18,16 +19,19 @@ public:
     virtual void setData(Buffer<double> &&b) {
         assert(false); // ups, virtual call didn't work?
     }
+
     /** virtual destructor */
     virtual ~Curve() {}
+
     Curve() : diffs(2) {
         for (int i = 0; i < diffs.size; ++i) diffs.append(0);
     }
+
     Curve(size_t n) : diffs(n) {
         for (int i = 0; i < diffs.size; ++i) diffs.append(0);
     }
 
-    Buffer<double>  operator()(double dx) {
+    Buffer<double> operator()(double dx) {
         return getValue(dx);
     }
 
@@ -45,22 +49,24 @@ class LinearTrajectory : public Curve {
     Buffer<Vec> P;
 public:
     LinearTrajectory() : Curve(2) {}
+
     LinearTrajectory(size_t diffs) : Curve(diffs) {}
 
     void setData(Buffer<double> &&b) override {
-        size_t off{b.size/2};
+        size_t off{b.size / 2};
         P = Buffer<Vec>(off);
         P.len = off;
         double slope;
         for (size_t i = 0; i < off; ++i) {
-            if (i+1 < off) {
-                slope = (b[i+1+off] - b[i+off]) / (b[i+1] - b[i]);
+            if (i + 1 < off) {
+                slope = (b[i + 1 + off] - b[i + off]) / (b[i + 1] - b[i]);
             } else {
                 slope = 0;
             }
-            P[i] = {b[i], b[i+off], slope};
+            P[i] = {b[i], b[i + off], slope};
         }
     }
+
     Buffer<double> getValue(double dx) override {
         if (!P.size) {
             diffs[0] = 0;
@@ -71,7 +77,7 @@ public:
         size_t left = 0, right = P.size - 1;
         while (true) {
             if (left == right) {
-                diffs[0] =  P[right].y;
+                diffs[0] = P[right].y;
                 diffs[1] = 0;
                 break;
             }
@@ -80,8 +86,8 @@ public:
                 i = (left + right) / 2;
                 continue;
             }
-            if (dx >= P[i+1].x) {
-                left = i+1;
+            if (dx >= P[i + 1].x) {
+                left = i + 1;
                 i = (left + right) / 2;
                 continue;
             }
@@ -103,23 +109,25 @@ class SmoothTrajectory : public Curve {
     Buffer<Vec> P;
 public:
     SmoothTrajectory(Buffer<double> coeffs, size_t n) : coeffs{coeffs}, n(n), Curve(coeffs.len) {}
+
     void setData(Buffer<double> &&b) override {
-        size_t off{b.size/2};
+        size_t off{b.size / 2};
         P = Buffer<Vec>(off);
         P.len = off;
         double slope;
         for (size_t i = 0; i < off; ++i) {
-            P[i] = {b[i], b[i+off]};
+            P[i] = {b[i], b[i + off]};
         }
     }
+
     Buffer<double> getValue(double x) override {
-        for (int l = 0; l < diffs.len; ++l)  diffs[l] = 0;
+        for (int l = 0; l < diffs.len; ++l) diffs[l] = 0;
 
         size_t i = (P.size - 1) / 2;
         size_t left = 0, right = P.size - 1;
         while (true) {
             if (left == right) {
-                diffs[0] =  P[right].y;
+                diffs[0] = P[right].y;
                 diffs[1] = 0;
                 break;
             }
@@ -128,13 +136,13 @@ public:
                 i = (left + right) / 2;
                 continue;
             }
-            if (x >= P[i+1].x) {
-                left = i+1;
+            if (x >= P[i + 1].x) {
+                left = i + 1;
                 i = (left + right) / 2;
                 continue;
             }
-            double dy = P[i+1].y - P[i].y;
-            double dx = P[i+1].x - P[i].x;
+            double dy = P[i + 1].y - P[i].y;
+            double dx = P[i + 1].x - P[i].x;
             double tau = (x - P[i].x) / dx;
 
             for (int k = n; k >= 0; --k) {
@@ -157,5 +165,33 @@ public:
         }
 
         return diffs;
+    }
+};
+
+/** Class implementing reference interpolation */
+template<int n>
+struct Reference {
+    double y[n]{};
+
+    size_t size(){
+        return n;
+    }
+
+    operator double *() {
+        return y;
+    }
+
+    Reference &operator+(const Reference &other) {
+        for (int i = 0; i < n; ++i) {
+            this->y[i] += other.y[i];
+        }
+        return *this;
+    }
+
+    Reference &operator-(const Reference &other) {
+        for (int i = 0; i < n; ++i) {
+            this->y[i] -= other.y[i];
+        }
+        return *this;
     }
 };
