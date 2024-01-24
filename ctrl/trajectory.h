@@ -188,4 +188,19 @@ struct Reference {
         }
         return *this;
     }
+    Reference() { }
+    Reference(std::initializer_list<double> list) {
+        assert(list.size() == n);
+        int i = 0;
+        for (auto l = list.begin(); l != list.end(); ++l, ++i) {
+            y[i] = *l;
+        }
+    }
+    Reference(const Buffer<double> &b) {
+        assert(b.len == n);
+        int i = 0;
+        for (auto l = b.begin(); l != b.end(); ++l, ++i) {
+            y[i] = *l;
+        }
+    }
 };
