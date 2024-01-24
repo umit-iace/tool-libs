@@ -23,12 +23,8 @@ public:
     /** virtual destructor */
     virtual ~Curve() {}
 
-    Curve() : diffs(2) {
-        for (int i = 0; i < diffs.size; ++i) diffs.append(0);
-    }
-
-    Curve(size_t n) : diffs(n) {
-        for (int i = 0; i < diffs.size; ++i) diffs.append(0);
+    Curve(size_t n=2) : diffs(n) {
+        for (size_t i = 0; i < diffs.size; ++i) diffs.append(0);
     }
 
     Buffer<double> operator()(double dx) {
@@ -48,9 +44,7 @@ class LinearTrajectory : public Curve {
     };
     Buffer<Vec> P;
 public:
-    LinearTrajectory() : Curve(2) {}
-
-    LinearTrajectory(size_t diffs) : Curve(diffs) {}
+    LinearTrajectory(size_t diffs=2) : Curve(diffs) {}
 
     void setData(Buffer<double> &&b) override {
         size_t off{b.size / 2};
@@ -108,7 +102,7 @@ class SmoothTrajectory : public Curve {
     };
     Buffer<Vec> P;
 public:
-    SmoothTrajectory(Buffer<double> coeffs, size_t n) : coeffs{coeffs}, n(n), Curve(coeffs.len) {}
+    SmoothTrajectory(Buffer<double> coeffs, size_t n) : Curve(coeffs.len), n(n), coeffs(coeffs) {}
 
     void setData(Buffer<double> &&b) override {
         size_t off{b.size / 2};
