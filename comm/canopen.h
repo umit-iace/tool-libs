@@ -160,6 +160,9 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
         can.push({.data = (uint64_t)(nodeid & 0x7f) << 8 | command,
                 .id = 0, .opts = {.dlc = 2}});
     }
+    void sync() {
+        can.push({.id = 0x80, .opts = {.dlc = 0}});
+    }
 };
 
 /** CANOpen device wrapper class
