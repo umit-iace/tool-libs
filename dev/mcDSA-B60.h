@@ -16,10 +16,20 @@ struct mcDSA : CAN::Open::Device {
             .type = CAN::Open::RPDO::CHANGE,
             .map = {{.ix = 0x3300, .sub = 0, .len = 32}},
             };
+    CAN::Open::TPDO msrPDO = {
+            .N = 1,
+            .type = CAN::Open::TPDO::SYNC,
+            .map = {
+                {.ix = 0x3a04, .sub = 1, .len = 32}, // speed
+                {.ix = 0x3262, .sub = 1, .len = 32}, // current [mA]
+            },
+    };
+
     mcDSA(CAN::Open::Dispatch &out, uint8_t id, bool invert) : CAN::Open::Device(out, id) {
         enable(false);
         init(invert);
         enablepdo(speedPDO);
+        enablepdo(msrPDO);
         enable(true);
     }
     struct Measurements {
@@ -96,6 +106,9 @@ struct mcDSA : CAN::Open::Device {
         }
     }
     void callback(CAN::Open::TPDO rq) {
+        uint64_t raw = rq.data;
+        double speed = ((int32_t)raw);
+        double current = (int32_t)(rq.data >> 32) * 0.001;
     }
 
     //TODO: this needs to happen on a higher level: heartbeat
