@@ -33,17 +33,17 @@ struct SDO {
         };
     }
 };
+struct PDOMap {
+    uint16_t ix;
+    uint8_t sub;
+    uint8_t len;
+};
 /** CANOpen Receive Process Data Object Type */
 struct RPDO {
     uint8_t N;
     enum : uint8_t {SYNC, CHANGE=255} type;
     uint32_t COB {}; // CAN OBject ID
-    struct MAP {
-        uint16_t ix;
-        uint8_t sub;
-        uint8_t len;
-    };
-    Buffer<MAP> map;
+    Buffer<PDOMap> map;
     Message write(uint64_t data) const {
         return {.data=data, .id = COB, .opts = {.dlc=8}};
     }
@@ -54,9 +54,7 @@ struct TPDO {
     enum : uint8_t {SYNC, CHANGE=255} type;
     uint32_t COB; // CAN OBject ID
     uint64_t data;
-    static TPDO fromCanMsg(Message msg) {
-        return {.COB = msg.id};
-    }
+    Buffer<PDOMap> map;
 };
 
 /** CANOpen dispatch class
@@ -231,10 +229,22 @@ struct Device : Sink<TPDO>, Sink<SDO> {
     }
     /** enable sending PDO on device */
     void enablepdo(TPDO &pdo) {
-        //TODO: enable sending on device
+        if (pdo.COB == 0) pdo.COB = id + 0x80 + 0x100 * pdo.N;
+        disablepdo(pdo);
+        w8(0x1800+pdo.N-1, 0x2, pdo.type);
+        /* w16(0x1800+pdo.N-1, 0x3, pdo.inhibit_time); */
+        /* w16(0x1800+pdo.N-1, 0x5, pdo.event_timer); */
+        w8(0x1a00+pdo.N-1, 0x0, 0); // clear number of mapped objects
+        for (size_t i = 0; i < pdo.map.len; ++i) {
+            auto &d = pdo.map[i];
+            w32(0x1a00+pdo.N-1, i+1, d.ix << 16 | d.sub << 8 | d.len);
+        }
+        w8(0x1a00+pdo.N-1, 0x0, pdo.map.len); // set number of mapped objects
+        w32(0x1800+pdo.N-1, 0x1, 1<<30 | pdo.COB); // enable PDO
         out.registerpdo(&pdo, this);
     };
     void disablepdo(TPDO &pdo) {
+        w32(0x1800+pdo.N-1, 0x1, 1<<31); // clear
     };
     using Sink<SDO>::push;
     void push(SDO &&sdo) override {
