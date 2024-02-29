@@ -66,7 +66,6 @@ void _startSlave(I2C_HandleTypeDef *handle, uint8_t recv, uint16_t addr) {
     }
 }
 
-void poll(HW *i2c);
 void _error(I2C_HandleTypeDef *handle) {
     auto i2c = HW::reg.from(handle);
     if (!i2c->active) {
@@ -81,10 +80,11 @@ void _error(I2C_HandleTypeDef *handle) {
     __HAL_I2C_DISABLE(handle);
     __HAL_I2C_ENABLE(handle);
     if (i2c->handle.Init.OwnAddress1) HAL_I2C_EnableListen_IT(handle);
+    i2c->poll(uwTick, 0);
 }
-void poll(HW *i2c) {
-    if (i2c->active && i2c->deadline(uwTick)) _error(&i2c->handle);
-    if (!i2c->active && !i2c->q.empty()) return _startMaster(i2c);
+void HW::poll(uint32_t now, uint32_t dt) {
+    if (active && deadline(now)) return _error(&handle);
+    if (!active && !q.empty()) return _startMaster(this);
 }
 
 void _complete(I2C_HandleTypeDef *handle) {
@@ -106,7 +106,7 @@ void _complete(I2C_HandleTypeDef *handle) {
     i2c->active = i2c->NONE;
     i2c->deadline = Deadline{};
     if (i2c->handle.Init.OwnAddress1) HAL_I2C_EnableListen_IT(&i2c->handle);
-    poll(i2c);
+    i2c->poll(uwTick, 0);
 }
 
 void HW::push(Request &&rq) {
@@ -121,7 +121,6 @@ void HW::push(Request &&rq) {
             q.push(std::move(rq));
             break;
     }
-    poll(this);
 }
 
 HW::HW(const HW::Conf &conf) {
