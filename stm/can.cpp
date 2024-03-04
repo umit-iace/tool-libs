@@ -8,7 +8,7 @@ void _start(CAN_HandleTypeDef *handle, const Message &msg) {
         .StdId = msg.opts.ide ? 0 : msg.id & 0x7ff,
         .ExtId = msg.opts.ide ? msg.id : 0,
         .IDE = msg.opts.ide ? CAN_ID_EXT : CAN_ID_STD,
-        .RTR = msg.opts.rtr,
+        .RTR = msg.opts.rtr ? CAN_RTR_REMOTE : CAN_RTR_DATA,
         .DLC = msg.opts.dlc,
     };
     while(HAL_CAN_AddTxMessage(handle, &header, (uint8_t*)&msg.data, &mbox) != HAL_OK);
