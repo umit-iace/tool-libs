@@ -1,5 +1,8 @@
 #pragma once
 #include "can.h"
+#include <utils/deadline.h>
+#include <core/kern.h>
+
 
 namespace CAN {
 /** cf. https://www.can-cia.org/fileadmin/resources/documents/brochures/co_poster.pdf */
@@ -179,16 +182,17 @@ struct Device : Sink<TPDO>, Sink<SDO> {
 
     struct State {
         Queue<SDO> q{60};
-        bool waiting{};
+        Deadline next{};
     } state;
     /** implement the callback method to handle incoming data */
     virtual void callback(SDO rq) { assert(false); };
     /** implement the callback method to handle incoming data */
     virtual void callback(TPDO rq) { assert(false); };
     void process() {
-        if (state.waiting || state.q.empty()) return;
+        if (state.q.empty()) return;
+        if (state.next.when && !state.next(k.time)) return;
         out.push(state.q.pop());
-        state.waiting = true;
+        state.next = {k.time + 2};
     }
     /** read DO with given index and subindex of this device */
     void read(uint16_t ix, uint8_t sub) {
@@ -251,13 +255,13 @@ struct Device : Sink<TPDO>, Sink<SDO> {
     };
     using Sink<SDO>::push;
     void push(SDO &&sdo) override {
-        state.waiting=false;
-        callback(sdo);
+        state.next = {0};
+        callback(std::move(sdo));
         process();
     }
     using Sink<TPDO>::push;
     void push(TPDO &&pdo) override {
-        callback(pdo);
+        callback(std::move(pdo));
         process();
     }
 };
