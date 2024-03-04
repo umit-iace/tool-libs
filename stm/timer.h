@@ -58,4 +58,7 @@ namespace TIMER {
         /** HAL handle, for use with unwrapped Timer capabilities */
         TIM_HandleTypeDef handle = {};
     };
+    struct CC {
+        // maybe add code HERE
+    };
 }
