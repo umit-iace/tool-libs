@@ -7,6 +7,20 @@
 namespace CAN {
 /** cf. https://www.can-cia.org/fileadmin/resources/documents/brochures/co_poster.pdf */
 namespace Open {
+/** CANOpen Network ManagemenT Commands */
+enum class NMT : uint8_t {
+    START = 1,          ///< enter OPERATIONAL  0x5
+    STOP = 2,           ///< enter STOPPED      0x4
+    PREOP = 0x80,       ///< enter PREOP        0x7f
+    RESET_APP = 0x81,   ///< ... -> PREOP
+    RESET_COMM = 0x82,  ///< ... -> PREOP
+};
+/** CANOpen Device states */
+enum class STATE : uint8_t {
+    STOPPED = 4,
+    OPERATIONAL = 5,
+    PREOP = 0x7f,
+};
 /** CANOpen Service Data Object xfer request
  *
  * this struct shouldn't have to be instantiated by the user directly.
@@ -153,19 +167,18 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
 #endif
         }
     }
-    enum NMT : uint8_t {
-        OPERATIONAL = 1,
-        PREPARED = 2,
-        PREOP = 0x80,
-        RESET = 0x81,
-        RESET_COMM = 0x82,
-    };
     void nmt(NMT command, uint8_t nodeid) {
-        can.push({.data = (uint64_t)(nodeid & 0x7f) << 8 | command,
+        can.push({.data = (uint64_t)(nodeid & 0x7f) << 8 | (uint8_t)command,
                 .id = 0, .opts = {.dlc = 2}});
     }
     void sync() {
         can.push({.id = 0x80, .opts = {.dlc = 0}});
+    }
+    void heartbeat(uint8_t id, STATE state) {
+        can.push({.data = (uint8_t)state, .id = (uint32_t)0x700 + id, .opts = {.dlc = 1}});
+    }
+    void guard(uint8_t id) {
+        can.push({.id = (uint32_t)0x700 + id, .opts = {.rtr = true}});
     }
 };
 
