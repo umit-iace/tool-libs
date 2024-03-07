@@ -118,10 +118,11 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
         uint16_t service = msg.id & ~0x7f;
         uint8_t id = msg.id & 0x7f;
         if (id == 0) return false;
-        if (service == 0x80 ||
-            service == 0x580 ||
-            service == 0x600 ||
-            service == 0x700) {
+        if (service == 0x80 ||  // SYNC
+            service == 0x580 || // SDO server-to-client
+            service == 0x600 || // SDO client-to-server
+            service == 0x700 || // NMT control
+            false) {
             ids[id]->push(SDO::fromCanMsg(msg));
             return true;
         }
