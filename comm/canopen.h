@@ -105,7 +105,8 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
     bool handlePDO(Message msg) {
         for (int i = 0; i < pdo.n; ++i) {
             auto tpdo = pdo.pdo[i];
-            if (tpdo->COB == msg.id) {
+            if (tpdo->COB == msg.id
+                    && msg.opts.dlc) {
                 tpdo->data = msg.data;
                 pdo.dev[i]->push(*tpdo);
                 return true;
