@@ -11,7 +11,7 @@ void _start(CAN_HandleTypeDef *handle, const Message &msg) {
         .RTR = msg.opts.rtr ? CAN_RTR_REMOTE : CAN_RTR_DATA,
         .DLC = msg.opts.dlc,
     };
-    while(HAL_CAN_AddTxMessage(handle, &header, (uint8_t*)&msg.data, &mbox) != HAL_OK);
+    HAL_CAN_AddTxMessage(handle, &header, (uint8_t*)&msg.data, &mbox);
     HW::reg.from(handle)->tx.active |= mbox;
 }
 template<int N>
