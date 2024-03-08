@@ -214,18 +214,18 @@ struct Device : Sink<TPDO>, Sink<SDO> {
         process();
     }
     /** write given value to DO at given index and subindex */
-    void w8(uint16_t ix, uint8_t sub, uint8_t val) {
-        state.q.push({.data=val, .ix=ix, .sub=sub, .cmd=0x2f, .nodeID=id});
+    void w8(uint16_t ix, uint8_t sub, int8_t val) {
+        state.q.push({.data=(uint32_t)val, .ix=ix, .sub=sub, .cmd=0x2f, .nodeID=id});
         process();
     }
     /** write given value to DO at given index and subindex */
-    void w16(uint16_t ix, uint8_t sub, uint16_t val) {
-        state.q.push({.data=val, .ix=ix, .sub=sub, .cmd=0x2b, .nodeID=id});
+    void w16(uint16_t ix, uint8_t sub, int16_t val) {
+        state.q.push({.data=(uint32_t)val, .ix=ix, .sub=sub, .cmd=0x2b, .nodeID=id});
         process();
     }
     /** write given value to DO at given index and subindex */
-    void w32(uint16_t ix, uint8_t sub, uint32_t val) {
-        state.q.push({.data=val, .ix=ix, .sub=sub, .cmd=0x23, .nodeID=id});
+    void w32(uint16_t ix, uint8_t sub, int32_t val) {
+        state.q.push({.data=(uint32_t)val, .ix=ix, .sub=sub, .cmd=0x23, .nodeID=id});
         process();
     }
     /** enable receiving PDO on device */
@@ -245,7 +245,7 @@ struct Device : Sink<TPDO>, Sink<SDO> {
         w32(0x1400+pdo.N-1, 0x1, 1<<31); // clear
     }
     /** send data through given pdo */
-    void wpdo(const RPDO &rpdo, uint64_t val) {
+    void wpdo(const RPDO &rpdo, int64_t val) {
         out.push(rpdo.write(val));
     }
     /** enable sending PDO on device */
