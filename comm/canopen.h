@@ -208,25 +208,29 @@ struct Device : Sink<TPDO>, Sink<SDO> {
         out.push(state.q.pop());
         state.next = {k.time + 2};
     }
+    void pushorqueue(SDO &&sdo) {
+        if (state.next.when && !state.next(k.time)) {
+            state.q.push(std::move(sdo));
+        } else {
+            out.push(std::move(sdo));
+            state.next = {k.time + 2};
+        }
+    }
     /** read DO with given index and subindex of this device */
     void read(uint16_t ix, uint8_t sub) {
-        state.q.push({.ix=ix, .sub=sub, .cmd=0x40, .nodeID=id});
-        process();
+        pushorqueue({.ix=ix, .sub=sub, .cmd=0x40, .nodeID=id});
     }
     /** write given value to DO at given index and subindex */
-    void w8(uint16_t ix, uint8_t sub, int8_t val) {
-        state.q.push({.data=(uint32_t)val, .ix=ix, .sub=sub, .cmd=0x2f, .nodeID=id});
-        process();
+    void w8(uint16_t ix, uint8_t sub, uint8_t val) {
+        pushorqueue({.data=(uint32_t)val, .ix=ix, .sub=sub, .cmd=0x2f, .nodeID=id});
     }
     /** write given value to DO at given index and subindex */
-    void w16(uint16_t ix, uint8_t sub, int16_t val) {
-        state.q.push({.data=(uint32_t)val, .ix=ix, .sub=sub, .cmd=0x2b, .nodeID=id});
-        process();
+    void w16(uint16_t ix, uint8_t sub, uint16_t val) {
+        pushorqueue({.data=(uint32_t)val, .ix=ix, .sub=sub, .cmd=0x2b, .nodeID=id});
     }
     /** write given value to DO at given index and subindex */
-    void w32(uint16_t ix, uint8_t sub, int32_t val) {
-        state.q.push({.data=(uint32_t)val, .ix=ix, .sub=sub, .cmd=0x23, .nodeID=id});
-        process();
+    void w32(uint16_t ix, uint8_t sub, uint32_t val) {
+        pushorqueue({.data=(uint32_t)val, .ix=ix, .sub=sub, .cmd=0x23, .nodeID=id});
     }
     /** enable receiving PDO on device */
     void enablepdo(RPDO &pdo) {
