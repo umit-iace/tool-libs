@@ -43,9 +43,13 @@ struct mcDSA : CAN::Open::Device {
     void disable() {
         enable(false);
     }
+    void clear() {
+        w8(0x3000, 0, 1); // clear errors
+    }
 
     //TODO:
     /** Set the motor speed in u/min.
+     * Only works if device is in Operational State
      * Capped at +- 1m/s
      */
     void speed(double speed) {
