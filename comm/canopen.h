@@ -189,6 +189,7 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
 struct Device : Sink<TPDO>, Sink<SDO> {
     Device(Dispatch &canopen, uint8_t id) : id(id), out(canopen)
     {
+        assert(id > 0 && id < 128);
         canopen.registersdo(id, this);
     }
     uint8_t const id {};    ///< CANOpen node ID [1 - 127]
