@@ -54,24 +54,42 @@ struct PDOMap {
     uint16_t ix;
     uint8_t sub;
     uint8_t len;
+    int32_t data;
 };
+enum PDOType : uint8_t { SYNC, CHANGE=255 };
 /** CANOpen Receive Process Data Object Type */
 struct RPDO {
     uint8_t N;
-    enum : uint8_t {SYNC, CHANGE=255} type;
+    PDOType type;
     uint32_t COB {}; // CAN OBject ID
     Buffer<PDOMap> map;
     Message write(uint64_t data) const {
         return {.data=data, .id = COB, .opts = {.dlc=8}};
     }
+    Message write() const {
+        uint64_t dat = 0;
+        uint8_t shift = 0;
+        for (auto &i : map) {
+            dat |= (i.data & (1 << i.len)-1) << shift;
+            shift += i.len;
+        }
+        return {.data=dat, .id = COB, .opts = {.dlc=8}};
+    }
 };
 /** CANOpen Transmit Process Data Object Type */
 struct TPDO {
     uint8_t N;
-    enum : uint8_t {SYNC, CHANGE=255} type;
+    PDOType type;
     uint32_t COB; // CAN OBject ID
-    uint64_t data;
+    /* uint64_t data; */
     Buffer<PDOMap> map;
+    void setData(uint64_t d) {
+        uint8_t shift = 0;
+        for (auto &i : map) {
+            i.data = d >> shift & (1 << i.len) - 1;
+            shift += i.len;
+        }
+    }
 };
 
 /** CANOpen dispatch class
@@ -121,7 +139,7 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
             auto tpdo = pdo.pdo[i];
             if (tpdo->COB == msg.id
                     && msg.opts.dlc) {
-                tpdo->data = msg.data;
+                tpdo->setData(msg.data);
                 pdo.dev[i]->push(*tpdo);
                 return true;
             }
@@ -252,6 +270,10 @@ struct Device : Sink<TPDO>, Sink<SDO> {
     /** send data through given pdo */
     void wpdo(const RPDO &rpdo, int64_t val) {
         out.push(rpdo.write(val));
+    }
+    /** send data through given pdo */
+    void wpdo(const RPDO &rpdo) {
+        out.push(rpdo.write());
     }
     /** enable sending PDO on device */
     void enablepdo(TPDO &pdo) {
