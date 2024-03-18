@@ -13,12 +13,12 @@
 struct mcDSA : CAN::Open::Device {
     CAN::Open::RPDO speedPDO = {
             .N = 1,
-            .type = CAN::Open::RPDO::CHANGE,
+            .type = CAN::Open::PDOType::CHANGE,
             .map = {{.ix = 0x3300, .sub = 0, .len = 32}},
             };
     CAN::Open::TPDO msrPDO = {
             .N = 1,
-            .type = CAN::Open::TPDO::SYNC,
+            .type = CAN::Open::PDOType::SYNC,
             .map = {
                 {.ix = 0x3a04, .sub = 1, .len = 32}, // speed
                 {.ix = 0x3262, .sub = 1, .len = 32}, // current [mA]
@@ -56,10 +56,11 @@ struct mcDSA : CAN::Open::Device {
         speed = fmin(1, fmax(-1, speed));
         /* int iSpeed = (int) (6000 / M_PI / CAR_WHEEL_DIAMETER * dSpeed); // calculates from m/s to (U/100) / min */
         /* int iSpeed; */
-        wpdo(speedPDO, 6000 / M_PI * speed);
+        speedPDO.map[0].data = 6000 / M_PI * speed;
+        wpdo(speedPDO);
     }
     double speed() {
-        return meas.speed;
+        return msrPDO.map[0].data;
     }
 
     /**
@@ -80,7 +81,7 @@ struct mcDSA : CAN::Open::Device {
      * Return the current motor current in mA
      */
     double current() {
-        return meas.current;
+        return msrPDO.map[1].data;
     }
 
     void callback(CAN::Open::SDO rq) {
@@ -93,8 +94,5 @@ struct mcDSA : CAN::Open::Device {
         }
     }
     void callback(CAN::Open::TPDO rq) {
-        uint64_t raw = rq.data;
-        meas.speed = (double)(int32_t)raw * M_PI / 6000;
-        meas.current = (int32_t)(rq.data >> 32) * 0.001;
     }
 };
