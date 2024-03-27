@@ -75,4 +75,8 @@ public:
     bool full() {
         return q.len == q.size;
     }
+    /** return element at idx */
+    T getAt(size_t idx) {
+        return q[(tail + idx) % q.size];
+    }
 };
