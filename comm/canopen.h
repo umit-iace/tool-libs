@@ -70,10 +70,10 @@ struct RPDO {
         uint64_t dat = 0;
         uint8_t shift = 0;
         for (auto &i : map) {
-            dat |= (i.data & (1 << i.len)-1) << shift;
+            dat |= (i.data & ((uint64_t)1 << i.len)-1) << shift;
             shift += i.len;
         }
-        return {.data=dat, .id = COB, .opts = {.dlc=8}};
+        return {.data=dat, .id = COB, .opts = {.dlc=(uint8_t)(shift / 8)}};
     }
 };
 /** CANOpen Transmit Process Data Object Type */
@@ -86,7 +86,7 @@ struct TPDO {
     void setData(uint64_t d) {
         uint8_t shift = 0;
         for (auto &i : map) {
-            i.data = d >> shift & (1 << i.len) - 1;
+            i.data = d >> shift & ((uint64_t)1 << i.len) - 1;
             shift += i.len;
         }
     }
