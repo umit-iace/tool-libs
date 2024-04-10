@@ -3,7 +3,7 @@
  * Copyright (c) 2023 IACE
  */
 #pragma once
-#include <stdio.h>
+#include <stdint.h>
 
 /**
  * Wrapper for extracting bitwise data from a stream of bytes.

@@ -1,12 +1,21 @@
 cmake_minimum_required(VERSION 3.25)
 cmake_policy(VERSION 3.25)
 
+project(tool-libs
+	HOMEPAGE_URL https://github.com/umit-iace/tool-libs
+	LANGUAGES C CXX ASM
+)
+
+option(TEST "generate test targets" FALSE)
+
 add_library(tool-libs INTERFACE)
 target_include_directories(tool-libs INTERFACE .)
 
 add_subdirectory(stm)
 add_subdirectory(linux)
-add_subdirectory(tests)
+if (PROJECT_IS_TOP_LEVEL OR TEST)
+    add_subdirectory(tests)
+endif()
 
 find_package(Doxygen)
 if(DOXYGEN_FOUND)
