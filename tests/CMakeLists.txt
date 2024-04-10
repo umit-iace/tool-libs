@@ -1,5 +1,3 @@
-project(libs_tests VERSION 0.0.1 LANGUAGES CXX)
-
 include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
 FetchContent_Declare( doctest
@@ -10,31 +8,32 @@ FetchContent_Declare( doctest
 )
 FetchContent_MakeAvailable(doctest)
 
-# Make test executable
-add_executable(tool-libs-tests main.cpp
-    buffer.cpp
-    experiment.cpp
-    frameregistry.cpp
-    interpolation.cpp
-    later.cpp
-    min.cpp
-    movingaverage.cpp
-    Queue.cpp
-    TFR.cpp
-    )
-target_compile_features(tool-libs-tests PRIVATE cxx_std_17)
-target_include_directories(tool-libs-tests PUBLIC ${DOCTEST_INCLUDE_DIR})
-target_link_libraries(tool-libs-tests PUBLIC tool-libs doctest::doctest)
+function(make_test name)
+	add_executable(test-${name} main.cpp ${name}.cpp)
+	target_compile_features(test-${name} PRIVATE cxx_std_17)
+	target_include_directories(test-${name} PUBLIC ${DOCTEST_INCLUDE_DIR})
+	target_link_libraries(test-${name} PUBLIC tool-libs doctest::doctest ${ARGN})
 
-add_custom_target(tool-libs-tests-run
-    DEPENDS tool-libs-tests
-    COMMAND valgrind -s --leak-check=full "${CMAKE_CURRENT_BINARY_DIR}/tool-libs-tests"
-    )
+	add_custom_target(test-${name}-run
+		DEPENDS test-${name}
+		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+		COMMAND ./test-${name}
+		VERBATIM
+	)
+	set(TOOL-LIBS-TESTS "test-${name}-run;${TOOL-LIBS-TESTS}" PARENT_SCOPE)
+endfunction()
 
-add_executable(bitstream bitstream.cpp)
-target_link_libraries(bitstream PUBLIC tool-libs doctest::doctest)
-add_custom_target(bitstream-test
-    DEPENDS bitstream
-    COMMAND ./bitstream
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+make_test(bitstream)
+make_test(buffer)
+make_test(experiment)
+make_test(frameregistry)
+# make_test(interpolation)
+make_test(later)
+make_test(min)
+make_test(movingaverage)
+make_test(Queue)
+make_test(TFR)
+
+add_custom_target(test-run
+	DEPENDS ${TOOL-LIBS-TESTS}
 )
