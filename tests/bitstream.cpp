@@ -1,8 +1,7 @@
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
 #include <iostream>
 
-#include "utils/bitstream.h"
+#include <utils/bitstream.h>
 struct Data {
     uint8_t cnf:6;
     int16_t pos:12;
