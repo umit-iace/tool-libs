@@ -77,6 +77,6 @@ public:
     }
     /** return element at idx */
     T getAt(size_t idx) {
-        return q[(tail + idx) % q.size];
+        return q[(head + idx) % q.size];
     }
 };
