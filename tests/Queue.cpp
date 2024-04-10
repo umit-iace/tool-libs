@@ -81,3 +81,18 @@ TEST_CASE("tool-libs: queue: roundabout") {
         }
     }
 }
+TEST_CASE("tool-libs: queue: indexed access") {
+    Queue<int> q{10};
+    for (int i = 0; i < 7; ++i) {
+        q.push(i);
+        CHECK(i == q.getAt(0));
+        q.pop();
+    }
+    CHECK(q.size() == 0);
+    for (int i = 0; i < 5; ++i) {
+        q.push(i);
+    }
+    for (int i = 0; i < 5; ++i) {
+        CHECK(i == q.getAt(i));
+    }
+}
