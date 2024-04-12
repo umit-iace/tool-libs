@@ -104,9 +104,6 @@ struct TPDO {
 struct Dispatch : Sink<SDO>, Sink<Message> {
     Dispatch(CAN &can) : can(can) { }
     CAN &can;
-#if defined(DEBUG)
-    Logger log;
-#endif
     Sink<SDO> *ids[128] {};
     struct PDO {
         Sink<TPDO> *dev[8] {};
@@ -116,7 +113,11 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
 
     using Sink<SDO>::push;
     void push(SDO &&rq) override {
-        assert(ids[rq.nodeID] != nullptr); //must register first!
+        //assert(ids[rq.nodeID] != nullptr); //must register first!
+        if (ids[rq.nodeID] ==nullptr) {
+            k.log.warn("ID [0x%x] NOT registered!\n", rq.nodeID);
+            return;
+        }
         can.push(rq.toCanMsg());
     }
     using Sink<Message>::push;
@@ -141,6 +142,10 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
                     && msg.opts.dlc) {
                 tpdo->setData(msg.data);
                 pdo.dev[i]->push(*tpdo);
+	    /* k.log.info("handled PDO id: %x\n", msg.id); */
+	    /* k.log.info("          data: %x\n", msg.data); */
+	    /* k.log.info("    TPDO data0: %x\n",tpdo->map[0].data); */
+	    /* k.log.info("    TPDO data1: %x\n",tpdo->map[1].data); */
                 return true;
             }
         }
@@ -150,14 +155,15 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
         uint16_t service = msg.id & ~0x7f;
         uint8_t id = msg.id & 0x7f;
         if (id == 0) return false;
-        if (service == 0x80 ||  // SYNC
+        if (//service == 0x80 ||  // SYNC
             service == 0x580 || // SDO server-to-client
-            service == 0x600 || // SDO client-to-server
-            service == 0x700 || // NMT control
+            //service == 0x600 || // SDO client-to-server
+            //service == 0x700 || // NMT control
             false) {
             if (ids[id]) {
                 ids[id]->push(SDO::fromCanMsg(msg));
             }
+	    /* k.log.info("handled SDO id: %x\n", msg.id); */
             return true;
         }
         return false;
@@ -167,11 +173,23 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
         // TODO: what to do to CAN messages that _aren't_ CanOpen
         while (!can.empty()) {
             auto msg = can.pop();
+	    /* k.log.info("received msg:\n" */
+		     /* "	COB: %x\n" */
+		     /* "	dat: [%02x %02x %02x %02x %02x %02x %02x %02x]\n", */
+		     /* msg.id, */
+                    /* (uint8_t)(msg.data), */
+                    /* (uint8_t)(msg.data>>8), */
+                    /* (uint8_t)(msg.data>>16), */
+                    /* (uint8_t)(msg.data>>24), */
+                    /* (uint8_t)(msg.data>>32), */
+                    /* (uint8_t)(msg.data>>40), */
+                    /* (uint8_t)(msg.data>>48), */
+                    /* (uint8_t)(msg.data>>56) */
+		    /* ); */
             if (handlePDO(msg)) continue;
             if (handleSDO(msg)) continue;
-#if defined(DEBUG)
             // don't know what to do with received message!
-            log.warn("COdispatch: [id: %d] [x%2x x%2x x%2x x%2x x%2x x%2x x%2x x%2x]\n",
+            k.log.warn("unhandled: [id: %x] [%02x %02x %02x %02x %02x %02x %02x %02x]\n",
                     msg.id,
                     (uint8_t)(msg.data),
                     (uint8_t)(msg.data>>8),
@@ -182,7 +200,6 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
                     (uint8_t)(msg.data>>48),
                     (uint8_t)(msg.data>>56)
                     );
-#endif
         }
     }
     void nmt(NMT command, uint8_t nodeid) {
