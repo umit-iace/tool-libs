@@ -56,7 +56,7 @@ struct PDOMap {
     uint8_t len;
     int32_t data;
 };
-enum PDOType : uint8_t { SYNC, CHANGE=255 };
+enum PDOType : uint8_t { SYNC, CYCLIC=254, CHANGE=255 };
 /** CANOpen Receive Process Data Object Type */
 struct RPDO {
     uint8_t N;
@@ -80,8 +80,8 @@ struct RPDO {
 struct TPDO {
     uint8_t N;
     PDOType type;
-    uint32_t COB; // CAN OBject ID
-    /* uint64_t data; */
+    uint32_t COB; ///< CAN OBject ID
+    uint32_t inhibit_time; ///< inhibit time in 0.1ms steps
     Buffer<PDOMap> map;
     void setData(uint64_t d) {
         uint8_t shift = 0;
@@ -280,7 +280,7 @@ struct Device : Sink<TPDO>, Sink<SDO> {
         if (pdo.COB == 0) pdo.COB = id + 0x80 + 0x100 * pdo.N;
         disablepdo(pdo);
         w8(0x1800+pdo.N-1, 0x2, pdo.type);
-        /* w16(0x1800+pdo.N-1, 0x3, pdo.inhibit_time); */
+        w16(0x1800+pdo.N-1, 0x3, pdo.inhibit_time);
         /* w16(0x1800+pdo.N-1, 0x5, pdo.event_timer); */
         w8(0x1a00+pdo.N-1, 0x0, 0); // clear number of mapped objects
         for (size_t i = 0; i < pdo.map.len; ++i) {
