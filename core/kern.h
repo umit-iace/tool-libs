@@ -37,11 +37,15 @@ public:
         time_ += dt_ms;
     }
     /** kernel entry point */
-    [[noreturn]] void run () {
-        while(true) {
+    void run () {
+        while(go) {
             Scheduler::run();
             idle();
         }
+    }
+    /** stop kernel */
+    void exit() {
+        go = false;
     }
     /** implement to not burn unnecessary cpu cycles
      *
@@ -59,4 +63,5 @@ public:
     void setTimeStep(uint16_t dt_us);
 private:
     uint32_t time_{};
+    bool go{true};
 } k;
