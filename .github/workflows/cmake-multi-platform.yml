@@ -38,6 +38,7 @@ jobs:
           build-base
           doctest-dev
           cmake
+          linux-headers
         arch: ${{ matrix.arch }}
 
     - name: Set reusable strings
