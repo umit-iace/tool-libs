@@ -23,18 +23,18 @@ namespace CAN {
             int flags = fcntl(sock, F_GETFL, 0);
             if (flags == -1) {
                 perror("cannot get CAN socket flags");
-                abort();
+                return;
             }
             if (fcntl(sock, F_SETFL, flags | O_NONBLOCK) == -1) {
                 perror("cannot set O_NONBLOCK on CAN socket");
-                abort();
+                return;
             }
             /* */
             struct ifreq ifr = {};
             strncpy(ifr.ifr_name, ifname, IF_NAMESIZE);
             if (ioctl(sock, SIOCGIFINDEX, &ifr) == -1) {
                 perror("cannot find CAN interface index");
-                abort();
+                return;
             }
             /* setup address for bind */
             struct sockaddr_can addr {
@@ -44,7 +44,7 @@ namespace CAN {
             /* bind socket to the can0 interface */
             if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
                 perror("cannot bind socket to CAN interface");
-                abort();
+                return;
             }
         }
         ~HW() {
