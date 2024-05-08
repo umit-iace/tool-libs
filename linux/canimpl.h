@@ -61,11 +61,10 @@ namespace CAN {
                 auto frame = tx.front();
                 int l = write(sock, &frame, sizeof(frame));
                 if (l < 0) {
-                    if (errno == EAGAIN) {
-                        break;
-                    } else {
+                    if (errno != EAGAIN) {
                         perror("writing on CAN socket error");
                     }
+                    break;
                 } else if (l < sizeof(frame)) {
                     fprintf(stderr, "write: incomplete CAN frame: %d\n", l);
                 } else { // success
