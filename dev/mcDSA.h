@@ -27,8 +27,8 @@ struct mcDSA : CAN::Open::Device {
 
     mcDSA(CAN::Open::Dispatch &out, uint8_t id) : CAN::Open::Device(out, id) {
         enable(false);
-        enablepdo(speedPDO);
-        enablepdo(msrPDO);
+        enablePDO(speedPDO);
+        enablePDO(msrPDO);
         enable(true);
     }
     struct Measurements {
@@ -57,7 +57,7 @@ struct mcDSA : CAN::Open::Device {
         /* int iSpeed = (int) (6000 / M_PI / CAR_WHEEL_DIAMETER * dSpeed); // calculates from m/s to (U/100) / min */
         /* int iSpeed; */
         speedPDO.map[0].data = 6000 / M_PI * speed;
-        wpdo(speedPDO);
+        wPDO(speedPDO);
     }
     double speed() {
         return msrPDO.map[0].data;
