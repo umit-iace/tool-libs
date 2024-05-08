@@ -48,7 +48,7 @@ extern class Experiment {
     };
 public:
     /// States during which recurring tasks can be called using \ref during
-    enum State { 
+    enum State {
         /// initial Experiment state
         IDLE,
         /// running Experiment state
@@ -118,7 +118,7 @@ private:
         State old = state;
         // very simple state machine
         state_ = alive ? RUN : IDLE;
-        if (state != old) switch(old) { // react to state changes
+        if (state != old) switch(old) { // handle state transitions == events
         case IDLE:
             time_ = 0;
             k.schedule(time, init);
@@ -127,7 +127,8 @@ private:
         case RUN:
             k.schedule(time, stop);
             break;
-        } else switch (state) { // no state changes
+        }
+        switch (state) { // handle states == recurring
         case IDLE:
             k.schedule(time, idle);
             break;
