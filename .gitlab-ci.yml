@@ -8,14 +8,8 @@ docu:
     refs:
      - master
   script:
-     - virtualenv _venv
-     - source _venv/bin/activate
-     - pip install -r docs/requirements.txt
-     - cd docs
-     - make html
+     - doxygen docs/doxyfile
      - rm -rf /srv/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME
      - mkdir -p /srv/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME
-     - mv _build/html/* /srv/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME
-     - cd ..
-     - deactivate
+     - mv html/* /srv/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME
      - rm -rf *
