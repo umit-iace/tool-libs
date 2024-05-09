@@ -1,6 +1,6 @@
 #include <core/kern.h>
 
-#include "hal.h"
+#include "sys/hal.h"
 
 HAL_StatusTypeDef hal = HAL_Init();
 void Kernel::idle() {
