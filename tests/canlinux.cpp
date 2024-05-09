@@ -1,6 +1,6 @@
 #include <core/kern.h>
 #include <comm/canopen.h>
-#include <linux/canimpl.h>
+#include <sys/can.h>
 
 Kernel k;
 using namespace CAN;

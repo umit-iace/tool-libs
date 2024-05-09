@@ -2,7 +2,7 @@
  *
  * Copyright (c) 2023 IACE
  */
-#include "spi.h"
+#include "sys/spi.h"
 
 using namespace SPI;
 namespace SPI {

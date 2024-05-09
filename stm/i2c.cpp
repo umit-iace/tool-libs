@@ -2,7 +2,7 @@
  *
  * Copyright (c) 2023 IACE
  */
-#include "i2c.h"
+#include "sys/i2c.h"
 namespace debug {
 namespace i2c {
 }}

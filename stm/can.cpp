@@ -1,4 +1,4 @@
-#include "can.h"
+#include "sys/can.h"
 
 using namespace CAN;
 

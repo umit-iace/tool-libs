@@ -5,6 +5,7 @@ target_link_libraries(tool-libs-stm INTERFACE tool-libs)
 target_compile_definitions(tool-libs-stm INTERFACE
     HAL_TIM_MODULE_ENABLED USE_HAL_TIM_REGISTER_CALLBACKS=1
     )
+target_include_directories(tool-libs-stm INTERFACE .)
 
 add_library(tool-libs-stm-i2c INTERFACE)
 target_sources(tool-libs-stm-i2c INTERFACE i2c.cpp)

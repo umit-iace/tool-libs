@@ -2,7 +2,7 @@
  *
  * Copyright (c) 2023 IACE
  */
-#include "uart.h"
+#include "sys/uart.h"
 using namespace UART;
 namespace debug {
     namespace uart {
