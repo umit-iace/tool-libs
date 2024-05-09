@@ -37,15 +37,17 @@ public:
         time_ += dt_ms;
     }
     /** kernel entry point */
-    void run () {
+    int run () {
         while(go) {
             Scheduler::run();
             idle();
         }
+        return exit_code;
     }
     /** stop kernel */
-    void exit() {
+    void exit(int code=0) {
         go = false;
+        exit_code = code;
     }
     /** implement to not burn unnecessary cpu cycles
      *
@@ -64,4 +66,5 @@ public:
 private:
     uint32_t time_{};
     bool go{true};
+    int exit_code{};
 } k;
