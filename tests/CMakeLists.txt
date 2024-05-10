@@ -40,6 +40,7 @@ make_test(Queue)
 make_test(TFR)
 
 make_test_standalone(canlinux tool-libs-linux-can)
+make_test_standalone(iface tool-libs-linux)
 
 add_custom_target(test-run
 	DEPENDS ${TOOL-LIBS-TESTS}
