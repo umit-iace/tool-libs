@@ -9,10 +9,6 @@ void Kernel::idle() {
 void Kernel::setTimeStep(uint16_t dt_us) {
     assert(false); // impossible to change physical time
 }
-void HAL_IncTick() {
-    k.tick(uwTickFreq);
-    uwTick += uwTickFreq;
-}
 void __assert_func(const char *file, int line, const char *func, const char *assert) {
     asm("bkpt");
     while (true);
@@ -63,7 +59,7 @@ void PendSV_Handler(void) { }
   * @brief This function handles System tick timer.
   */
 void SysTick_Handler(void) {
-    HAL_IncTick();
-    HAL_SYSTICK_IRQHandler();
+    k.tick(uwTickFreq);
+    uwTick += uwTickFreq;
 }
 }
