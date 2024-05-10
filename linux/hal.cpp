@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 #include <thread>
 #include <unistd.h>
+#include <setjmp.h>
 using namespace std::chrono;
 
 time_point start{steady_clock::now()};
@@ -26,7 +27,13 @@ void Kernel::setTimeStep(uint16_t dt_us) {
     dt = microseconds{dt_us};
 }
 
-void sighandler(int signum);
+void sighandler(int signum) {
+    k.exit(signum == SIGINT ? 0 : -1);
+    if (signum == SIGSEGV) {
+        /* fprintf(stderr, "detected SIGSEGV, attempting clean shutdown\n"); */
+        longjmp(k.jbf, 1);
+    }
+}
 
 struct impl {
     struct Pipe {
@@ -116,9 +123,6 @@ struct impl {
     WRITE writeSock{p_out.write}, writeTTY{STDOUT_FILENO};
 } impl;
 
-void sighandler(int signum) {
-    exit(EXIT_SUCCESS);
-}
 
 Host host{
     .socket{
