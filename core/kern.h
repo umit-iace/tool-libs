@@ -5,6 +5,7 @@
 #pragma once
 #include "timed.h"
 #include "logger.h"
+#include <setjmp.h>
 
 /** simple kernel for running tool-libs based applications
  *
@@ -38,6 +39,7 @@ public:
     }
     /** kernel entry point */
     int run () {
+        setjmp(jbf);
         while(go) {
             Scheduler::run();
             idle();
@@ -67,4 +69,6 @@ private:
     uint32_t time_{};
     bool go{true};
     int exit_code{};
+    jmp_buf jbf{};
+    friend void sighandler(int);
 } k;
