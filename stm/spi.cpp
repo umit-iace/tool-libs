@@ -89,7 +89,7 @@ void _complete(SPI_HandleTypeDef *handle) {
     auto& rq = spi->q.front();
     rq.dev->select(false);
     rq.dev->callback(rq);
-    spi->q.pop();
+    spi->q.drop();
     spi->deadline = {};
     spi->active.xfer = false;
     poll(spi);
