@@ -7,7 +7,7 @@
 #include <cmath>
 #include <cstdint>
 
-#include "stm/spi.h"
+#include "sys/spi.h"
 
 /** Implementation of MAX31855 thermocouple temperature measurement */
 struct MAX31855 : SPI::Device {

@@ -5,8 +5,7 @@
 #ifndef ADS1115_H
 #define ADS1115_H
 
-#include "stm/hal.h"
-#include "stm/i2c.h"
+#include "sys/i2c.h"
 
 /**
  * Implementation of the ADS1115 analog to digital converter.

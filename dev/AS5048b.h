@@ -6,7 +6,7 @@
 
 #include <cmath>
 #include <cstdint>
-#include "stm/i2c.h"
+#include "sys/i2c.h"
 
 /** 14-bit rotary position sensor */
 class AS5048B : I2C::Device {

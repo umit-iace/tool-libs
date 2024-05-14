@@ -5,7 +5,7 @@
 #pragma once
 
 #include <cstdint>
-#include "stm/i2c.h"
+#include "sys/i2c.h"
 
 /** Implementation of the BMI160 6axis Inertial Measurement Unit */
 struct BMI160 : I2C::Device {
