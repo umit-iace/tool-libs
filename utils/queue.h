@@ -63,6 +63,14 @@ public:
         q.len--;
         return std::move(q[head++]);
     }
+    /**
+     * shift head of queue without touching underlying memory
+     */
+    void drop() {
+        assert(q.len != 0);
+        q.len--;
+        head++;
+    }
     /** return number of elements in queue */
     size_t size() {
         return q.len;
