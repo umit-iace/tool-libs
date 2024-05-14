@@ -20,7 +20,8 @@ void _tx_complete(CAN_HandleTypeDef *handle) {
     assert(can->tx.active & 1<<N);
     can->tx.active &= ~(1<<N);
     while (can->tx.q.size() && HAL_CAN_GetTxMailboxesFreeLevel(handle)) {
-        _start(handle, can->tx.q.pop());
+        _start(handle, can->tx.q.front());
+        can->tx.q.drop();
     }
 }
 template<int N>
