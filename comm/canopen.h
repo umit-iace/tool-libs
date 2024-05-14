@@ -170,7 +170,7 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
     using Sink<SDO>::push;
     void push(SDO &&rq) override {
         //assert(ids[rq.nodeID] != nullptr); //must register first!
-        if (ids[rq.nodeID] ==nullptr) {
+        if (ids[rq.nodeID] == nullptr) {
             k.log.warn("ID [0x%x] NOT registered!\n", rq.nodeID);
             return;
         }
@@ -185,6 +185,12 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
         ids[nodeID] = dev;
     }
     void registerPDO(TPDO *tpdo, Sink<TPDO> *dev) {
+        for (uint8_t i = 0; i < pdo.n; i++) {
+            if (pdo.pdo[i] == tpdo) {
+                assert(pdo.dev[i] == dev);
+                return;
+            }
+        }
         assert ( pdo.n < 8 );
         pdo.dev[pdo.n] = dev;
         pdo.pdo[pdo.n] = tpdo;
