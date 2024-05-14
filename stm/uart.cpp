@@ -148,7 +148,7 @@ void _rxcallback(UART_HandleTypeDef *handle) {
 void _txcallback(UART_HandleTypeDef *handle) {
     auto uart = HW::reg.from(handle);
     auto& tx = uart->tx;
-    tx.q.pop();
+    tx.q.drop();
     tx.active = false;
     tx.deadline = Deadline{};
     poll(uart);
