@@ -5,8 +5,7 @@
 #ifndef QMC5883L_H
 #define QMC5883L_H
 
-#include "stm/hal.h"
-#include "stm/i2c.h"
+#include "sys/i2c.h"
 #include <cmath>
 
 /**

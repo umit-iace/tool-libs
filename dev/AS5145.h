@@ -4,7 +4,7 @@
  */
 #pragma once
 
-#include "stm/spi.h"
+#include "sys/spi.h"
 #include "utils/bitstream.h"
 
 /** Class describing a chain of AS5145 Hall sensors */

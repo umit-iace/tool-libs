@@ -5,8 +5,7 @@
 #ifndef HMC5883L_H
 #define HMC5883L_H
 
-#include "stm/hal.h"
-#include "stm/i2c.h"
+#include "sys/i2c.h"
 #include <cmath>
 
 /**
