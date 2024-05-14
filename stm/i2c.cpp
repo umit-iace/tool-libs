@@ -91,8 +91,7 @@ void _complete(I2C_HandleTypeDef *handle) {
     auto i2c = HW::reg.from(handle);
     switch (i2c->active) {
     case i2c->Q:
-        i2c->q.front().dev->callback(i2c->q.front());
-        i2c->q.drop();
+        i2c->q.front().dev->callback(i2c->q.pop());
         break;
     case i2c->IN:
         i2c->in.dev->callback(std::move(i2c->in));
