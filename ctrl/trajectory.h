@@ -108,14 +108,13 @@ public:
         size_t off{b.size / 2};
         P = Buffer<Vec>(off);
         P.len = off;
-        double slope;
         for (size_t i = 0; i < off; ++i) {
             P[i] = {b[i], b[i + off]};
         }
     }
 
     Buffer<double> getValue(double x) override {
-        for (int l = 0; l < diffs.len; ++l) diffs[l] = 0;
+        for (auto &d: diffs) d = 0;
 
         size_t i = (P.size - 1) / 2;
         size_t left = 0, right = P.size - 1;
@@ -149,7 +148,7 @@ public:
                     diffs[0] = diffs[0] * tau + coeffs[k - coeffs.len];
             }
 
-            for (int l = 0; l < diffs.len; ++l) {
+            for (size_t l = 0; l < diffs.len; ++l) {
                 if (l > 0)
                     diffs[l] *= dy * l / pow(dx, l);
                 else
