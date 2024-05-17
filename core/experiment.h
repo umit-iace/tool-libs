@@ -36,7 +36,7 @@ extern class Experiment {
         virtual Buffer<uint8_t> pre() override {
             Buffer<uint8_t> ret = 256;
             ret.len = snprintf((char*)ret.buf, ret.size,
-                    "Experiment Logger (@%ldms): ", time);
+                    "Experiment Logger (@%w32dms): ", time);
             return ret;
         }
         ELog(const uint32_t &time, Sink<Buffer<uint8_t>> &underlying)

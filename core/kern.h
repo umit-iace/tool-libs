@@ -20,7 +20,7 @@ extern class Kernel :
         const uint32_t &time;
         virtual Buffer<uint8_t> pre() override {
             Buffer<uint8_t> ret = 256;
-            ret.len = snprintf((char*)ret.buf, ret.size, "(@%ldms): ", time);
+            ret.len = snprintf((char*)ret.buf, ret.size, "(@%w32dms): ", time);
             return ret;
         }
     };
