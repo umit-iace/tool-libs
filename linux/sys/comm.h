@@ -54,7 +54,7 @@ struct TTY:
                     perror("writing to fd error");
                 }
                 break;
-            } else if (l < msg.len) {
+            } else if ((size_t)l < msg.len) {
                 for (size_t i = 0; i < msg.len-l; i++){
                     msg.buf[i] = msg.buf[i+l];
                 }
@@ -136,7 +136,7 @@ struct UDP:
                     perror("writing to socket error");
                 }
                 break;
-            } else if (l < msg.len) {
+            } else if ((size_t)l < msg.len) {
                 for (size_t i = 0; i < msg.len-l; i++){
                     msg.buf[i] = msg.buf[i+l];
                 }

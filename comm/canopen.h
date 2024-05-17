@@ -73,7 +73,7 @@ struct RPDO {
         uint64_t data = 0;
         uint8_t shift = 0;
         for (auto &i : map) {
-            data |= (i.data & ((uint64_t)1 << i.len)-1) << shift;
+            data |= (i.data & (((uint64_t)1 << i.len)-1)) << shift;
             shift += i.len;
         }
         return {.data=data, .id = COB, .opts = {.dlc=(uint8_t)(shift / 8)}};
@@ -89,7 +89,7 @@ struct TPDO {
     void receive(uint64_t d) {
         uint8_t shift = 0;
         for (auto &i : map) {
-            i.data = d >> shift & ((uint64_t)1 << i.len) - 1;
+            i.data = d >> shift & (((uint64_t)1 << i.len) - 1);
             shift += i.len;
         }
     }
@@ -137,19 +137,6 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
         // TODO: what to do to CAN messages that _aren't_ CanOpen
         while (!can.empty()) {
             auto msg = can.pop();
-	    /* k.log.info("received msg:\n" */
-		     /* "	COB: %x\n" */
-		     /* "	dat: [%02x %02x %02x %02x %02x %02x %02x %02x]\n", */
-		     /* msg.id, */
-                    /* (uint8_t)(msg.data), */
-                    /* (uint8_t)(msg.data>>8), */
-                    /* (uint8_t)(msg.data>>16), */
-                    /* (uint8_t)(msg.data>>24), */
-                    /* (uint8_t)(msg.data>>32), */
-                    /* (uint8_t)(msg.data>>40), */
-                    /* (uint8_t)(msg.data>>48), */
-                    /* (uint8_t)(msg.data>>56) */
-		    /* ); */
             if (handlePDO(msg)) continue;
             if (handleSDO(msg)) continue;
             // don't know what to do with received message!

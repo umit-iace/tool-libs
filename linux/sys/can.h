@@ -65,7 +65,7 @@ namespace CAN {
                         perror("writing on CAN socket error");
                     }
                     break;
-                } else if (l < sizeof(frame)) {
+                } else if ((size_t)l < sizeof(frame)) {
                     fprintf(stderr, "write: incomplete CAN frame: %d\n", l);
                 } else { // success
                     tx.pop();
@@ -86,8 +86,7 @@ namespace CAN {
                     perror("reading on CAN socket error");
                 }
                 return rx.empty();
-            }
-            if (l < sizeof(frame)) { /* paranoid check ... */
+            } else if ((size_t)l < sizeof(frame)) { /* paranoid check ... */
                 fprintf(stderr, "read: incomplete CAN frame: %d\n", l);
                 return rx.empty();
             }
