@@ -106,7 +106,8 @@ struct TPDO {
  * cf. https://www.can-cia.org/fileadmin/resources/documents/brochures/co_poster.pdf
  */
 struct Dispatch : Sink<SDO>, Sink<Message> {
-    Dispatch(CAN &can) : can(can) { }
+    enum LOGLEVEL { NONE, WARN, INFO} log;
+    Dispatch(CAN &can, LOGLEVEL=NONE) : can(can) { }
     CAN &can;
     Sink<SDO> *ids[128] {};
     struct PDO {
@@ -140,7 +141,7 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
             if (handlePDO(msg)) continue;
             if (handleSDO(msg)) continue;
             // don't know what to do with received message!
-            k.log.warn("unhandled: [id: %x] [%02x %02x %02x %02x %02x %02x %02x %02x]\n",
+            if (log > NONE) k.log.warn("unhandled: [id: %x] [%02x %02x %02x %02x %02x %02x %02x %02x]\n",
                     msg.id,
                     (uint8_t)(msg.data),
                     (uint8_t)(msg.data>>8),
@@ -158,7 +159,7 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
     void push(SDO &&rq) override {
         //assert(ids[rq.nodeID] != nullptr); //must register first!
         if (ids[rq.nodeID] == nullptr) {
-            k.log.warn("ID [0x%x] NOT registered!\n", rq.nodeID);
+            if (log > NONE) k.log.warn("ID [0x%x] NOT registered!\n", rq.nodeID);
             return;
         }
         can.push(rq.toMessage());
@@ -191,10 +192,12 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
                     && msg.opts.dlc) {
                 tpdo->receive(msg.data);
                 pdo.dev[i]->push(*tpdo);
-	    /* k.log.info("handled PDO id: %x\n", msg.id); */
-	    /* k.log.info("          data: %x\n", msg.data); */
-	    /* k.log.info("    TPDO data0: %x\n",tpdo->map[0].data); */
-	    /* k.log.info("    TPDO data1: %x\n",tpdo->map[1].data); */
+                if (log > WARN) {
+                    k.log.info("handled PDO id: %x\n", msg.id);
+                    k.log.info("          data: %x\n", msg.data);
+                    k.log.info("    TPDO data0: %x\n",tpdo->map[0].data);
+                    k.log.info("    TPDO data1: %x\n",tpdo->map[1].data);
+                }
                 return true;
             }
         }
@@ -212,7 +215,7 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
             if (ids[id]) {
                 ids[id]->push(SDO::fromMessage(msg));
             }
-	    /* k.log.info("handled SDO id: %x\n", msg.id); */
+            if (log > WARN) k.log.info("handled SDO id: %x\n", msg.id);
             return true;
         }
         return false;
