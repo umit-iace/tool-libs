@@ -29,7 +29,8 @@ void Kernel::setTimeStep(uint16_t dt_us) {
 
 void sighandler(int signum) {
     k.exit(signum == SIGINT ? 0 : -1);
-    if (signum == SIGSEGV) {
+    if (signum == SIGSEGV
+            || signum == SIGABRT) {
         /* fprintf(stderr, "detected SIGSEGV, attempting clean shutdown\n"); */
         longjmp(k.jbf, 1);
     }
@@ -41,6 +42,7 @@ bool hal = [](){ // initialize signal handlers
         sigfillset(&act.sa_mask);
         sigaction(SIGINT, &act, NULL);
         sigaction(SIGSEGV, &act, NULL);
+        sigaction(SIGABRT, &act, NULL);
         return true;
 }();
 
