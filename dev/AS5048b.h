@@ -67,6 +67,15 @@ public:
         return this->dAngle / 16384 * 2 * M_PI;
     }
 
+    /**
+     * Resets the angles
+     */
+     void reset() {
+         this->dAngle = 0;
+         this->dLastAngle = 0;
+         bInit = false;
+     }
+
 private:
     ///\cond false
     bool bInit = false;
