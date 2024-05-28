@@ -27,7 +27,7 @@ struct Device {
     /**
      * callback. is called as soon as transmission completed successfully
      */
-    virtual void callback(const Request req)=0;
+    virtual void callback(const Request &req)=0;
 };
 
 /**
