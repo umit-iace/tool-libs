@@ -171,7 +171,7 @@ struct Min {
         In(Source<Buffer<uint8_t>> &from) : source{from} { }
         /** check if Frame available */
         bool empty() override {
-            while (!source.empty()) {
+            while (!queue.full() && !source.empty()) {
                 for (auto b: source.pop()) {
                     byte(b);
                 }
