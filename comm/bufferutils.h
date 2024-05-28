@@ -58,7 +58,7 @@ struct SplitPull {
         Queue<Buffer<uint8_t>> q{20};
         Sink<Buffer<uint8_t>> *other;
         bool empty() override {
-            while (!from.empty()) {
+            while (!q.full() && !from.empty()) {
                 auto b = from.pop();
                 other->push(b);
                 q.push(std::move(b));
@@ -107,7 +107,7 @@ struct Tee : Source<Buffer<uint8_t>> {
     Queue<Buffer<uint8_t>> q{20};
     /** check source and push available data to sink */
     bool empty() override {
-        while (!from.empty()) {
+        while (!q.full() && !from.empty()) {
             auto b = from.pop();
             q.push(b);
             to.push(std::move(b));
