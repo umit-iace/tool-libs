@@ -38,7 +38,7 @@ public:
     /** set underlying Source */
     LineFilter(Source<Buffer<uint8_t>> &p): source(p) { }
     bool empty() override {
-        while (!source.empty()) {
+        while (!q.full() && !source.empty()) {
             for (auto b: source.pop()) {
                 recv(b);
             }
