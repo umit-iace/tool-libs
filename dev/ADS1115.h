@@ -139,7 +139,7 @@ public:
     }
 
 private:
-    void callback(const I2C::Request rq) {
+    void callback(const I2C::Request &rq) override {
         if (rq.data.size != 2) return;
         adc = (int16_t)(rq.data[0]<<8 | rq.data[1]) * uV[eFullScale] * 1e-6;
     }

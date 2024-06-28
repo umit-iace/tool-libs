@@ -92,7 +92,7 @@ struct HMC5883L : I2C::Device {
         });
     }
 
-    void callback(const I2C::Request rq) override {
+    void callback(const I2C::Request &rq) override {
         if (rq.data.size != 6) return;
 
         this->Axes.x = rq.data.buf[1] | (rq.data.buf[0] << 8);
