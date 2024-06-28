@@ -36,7 +36,7 @@ public:
             });
     }
 
-    void callback(const I2C::Request rq) override {
+    void callback(const I2C::Request &rq) override {
         if (rq.mem != 0xfe) return;
         uint16_t iRawAngle = ((uint16_t) rq.data.buf[0] << 6);
         iRawAngle += (rq.data.buf[1] & 0x3F);

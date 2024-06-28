@@ -78,7 +78,7 @@ struct QMC5883L : I2C::Device {
         });
     }
 
-    void callback(const I2C::Request rq) override {
+    void callback(const I2C::Request &rq) override {
         if (rq.data.size != 9) return;
 
         // TODO Check status register
