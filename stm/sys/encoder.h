@@ -35,7 +35,8 @@ namespace TIMER {
         struct Conf {
             TIM_TypeDef *tim;
             AFIO a, b;
-            double factor;
+            double factor = 1;
+            uint8_t filter = 0;
         };
 
         Encoder(Conf conf) :
@@ -43,16 +44,17 @@ namespace TIMER {
                 dFactor(conf.factor) {
 
             TIM_HandleTypeDef *htim = &tim.handle;
-            TIM_Encoder_InitTypeDef sConfig = {};
-            sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
-            sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
-            sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
-            sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
-            sConfig.IC1Filter = 0;
-            sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
-            sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
-            sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
-            sConfig.IC2Filter = 0;
+            TIM_Encoder_InitTypeDef sConfig = {
+                .EncoderMode = TIM_ENCODERMODE_TI12,
+                .IC1Polarity = TIM_ICPOLARITY_RISING,
+                .IC1Selection = TIM_ICSELECTION_DIRECTTI,
+                .IC1Prescaler = TIM_ICPSC_DIV1,
+                .IC1Filter = conf.filter,
+                .IC2Polarity = TIM_ICPOLARITY_RISING,
+                .IC2Selection = TIM_ICSELECTION_DIRECTTI,
+                .IC2Prescaler = TIM_ICPSC_DIV1,
+                .IC2Filter = conf.filter,
+            };
             while (HAL_TIM_Encoder_Init(htim, &sConfig) != HAL_OK);
             while (HAL_TIM_Encoder_Start(htim, TIM_CHANNEL_ALL) != HAL_OK);
         }
@@ -113,7 +115,7 @@ namespace TIMER {
 
     private:
         TIMER::HW tim;
-        double dFactor = 1;
+        double dFactor;
         int16_t iLastVal = 0;
         uint32_t iLastTick = 0;
 
