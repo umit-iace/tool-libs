@@ -4,6 +4,7 @@
  */
 #pragma once
 
+#include <cmath>
 #include <utility>
 #include <utils/buffer.h>
 
