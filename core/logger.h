@@ -10,8 +10,8 @@ template<typename T>
 struct DevNull: Sink<T>, Source<T> {
     bool empty() override { return true; }
     T pop() override { return T{}; }
-    void push(T &&) override {
-    }
+    bool full() override { return false; }
+    void push(T &&) override { }
 };
 /** black-hole sink & source, just drops all data, provides none */
 template<typename T>
@@ -59,8 +59,11 @@ public:
         mklog(NONE, fmt, args);
         va_end(args);
     }
+    bool full() override {
+        return out.full();
+    }
     /** push otherwisely prepared Buffer through Logger */
-    void push(Buffer<uint8_t> &&b) {
+    void push(Buffer<uint8_t> &&b) override {
         Buffer<uint8_t> tmp = pre();
         for (auto &c : b) { tmp.append(c); }
         out.push(std::move(tmp));

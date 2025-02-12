@@ -39,7 +39,7 @@ struct Min {
         EOF_BYTE = 0x55U,
     };
     /** incoming Min stream
-     * 
+     *
      * check data availability from underlying Buffer stream with
      * `empty()` then `pop()` and use data
      * ```
@@ -191,7 +191,7 @@ struct Min {
         }
     };
     /** outgoing Min stream
-     * 
+     *
      * pushes data out directly to underlying Buffer stream
      *
      * \dot
@@ -231,6 +231,9 @@ struct Min {
         /** create Buffer stream wrapper */
         Out(Sink<Buffer<uint8_t>> &to) : out{to} { }
         using Sink<Frame>::push;
+        bool full() override {
+            return out.full();
+        }
         /** push Frame through to underlying Buffer stream */
         void push(Frame &&f) override {
             req = 128;
