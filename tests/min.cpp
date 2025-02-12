@@ -4,6 +4,9 @@
 #include <doctest/doctest.h>
 
 struct Printer : Sink<Buffer<uint8_t>> {
+    bool full() override {
+        return false;
+    }
     void push(Buffer<uint8_t> &&b) override {
         printf("%.*s\n", b.len, b.buf);
     }
