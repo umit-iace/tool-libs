@@ -79,6 +79,8 @@ struct HW : public Sink<Request> {
     };
     /** init peripheral with given Conf */
     HW(const Conf &conf);
+    /** no need to call this before pushing SLAVE requests */
+    bool full() override;
     void push(Request &&rq) override;
     using Sink<Request>::push;
     void irqEvHandler();

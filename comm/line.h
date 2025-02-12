@@ -54,6 +54,9 @@ class LineDelimiter : public Sink<Buffer<uint8_t>> {
 public:
     /** set underlying Sink */
     LineDelimiter(Sink<Buffer<uint8_t>> &p): p(p) { }
+    bool full() override {
+        return p.full();
+    }
     void push(const Buffer<uint8_t> &b) override {
         if (b.len + 1 <= b.size) {
             push(std::move(Buffer<uint8_t>{b}));

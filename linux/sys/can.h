@@ -50,6 +50,9 @@ namespace CAN {
         ~HW() {
             close(sock);
         }
+        bool full() override {
+            return tx.full();
+        }
         void push(Message &&msg) override {
             struct can_frame frame = frameFromMessage(std::move(msg));
             tx.push(frame);

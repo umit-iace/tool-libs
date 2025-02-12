@@ -84,6 +84,7 @@ struct HW : public Sink<Request> {
     };
     /** init peripheral with given Conf */
     HW(const Conf &conf);
+    bool full() override;
     void push(Request &&rq) override;
     using Sink<Request>::push;
     void irqHandler();
