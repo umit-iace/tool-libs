@@ -49,10 +49,12 @@ struct Scheduler {
     // we do not own them
     Queue<Schedule::Schedulable*> q;
     /** schedule all registered schedulables of registry if necessary */
-    void schedule(uint32_t time, Schedule::Registry &reg) {
+    bool schedule(uint32_t time, Schedule::Registry &reg) {
         for (auto &c: reg.list) {
+            if (q.full()) return false;
             if (c->schedule(time)) q.push(c);
         }
+        return true;
     }
     /** run scheduled calls */
     void run() {

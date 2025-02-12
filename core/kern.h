@@ -34,7 +34,8 @@ public:
     }
     /** call every ms */
     void tick(uint32_t dt_ms) {
-        schedule(time, *this);
+        auto ok = schedule(time, *this);
+        if (!ok) exit( 127 ); // too many items in scheduled queue. DYING.
         time_ += dt_ms;
     }
     /** kernel entry point */
