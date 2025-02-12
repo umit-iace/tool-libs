@@ -19,11 +19,7 @@ class LineFilter : public Source<Buffer<uint8_t>> {
         // handle both \n and \r\n newlines
         if (b == '\n' || b == '\r') {
             if (l.len == 0) return;
-            if (!q.full()) {
-                q.push(std::move(l));
-            } else {
-                // fallthrough: Drop Line, queue was full
-            }
+            q.trypush(std::move(l));
             l = linelen;
             return;
         }

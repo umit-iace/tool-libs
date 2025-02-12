@@ -46,7 +46,7 @@ struct AS5145 : SPI::Device {
      * request measurement of sensor data
      */
     void sense() {
-        bus.push({
+        bus.trypush({
             .dev = this,
             .data = BYTES,
             .dir = SPI::Request::MISO,

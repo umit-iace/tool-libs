@@ -70,7 +70,7 @@ struct HMC5883L : I2C::Device {
      * start async read of angle
      */
     void measure() {
-        bus.push({
+        bus.trypush({
             .dev = this,
             .data = 6,
             .opts = {
@@ -82,7 +82,7 @@ struct HMC5883L : I2C::Device {
     }
 
     void writeReg(uint8_t reg, uint8_t val) {
-        bus.push({
+        bus.trypush({
             .dev = this,
             .data = {val},
             .opts = {

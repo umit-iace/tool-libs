@@ -21,7 +21,7 @@ struct BMI160 : I2C::Device {
             : I2C::Device(bus, addr) {
         writeReg(0x7e, 0x11);   // enable accelerometer
         writeReg(0x7e, 0x15);   // enable gyroscope
-        bus.push({
+        bus.trypush({
             .dev = this,
             .data = {0xc}, // set read pointer to gyro data
             });
@@ -31,7 +31,7 @@ struct BMI160 : I2C::Device {
      * start async read-out of sensor data
      */
     void measure() {
-        bus.push({
+        bus.trypush({
             .dev = this,
             .data = 12,
             .opts = {
@@ -45,7 +45,7 @@ struct BMI160 : I2C::Device {
     double factor_a{9.81 / 16384}, factor_g{3.14 / 180 / 16.4};
 
     void writeReg(uint8_t reg, uint8_t val) {
-        bus.push({
+        bus.trypush({
             .dev = this,
             .data = {val},
             .opts = {

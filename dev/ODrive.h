@@ -60,7 +60,7 @@ struct ODrive {
             }
             Buffer<uint8_t> cmd = 32;
             cmd.len = snprintf((char*)cmd.buf, cmd.size, cmds.velocity, side, speed, 0);
-            drive->q.push({
+            drive->q.trypush({
                     .cmd = VELO,
                     .m = this,
                     .out = std::move(cmd),
@@ -75,7 +75,7 @@ struct ODrive {
             }
             Buffer<uint8_t> cmd = 32;
             cmd.len = snprintf((char*)cmd.buf, cmd.size, cmds.get, side);
-            drive->q.push({
+            drive->q.trypush({
                     .cmd = GET,
                     .m = this,
                     .out = std::move(cmd),
@@ -101,7 +101,7 @@ struct ODrive {
                     _alive = true;
                 }
             } else if (k.time % 500 == 0) {
-                out.push({(const uint8_t*)"r vbus_voltage\n", 16});
+                out.trypush({(const uint8_t*)"r vbus_voltage\n", 16});
             }
             return;
         }
@@ -112,7 +112,7 @@ struct ODrive {
             req.m->callback(req, resp);
         }
         while (!q.empty() && q.front().out.buf) { // command has not been sent
-            out.push(std::move(q.front().out));
+            out.trypush(std::move(q.front().out));
             if (q.front().cmd != GET) { // only expect response from GET
                 q.pop();
             }

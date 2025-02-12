@@ -35,7 +35,7 @@ struct Logger : Sink<Buffer<uint8_t>> {
         if (lvl != NONE) {
             b.len += snprintf((char*)b.buf+b.len, b.size-b.len, "%s", color[NONE]);
         }
-        out.push(std::move(b));
+        out.trypush(std::move(b));
     }
 public:
     /** Info log level */
