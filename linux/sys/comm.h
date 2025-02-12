@@ -23,6 +23,9 @@ struct TTY:
     ~TTY() {
         close(fd);
     }
+    bool full() override {
+        return tx.full();
+    }
     using Sink::push;
     void push(Buffer<uint8_t> &&b) override {
         tx.push(std::move(b));
@@ -102,6 +105,9 @@ struct UDP:
     }
     ~UDP() {
         close(fd);
+    }
+    bool full() override {
+        return tx.full();
     }
     using Sink::push;
     void push(Buffer<uint8_t> &&b) override {

@@ -11,7 +11,7 @@
 #include "registry.h"
 
 namespace UART {
-/** Character Buffer Sink & Source wrapping UART Peripheral 
+/** Character Buffer Sink & Source wrapping UART Peripheral
  *
  * \dot
  * digraph UART_SINK_SOURCE {
@@ -46,6 +46,7 @@ struct HW : public Sink<Buffer<uint8_t>>, public Source<Buffer<uint8_t>> {
     HW(const Default &conf);
     /** constructor with manually specifiable settings */
     HW(const Manual &conf);
+    bool full() override;
     /** push bytebuffer into sending queue */
     void push(Buffer<uint8_t> &&tx) override;
     using Sink<Buffer<uint8_t>>::push;

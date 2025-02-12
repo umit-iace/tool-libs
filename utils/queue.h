@@ -80,7 +80,7 @@ public:
         return q.len == 0;
     }
     /** return true if queue is full */
-    bool full() {
+    bool full() override {
         return q.len == q.size;
     }
     /** return element at idx */

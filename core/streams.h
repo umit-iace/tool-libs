@@ -13,12 +13,22 @@
  */
 template<typename T>
 struct Sink {
+    /// check if sink is full
+    virtual bool full()=0;
     /// copy semantics
+    /// does _not_ check for space. guard by using 'if (!full) { ... }'
     virtual void push(const T& t) {
         push(std::move(T{t}));
     }
     /// move semantics
+    /// does _not_ check for space. guard by using 'if (!full) { ... }'
     virtual void push(T&&)=0;
+    /// use this if you don't care if it's going to be successful.
+    /// data gets discarded if sink is full.
+    void trypush(T&& t) {
+        if (full()) return;
+        push(std::move(t));
+    }
 };
 
 /** generic object source, i.e. generator of objects
@@ -31,5 +41,6 @@ struct Source {
     /// check if source is empty
     virtual bool empty()=0;
     /// pull object from source
+    /// does _not_ check for data. guard by using 'if (!empty) { ... }'
     virtual T pop()=0;
 };

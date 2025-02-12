@@ -194,6 +194,9 @@ void HW::irqHandler() {
     /* luckily we only ever use this one type of reception */
     handle.ReceptionType = HAL_UART_RECEPTION_TOIDLE;
 }
+bool HW::full() {
+    return tx.q.full();
+}
 void HW::push(Buffer<uint8_t> &&b) {
     tx.q.push(std::move(b));
     poll(this);
