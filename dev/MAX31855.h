@@ -43,7 +43,7 @@ struct MAX31855 : SPI::Device {
      * request measurement of sensor data
      */
     void sense() {
-        bus.push({
+        bus.trypush({
             .dev = this,
             .data = 4,
             .dir = SPI::Request::MISO,

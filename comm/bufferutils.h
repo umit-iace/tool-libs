@@ -116,7 +116,7 @@ struct Tee : Source<Buffer<uint8_t>> {
         while (!q.full() && !from.empty()) {
             auto b = from.pop();
             q.push(b);
-            to.push(std::move(b));
+            to.trypush(std::move(b));
         }
         return q.empty();
     }

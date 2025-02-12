@@ -104,7 +104,8 @@ public:
                 Sink<Frame> &s;
                 TMP(Sink<Frame>&s): s(s) {}
                 void call() override{
-                    s.push(Frame{1}.pack(false));
+                    auto f = Frame{1}.pack(false);
+                    s.trypush(std::move(f));
                 }};
         timeout.call(new TMP{notify});
     }

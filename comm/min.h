@@ -151,7 +151,7 @@ struct Min {
                     frame_crc |= b;
                     if (frame_crc == crc.finalize()) {
                         // Frame received OK, pass up data to handler
-                        queue.push(std::move(frame));
+                        queue.trypush(std::move(frame));
                         frame = {};
                     }
                     // Either the frame failed, or we already handled it
@@ -252,7 +252,7 @@ struct Min {
             stuff((uint8_t) ((sum >> 8) & 0xff));
             stuff((uint8_t) ((sum >> 0) & 0xff));
             nostuff(EOF_BYTE);
-            out.push(std::move(req));
+            out.trypush(std::move(req));
         }
         void *operator new(size_t sz, Out *where) {
             return where;

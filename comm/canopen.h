@@ -118,20 +118,20 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
 
     /** send NMT command to nodeid, rsp broadcast it (id = 0) */
     void nmt(NMT command, uint8_t nodeid) {
-        can.push({.data = (uint64_t)(nodeid & 0x7f) << 8 | (uint8_t)command,
+        can.trypush({.data = (uint64_t)(nodeid & 0x7f) << 8 | (uint8_t)command,
                 .id = 0, .opts = {.dlc = 2}});
     }
     /** send SYNC message on network */
     void sync() {
-        can.push({.id = 0x80, .opts = {.dlc = 0}});
+        can.trypush({.id = 0x80, .opts = {.dlc = 0}});
     }
     /** send HEARTBEAT message to node id, signal own state */
     void heartbeat(uint8_t id, STATE state) {
-        can.push({.data = (uint8_t)state, .id = (uint32_t)0x700 + id, .opts = {.dlc = 1}});
+        can.trypush({.data = (uint8_t)state, .id = (uint32_t)0x700 + id, .opts = {.dlc = 1}});
     }
     /** send GUARD message to node id */
     void guard(uint8_t id) {
-        can.push({.id = (uint32_t)0x700 + id, .opts = {.rtr = true}});
+        can.trypush({.id = (uint32_t)0x700 + id, .opts = {.rtr = true}});
     }
     /** call directly after CAN interrupt handler processed */
     void process() {
@@ -265,7 +265,7 @@ struct Device : Sink<TPDO>, Sink<SDO> {
     }
     /** send PDO */
     void wPDO(const RPDO &rpdo) {
-        out.push(rpdo.toMessage());
+        (*(Sink<Message>*)&out).trypush(rpdo.toMessage());
     }
     /** enable receiving PDO on device */
     void enablePDO(RPDO &pdo) {
@@ -326,9 +326,9 @@ struct Device : Sink<TPDO>, Sink<SDO> {
     }
     void pushorqueue(SDO &&sdo) {
         if (state.next.when && !state.next(k.time)) {
-            state.q.push(std::move(sdo));
+            state.q.trypush(std::move(sdo));
         } else {
-            out.push(std::move(sdo));
+            (*(Sink<SDO>*)&out).trypush(std::move(sdo));
             state.next = {k.time + 2};
         }
     }

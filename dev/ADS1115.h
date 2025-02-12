@@ -145,14 +145,14 @@ private:
     }
     double adc{0};
     void setPointer(uint8_t reg) {
-        bus.push({
+        bus.trypush({
             .dev = this,
             .data = {reg},
         });
     }
 
     void read() {
-        bus.push({
+        bus.trypush({
             .dev = this,
             .data = 2,
             .opts = {
@@ -162,7 +162,7 @@ private:
     }
 
     void write(uint8_t reg, uint16_t val) {
-        bus.push({
+        bus.trypush({
             .dev = this,
             .data = {reg, (uint8_t)(val>>8), (uint8_t)val},
             });

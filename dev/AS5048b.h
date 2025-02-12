@@ -25,7 +25,7 @@ public:
      * start async read of angle
      */
     void measure() {
-        bus.push({
+        bus.trypush({
             .dev = this,
             .data = 2,
             .opts = {

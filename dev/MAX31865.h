@@ -169,7 +169,7 @@ struct MAX31865 : SPI::Device {
      * @param thr threshold
      */
     void setLThr(uint16_t thr) {
-        bus.push({
+        bus.trypush({
                 .dev = this,
                 .data = {WRITE | REG_LOW_FAULT_THRESHOLD, (uint8_t)(thr>>8), (uint8_t)thr},
                 .dir = SPI::Request::MOSI,
@@ -181,7 +181,7 @@ struct MAX31865 : SPI::Device {
      * @param thr threshold
      */
     void setHThr(uint16_t thr) {
-        bus.push({
+        bus.trypush({
                 .dev = this,
                 .data = {WRITE | REG_HIGH_FAULT_THRESHOLD, (uint8_t)(thr>>8), (uint8_t)thr},
                 .dir = SPI::Request::MOSI,
@@ -213,7 +213,7 @@ private:
 
     void setConfig(uint8_t val) {
         data.config = val;
-        bus.push({
+        bus.trypush({
                 .dev = this,
                 .data = {WRITE|REG_CONFIG, data.config},
                 .dir = SPI::Request::MOSI,
@@ -221,7 +221,7 @@ private:
     }
 
     void getTempData() {
-        bus.push({
+        bus.trypush({
                 .dev = this,
                 .data = {READ|REG_RTD, 0, 0},
                 .dir = SPI::Request::BOTH,
@@ -229,7 +229,7 @@ private:
     }
 
     void getStatusData() {
-        bus.push({
+        bus.trypush({
                 .dev = this,
                 .data = {READ|REG_STATUS, 0},
                 .dir = SPI::Request::BOTH,
@@ -237,7 +237,7 @@ private:
     }
 
     void getAllData() {
-        bus.push({
+        bus.trypush({
                 .dev = this,
                 .data = {READ|REG_CONFIG, 0,0,0,0,0,0,0,0},
                 .dir = SPI::Request::BOTH,
