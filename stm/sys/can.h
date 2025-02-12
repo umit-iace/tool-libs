@@ -16,6 +16,7 @@ struct HW : public CAN {
     };
     HW(const Config &);
     ~HW();
+    bool full() override;
     void push(Message &&) override;
     using Sink::push;
     Message pop() override { return rx.pop(); };

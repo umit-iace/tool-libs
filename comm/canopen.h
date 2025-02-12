@@ -155,6 +155,9 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
         }
     }
 
+    bool full() override {
+        return can.full();
+    }
     using Sink<SDO>::push;
     void push(SDO &&rq) override {
         //assert(ids[rq.nodeID] != nullptr); //must register first!
@@ -301,6 +304,9 @@ struct Device : Sink<TPDO>, Sink<SDO> {
     void disablePDO(TPDO &pdo) {
         w32(0x1800+pdo.N-1, 0x1, 1<<31); // clear
     };
+    bool full() override {
+        return (*(Sink<Message>*)&out).full();
+    }
     using Sink<SDO>::push;
     void push(SDO &&sdo) override {
         state.next = {0};

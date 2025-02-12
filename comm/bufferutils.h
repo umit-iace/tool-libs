@@ -23,6 +23,9 @@
  */
 struct SplitPush : Sink<Buffer<uint8_t>> {
     Sink<Buffer<uint8_t>> &left, &right;
+    bool full() override {
+        return left.full() || right.full();
+    }
     void push(Buffer<uint8_t> &&in) override {
         left.push(in);
         right.push(in);
@@ -67,6 +70,9 @@ struct SplitPull {
         }
         Buffer<uint8_t> pop() override {
             return q.pop();
+        }
+        bool full() override {
+            return q.full();
         }
         void push(Buffer<uint8_t> &&t) override {
             q.push(std::move(t));
@@ -132,6 +138,9 @@ struct Hexify : Sink<Buffer<uint8_t>> {
     static constexpr size_t blen = 512*3;
     Sink<Buffer<uint8_t>> &down;
     Buffer<uint8_t> work = blen;
+    bool full() override {
+        return down.full();
+    }
     void push(Buffer<uint8_t> &&in) override {
         for (auto b: in) {
             work.append({'\\', map[b >> 4], map[b & 0xf]});

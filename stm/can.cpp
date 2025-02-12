@@ -123,6 +123,9 @@ HW::~HW() {
                                    CAN_IT_TX_MAILBOX_EMPTY);
     HAL_CAN_Stop(&handle);
 }
+bool HW::full() {
+    return tx.q.full();
+}
 void HW::push(Message &&msg) {
     if (HAL_CAN_GetTxMailboxesFreeLevel(&handle)) {
         _start(&handle, std::move(msg));

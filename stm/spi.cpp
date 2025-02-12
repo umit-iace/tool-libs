@@ -95,6 +95,10 @@ void _complete(SPI_HandleTypeDef *handle) {
     poll(spi);
 }
 
+bool HW::full() {
+    return q.full();
+}
+
 void HW::push(Request &&rq) {
     q.push(std::move(rq));
     poll(this);

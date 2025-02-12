@@ -110,6 +110,10 @@ void _complete(I2C_HandleTypeDef *handle) {
     poll(i2c);
 }
 
+bool HW::full() {
+    return q.full();
+}
+
 void HW::push(Request &&rq) {
     switch (rq.opts.type) {
         case Request::Type::SLAVE_WRITE:
