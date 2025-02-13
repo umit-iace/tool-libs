@@ -29,7 +29,7 @@ if(DOXYGEN_FOUND)
         COMMENT "Generate tool-libs documentation"
         VERBATIM
     )
-    add_custom_command(TARGET tool-libs-docs POST_BUILD
+    add_custom_command(TARGET tool-libs-docs POST_BUILD COMMAND ""
         COMMENT "tool-libs documentation entry point\nxdg-open ${CMAKE_CURRENT_BINARY_DIR}/html/index.html"
     )
 endif()
