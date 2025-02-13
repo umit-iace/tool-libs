@@ -66,12 +66,9 @@ namespace TIMER {
          */
         void measure() {
             int16_t iCurrEnc = __HAL_TIM_GET_COUNTER(&tim.handle);
-            uint32_t iCurrTick = HAL_GetTick();
             double dDiff = (int16_t) (iCurrEnc - iLastVal) * dFactor;
             dPosition += dDiff;
-            dSpeed = dDiff / (iCurrTick - iLastTick) * 1000;
             iLastVal = iCurrEnc;
-            iLastTick = iCurrTick;
         }
 
         /**
@@ -92,34 +89,19 @@ namespace TIMER {
         }
 
         /**
-         * @brief return current speed of encoder
-         *
-         * **disclaimer** this is just the numerically differentiated position
-         * of the encoder.
-         *
-         * @return speed, based on initialized factor / s
-         */
-        double getSpeed() {
-            return dSpeed;
-        }
-
-        /**
          * @brief reset encoder position
          */
         void zero() {
             __HAL_TIM_SET_COUNTER(&tim.handle, 0);
             iLastVal = 0;
             dPosition = 0;
-            dSpeed = 0;
         }
 
     private:
         TIMER::HW tim;
         double dFactor;
         int16_t iLastVal = 0;
-        uint32_t iLastTick = 0;
 
         double dPosition = 0;
-        double dSpeed = 0;
     };
 }
