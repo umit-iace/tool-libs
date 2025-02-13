@@ -15,9 +15,9 @@
  *  left [style=dashed, URL="\ref Sink"]
  *  right [style=dashed, URL="\ref Sink"]
  *  SplitPush [URL="\ref SplitPush"]
- *  data -> SplitPush [label=push, URL="\ref push"]
- *  SplitPush -> left [label=push, URL="\ref push"]
- *  SplitPush -> right [label=push, URL="\ref push"]
+ *  data -> SplitPush [label=push]
+ *  SplitPush -> left [label=push]
+ *  SplitPush -> right [label=push]
  * }
  * \enddot
  */
@@ -46,10 +46,10 @@ struct SplitPush : Sink<Buffer<uint8_t>> {
  *  S [style=dashed, URL="\ref Source"]
  *  a [style=dashed, URL="\ref Source"]
  *  b [style=dashed, URL="\ref Source"]
- *  SplitPush [URL="\ref SplitPush"]
- *  S -> SplitPush [label=empty]
- *  SplitPush -> a [label=empty]
- *  SplitPush -> b [label=empty]
+ *  SplitPull [URL="\ref SplitPull"]
+ *  S -> SplitPull [label=empty]
+ *  SplitPull -> a [label=empty]
+ *  SplitPull -> b [label=empty]
  *  a -> data1 [label=pop]
  *  b -> data2 [label=pop]
  * }
