@@ -6,6 +6,8 @@
 
 #include "sys/i2c.h"
 #include <cmath>
+#include <core/logger.h>
+extern Logger lg;
 
 /**
  * Implementation of the M92 multi-chip 9-axis motion processor
@@ -19,38 +21,59 @@
  */
 struct M92 : I2C::Device {
     enum ADDR {
-        DEFAULT = 0b1101000
+        DEFAULT = 0b1101000,
         ALT = 0b1101001,
     };
+    struct Axis {
+        double x,y,z;
+    };
+    struct Raw {
+        int16_t x,y,z;
+    } accel {}, gyro {}, mag {};
+    int16_t temp{};
     /// accelerometer full-scale in [g] @ 16bit
     enum ACCEL_FS { FS_2G, FS_4G, FS_8G, FS_16G, };
-    double accel_lsb[] = {2./(1<<15), 4./(1<<15), 8./(1<<15), 16./(1<<15)};
+    double accel_lsb[4] = {2./(1<<15), 4./(1<<15), 8./(1<<15), 16./(1<<15)};
     /// gyroscope full-scale in [degree per second] @ 16bit
     enum GYRO_FS { FS_250, FS_500, FS_1000, FS_2000, };
-    double gyro_lsb[] = {250./(1<<15), 500./(1<<15), 1000./(1<<15), 2000./(1<<15)};
+    double gyro_lsb[4] = {250./(1<<15), 500./(1<<15), 1000./(1<<15), 2000./(1<<15)};
     /// MAG FS: +-4800microTesla
     /* enum MAG_RES { RES_14, RES_16 }; */
     /* double mag_lsb[] = {0.6, 15}; /// microTesla */
 
     M92(Sink<I2C::Request> &bus, enum ADDR addr=DEFAULT)
-        : I2C::Device{bus, addr} {
+        : I2C::Device{bus, addr}, magdev{bus} {
     }
     void init() {
-        write(PWR_MGMT_1, 0); // reset
-        write(PWR_MGMT_1, 1); // select PLL clock
-        write(CONFIG, 3); // set gyro delay to 5.9ms / bandwidth: 41Hz
-        write(SMPLRT_DIV, 4); // sample rate: 200Hz
-        set_gyro_fullscale(FS_1000);
-        set_accel_fullscale(FS_4G);
-        write(ACCEL_CONFIG+1, 3); //set accel delay to 11.8ms / bandwidth: 41Hz
+        /* write(PWR_MGMT_1, 0); // reset */
+        /* write(PWR_MGMT_1, 1); // select PLL clock */
+        /* write(CONFIG, 3); // set gyro delay to 5.9ms / bandwidth: 41Hz */
+        /* write(SMPLRT_DIV, 4); // sample rate: 200Hz */
+        /* set_gyro_fullscale(FS_1000); */
+        /* set_accel_fullscale(FS_4G); */
+        /* write(ACCEL_CONFIG+1, 3); //set accel delay to 11.8ms / bandwidth: 41Hz */
 
-        write(USER_CTRL, 0x20); // I2C Master
-        write(I2C_MST_CTRL, 0x1D);
-        write(I2C_MST_DELAY_CTRL, 0x81);
-        write(I2C_SLV4_CTRL, 1);
+        /* write(INT_PIN_CFG, 1<<1); //enable i2c bypass */
+        /* read(INT_PIN_CFG); */
+        read(117); //read WHOAMI
 
-        mag_write(CNTL, (1<<4)|3); // set mag to 16bit, 100Hz mode
-        mag_enable_read();
+        /* magdev.write(CNTL, (1<<4)|(3<<1)); // set mag to 16bit, 100Hz mode */
+
+        /* write(INT_PIN_CFG, 0); //disable i2c bypass */
+
+        /* write(I2C_MST_CTRL, 0x1D); */
+        /* write(I2C_MST_DELAY_CTRL, 0x81); */
+        /* write(I2C_SLV4_CTRL, 1); */
+
+        /* // enable auto-read of mag data */
+        /* write(I2C_SLV0_ADDR, 0x8c); */
+        /* write(I2C_SLV0_REG, DATA); */
+        /* write(I2C_SLV0_CTRL, 0x80 // enable read */
+        /*         | (1 << 6) // auto-convert from Little to Big Endian */
+        /*         | (1 << 4) */
+        /*         | 7); // 7 bytes (2 * x,y,z + status to retrigger measurement) */
+
+        /* write(USER_CTRL, 1<<5); // enable I2C Master */
     }
 
     void set_accel_fullscale(enum ACCEL_FS fs) {
@@ -81,9 +104,22 @@ struct M92 : I2C::Device {
         });
     }
 
-
-
     void callback(const I2C::Request &rq) override {
+        char data[128];
+        int l = snprintf(data, 128, "XFER: @0x%.2x\n", rq.dev->address);
+        if (rq.opts.mem) {
+            l += snprintf(data+l, 128-l, "mem: %d\n", rq.mem);
+        }
+        if (rq.opts.read) {
+            l += snprintf(data+l, 128-l, "read: [");
+        } else {
+            l += snprintf(data+l, 128-l, "write: [");
+        }
+        for (auto &dat: rq.data) {
+            l += snprintf(data+l, 128-l, " 0x%.2x", dat);
+        }
+        l += snprintf(data+l, 128-l, "]\n");
+        lg.print("%*s", l, data);
         if (rq.opts.read != true) return;
         switch (rq.mem) {
         case ACCEL_X:
@@ -119,9 +155,9 @@ struct M92 : I2C::Device {
     // TODO: make resolution configurable
     Axis get_mag() {
         return {
-            .x = mag.x * 15,
-            .y = mag.y * 15,
-            .z = mag.z * 15,
+            .x = mag.x * 15.,
+            .y = mag.y * 15.,
+            .z = mag.z * 15.,
         };
     }
     /// get measurement in °C
@@ -129,13 +165,6 @@ struct M92 : I2C::Device {
         return temp / 333.87 + 21;
     }
 
-    Axis {
-        double x,y,z;
-    };
-    Raw {
-        int16_t x,y,z;
-    } accel {}, gyro {}, mag {};
-    int16_t temp{};
 private:
     struct {
         enum ACCEL_FS accel;
@@ -153,9 +182,9 @@ private:
         I2C_MST_CTRL = 36,
         I2C_SLV0_ADDR = 37,
         I2C_SLV0_REG = 38,
-        I2C_SLV0_DO = 99,
         I2C_SLV0_CTRL = 39,
         I2C_SLV4_CTRL = 52,
+        INT_PIN_CFG = 55,
         ACCEL_X = 59,
         ACCEL_Y = 61,
         ACCEL_Z = 63,
@@ -166,6 +195,8 @@ private:
         MAG_X = 73,
         MAG_Y = 75,
         MAG_Z = 77,
+        I2C_SLV0_DO = 99,
+        I2C_MST_DELAY_CTRL = 103,
         USER_CTRL = 106,
         PWR_MGMT_1 = 107,
         PWR_MGMT_2 = 108,
@@ -180,6 +211,47 @@ private:
         ST2 = 9, // read after each measurement
         CNTL = 10,
     };
+    struct AK8963 : public I2C::Device {
+        AK8963(Sink<I2C::Request> &bus) : I2C::Device(bus, 0xc) {}
+        void write(uint8_t addr, uint8_t val) {
+            bus.trypush({
+                .dev = this,
+                .data = {val},
+                .opts = {
+                    .mem = true,
+                },
+                .mem = addr,
+            });
+        }
+        void callback(const I2C::Request &rq) override {
+            char data[128];
+            int l = snprintf(data, 128, "XFER: @0x%.2x\n", rq.dev->address);
+            if (rq.opts.mem) {
+                l += snprintf(data+l, 128-l, "mem: %d\n", rq.mem);
+            }
+            if (rq.opts.read) {
+                l += snprintf(data+l, 128-l, "read: [");
+            } else {
+                l += snprintf(data+l, 128-l, "write: [");
+            }
+            for (auto &dat: rq.data) {
+                l += snprintf(data+l, 128-l, " 0x%.2x", dat);
+            }
+            l += snprintf(data+l, 128-l, "]\n");
+            lg.print("%*s", l, data);
+        }
+    } magdev;
+    void read(uint8_t addr) {
+        bus.trypush({
+            .dev = this,
+            .data = 1,
+            .opts = {
+                .read = true,
+                .mem = true,
+            },
+            .mem = addr,
+        });
+    }
     void write(uint8_t addr, uint8_t val) {
         bus.trypush({
             .dev = this,
@@ -189,17 +261,5 @@ private:
             },
             .mem = addr,
         });
-    }
-    void mag_write(uint8_t addr, uint8_t val) {
-        write(I2C_SLV0_ADDR, 0xc);
-        write(I2C_SLV0_REG, addr);
-        write(I2C_SLV0_DO, val);
-        write(I2C_SLV0_CTRL, (1<<5) | 1);
-    }
-    void mag_enable_read() {
-        write(I2C_SLV0_ADDR, 0x8c);
-        write(I2C_SLV0_REG, DATA);
-        write(I2C_SLV0_CTRL, 0x87 | (1 << 6) | (1 << 4)); // enable read 7 byte,
-                                    // auto-convert from Little to Big Endian
     }
 };
