@@ -64,10 +64,10 @@ struct Buffer {
         delete[] buf; buf = nullptr; len = 0; size = 0;
     }
     /** copy from naked array with known length */
-    Buffer(const T *src, size_t len, size_t sz=0) : buf{}, len(len), size(sz) {
+    Buffer(const T *src, size_t len, size_t sz=0) : buf{}, len(0), size(sz) {
         if (sz == 0) size = len;
         buf = new T[size];
-        memcpy(buf, src, len * sizeof(T));
+        for (size_t i = 0; i < len; ++i) append(src[i]);
     }
     /** initializer list constructor */
     Buffer(std::initializer_list<T> list) : buf{new T[list.size()]}, len(0), size(list.size()) {
@@ -76,21 +76,20 @@ struct Buffer {
     /** constructor with fixed size */
     Buffer(size_t sz=0) : buf{new T[sz]}, len(0), size(sz) { }
     /** copy constructor */
-    Buffer(const Buffer &b) : buf{new T[b.size]}, len(b.len), size(b.size) {
-        memcpy(buf, b.buf, len * sizeof(T));
+    Buffer(const Buffer &b) : buf{new T[b.size]}, len(0), size(b.size) {
+        for (auto el : b) append(el);
     }
     /** copy assignment operator */
     Buffer& operator=(const Buffer &b) {
         if (this == &b) return *this; // copy to self
-        if (!size && size != b.size) { // necessary to realloc
+        if (!size || size != b.size) { // necessary to realloc
             delete[] buf;
             buf = new T[b.size];
             size = b.size;
         }
         assert(buf != nullptr);
         assert(size >= b.len);
-        memcpy(buf, b.buf, b.len * sizeof(T));
-        len = b.len;
+        for (auto el: b) append(el);
         return *this;
     }
     /** move constructor */
