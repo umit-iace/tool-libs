@@ -20,7 +20,7 @@ namespace Schedule {
 struct Schedulable {
     virtual ~Schedulable(){}
     /** return true if object should be scheduled at this time */
-    virtual bool schedule(uint32_t now) { return true; }
+    virtual bool schedule(uint32_t) { return true; }
     /** this method is called to run the Schedulable */
     virtual void call()=0;
 };
