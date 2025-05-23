@@ -106,7 +106,7 @@ void startTransmit(HW *uart) {
     }
 
     // need = ms/s * Bytes * (bit/Byte + Stop + Parity) / (bit/s)
-    size_t need = 1000 * b.len * (8+2) / uart->handle.Init.BaudRate;
+    size_t need = 1000. * b.len * (8+2) / uart->handle.Init.BaudRate + 1;
     uart->tx.deadline = Deadline{k.time + need};
 }
 void startReceive(HW *uart) {

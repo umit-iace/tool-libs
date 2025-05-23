@@ -7,9 +7,9 @@
 namespace Schedule {
 /** Recurring function/method calling infrastructure
  *
- * the signature of a recurringly callable is 
+ * the signature of a recurringly callable is
  * ```
- *      // will be called with absolute `time`, and 
+ *      // will be called with absolute `time`, and
  *      // the period `dt` with which it has been scheduled
  *      void func_or_method (uint32_t time, uint32_t dt);
  * ```
@@ -66,13 +66,13 @@ struct Registry : Schedule::Registry {
 
     /** register a function to be called every dt_ms */
     void every(uint32_t dt_ms, typename Func::Call func) {
-        list.append(new Func{func, dt_ms});
+        if (dt_ms) list.append(new Func{func, dt_ms});
     }
     /** register a method to be called every dt_ms */
     template<typename T>
     void every(uint32_t dt_ms, T& base,
             typename Method<T>::Call method) {
-        list.append(new Method<T>{&base, method, dt_ms});
+        if (dt_ms) list.append(new Method<T>{&base, method, dt_ms});
     }
     /** reset calling times of all registered functions
      *

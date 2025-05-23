@@ -101,8 +101,8 @@ void _complete(I2C_HandleTypeDef *handle) {
         i2c->out.dev->callback(std::move(i2c->out));
         break;
     case i2c->NONE:
-        assert(false);
-        break;
+        // potentially called after a finished abort?
+        return;
     }
     i2c->active = i2c->NONE;
     i2c->deadline = Deadline{};
