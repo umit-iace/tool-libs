@@ -4,7 +4,7 @@
 using namespace std;
 struct data {
     double *d{nullptr};
-    data(double d): d(new double{d}) {
+    data(double d=0): d(new double{d}) {
         // MESSAGE("constr: ", d, " @", this->d);
     }
     ~data() {

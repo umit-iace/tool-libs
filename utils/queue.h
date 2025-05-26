@@ -10,11 +10,7 @@
 /** simple Buffer backed queue implementation */
 template <typename T>
 class Queue : public Sink<T>, public Source<T> {
-    union {
-        Buffer<uint8_t> space;  // space
-        Buffer<T> q;            // access
-    };
-    enum : uint8_t {SPACE, Q} tag {SPACE};
+    Buffer<T> q;
     struct WrappingIndex {
         WrappingIndex(size_t sz) : sz(sz) { }
         WrappingIndex(const WrappingIndex &other) : val(other.val), sz(other.sz) {}
@@ -34,56 +30,17 @@ class Queue : public Sink<T>, public Source<T> {
             return tmp;
         }
     } head, tail;
-    void destr() {
-        switch (tag) {
-        case SPACE: space.~Buffer(); return;
-        case Q: q.~Buffer(); return;
-        }
-    }
 
 public:
-    ~Queue() { destr(); }
-    /** allow copying */
-    Queue(const Queue &other) : space(other.space.size * sizeof(T)), head{other.head.sz}, tail{other.tail.sz} {
-        q.size = other.q.size;
-        for (auto el : other.q) push(el);
-    }
-    Queue& operator=(const Queue &other) {
-        if (this == &other) return *this;
-        if (!space.size || space.size != other.space.size) {
-            destr();
-            space = other.space.size * sizeof(T);
-            q.size = other.q.size;
-            head = other.head.sz;
-            tail = other.tail.sz;
-        } else {
-            while (!empty()) pop();
-        }
-        for (auto el : other.q) push(el);
-        return *this;
-    }
-    /** allow moving */
-    Queue(Queue &&other) noexcept
-        : space(std::move(other.space)), head{other.head}, tail{other.tail} { }
-    Queue& operator=(Queue &&other) noexcept {
-        if (this == &other) return *this; // move to self
-        destr();
-        q = std::move(other.q);
-        head = other.head;
-        tail = other.tail;
-        return *this;
-    }
     /** create Queue directly from filled Buffer */
-    Queue(const Buffer<T> &buf) : q(buf), tag{Q}, head{q.size}, tail{q.size} {}
-    Queue(Buffer<T> &&buf) : q(std::move(buf)), tag{Q}, head{q.size}, tail{q.size} {}
+    Queue(const Buffer<T> &buf) : q(buf), head{q.size}, tail{q.size} {}
+    Queue(Buffer<T> &&buf) : q(std::move(buf)), head{q.size}, tail{q.size} {}
     /** create Queue with constant size */
-    Queue(size_t size=30) : space(size * sizeof(T)), head{size}, tail{size} {
-        memset(space.buf, 0, size * sizeof(T));
-        // now that we allocated enough space,
-        // we can use the size & len for our own purposes
-        q.size = size;
-        q.len = 0;
-    }
+    Queue(size_t size=30)
+        : q(size)
+        , head{size}
+        , tail{size}
+    { }
     using Sink<T>::push;
     /** move element into queue
      *
