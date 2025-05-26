@@ -24,18 +24,27 @@
 struct BNO085 : I2C::Device {
     /** possible I2C addresses */
     enum ADDR {
-        DEFAULT = 0b1001010, //0x4a
-        ALT = 0b1001011, //0x4b
+        DEFAULT = 0b1001010, ///<0x4a
+        ALT = 0b1001011, ///<0x4b
     };
 
     /** Enum for defining wanted Units of angles */
-    enum Unit : uint8_t {RADIANS, DEGREES, NONE};
+    enum Unit : uint8_t {
+        /// return values in radians
+        RADIANS,
+        /// return values in degrees
+        DEGREES,
+        NONE,
+    };
     static constexpr double rad2deg = 180. / M_PI;
 
     /** Euler angles */
     struct Euler {
-        double yaw, pitch, roll;
-        Unit unit;
+        double yaw;   ///< yaw
+        double pitch; ///< pitch
+        double roll;  ///< roll
+        Unit unit;    ///< unit of entries
+        /** Convert to given Unit */
         Euler toUnit(Unit u) {
             if (u == unit) return *this;
             switch (u) {
@@ -78,8 +87,11 @@ struct BNO085 : I2C::Device {
 
     /** Rotation about axes, in given Unit/s */
     struct Rotation {
-        double x,y,z;
-        Unit unit;
+        double x; ///< rotation around x-axis, in unit/s
+        double y; ///< rotation around y-axis, in unit/s
+        double z; ///< rotation around z-axis, in unit/s
+        Unit unit; ///< Unit per second
+        /** Convert to given Unit per second */
         Rotation toUnit(Unit u) {
             if (u == unit) return *this;
             switch (u) {
@@ -101,10 +113,12 @@ struct BNO085 : I2C::Device {
     };
 
     /** high-speed Gyro-Integrated Rotation Vector
-     * includes approximations of rotation velocities
+     * includes estimation of rotation velocities
      */
     struct GIRV {
+        /// estimation of pose
         Quaternion pose;
+        /// estimation of rotation velocities
         Rotation rot;
     };
 
@@ -647,7 +661,7 @@ struct BNO085 : I2C::Device {
     /** high-accuracy 9-axis sensor-fused rotation vector */
     Quaternion rotvec;
     /** high-speed Gyro-Integrated Rotation Vector,
-     * includes approximations of rotation velocities
+     * includes estimation of rotation velocities
      */
     GIRV girv;
 
@@ -705,7 +719,10 @@ struct BNO085 : I2C::Device {
         });
     }
 
-    /** return approximated accuracy in given Unit */
+    /** return approximated accuracy in given Unit
+     *
+     * is only active if `enableRotVec` was called
+     */
     double accuracy(Unit u=RADIANS) {
         switch (u) {
         case RADIANS: return rotvec_accuracy;
