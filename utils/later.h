@@ -23,7 +23,7 @@ struct Later {
     T& where{};
     Later *nested{};
     enum Op {NOP, ADD, SUB} op{};
-    ~Later() { delete nested; nested = nullptr; }
+    ~Later() { delete nested; nested = nullptr; op = NOP; }
     Later(T& val): where(val) {} // unable to store temporaries. cast the first operand to this type first
     Later(T& v, Later *n, Op op): where(v), nested(n), op(op) {}
     // copying impossible. who'd own nested Laters?
@@ -32,10 +32,10 @@ struct Later {
     // moving is ok
     Later(Later &&l) noexcept : where(l.where), nested(l.nested), op(l.op) {
         l.nested = nullptr;
+        l.op = NOP;
     }
     Later& operator=(Later &&l) noexcept {
         if (this == &l) return *this;
-        this->~Later();
         new (this) Later(std::move(l));
         return *this;
     }
@@ -63,6 +63,7 @@ struct Later {
     }
     // placement new for copying into place
     void *operator new(size_t sz, Later *where) {
+        where->~Later();
         return where;
     }
 };

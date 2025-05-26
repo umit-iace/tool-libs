@@ -66,6 +66,7 @@ Drivers for the following sensors are implemented:
  - AS5048B - 14-bit rotary position sensor with digital angle
  - AS5145 - hall effect based angular position measurement
  - BMI160 - 6axis Inertial Measurement Unit
+ - BNO085 - 9axis Position/Motion sensor with integrated sensor fusion engine
  - HMC5883L - multi-chip three-axis magnetic sensor
  - MAX31855 - temperature measurement using thermocouples
  - MAX31865 - temperature measurement using temperature dependent resistors like

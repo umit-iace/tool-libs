@@ -27,3 +27,19 @@ TEST_CASE("tool-libs: buffer: out of range") {
     CHECK(b.at(0));
     /* CHECK_THROWS(b.at(1)); */
 }
+
+TEST_CASE("tool-libs: buffer: buffer of buffers") {
+    using Inner = Buffer<size_t>;
+    using Outer = Buffer<Inner>;
+    Outer out = 10, out2=2;
+
+    while (out.len < out.size) {
+        Inner b = {out.len, out.size};
+        out.append(b);
+        CHECK(out.size);
+        CHECK(out[out.len-1][0] == out.len-1);
+    }
+    out2 = out;
+    CHECK(out2.size == out.size);
+    CHECK(out2.len == out.len);
+}
