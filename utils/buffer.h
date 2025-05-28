@@ -89,6 +89,7 @@ struct Buffer {
         }
         assert(buf != nullptr);
         assert(size >= b.len);
+        len = 0;
         for (auto el: b) append(el);
         return *this;
     }
