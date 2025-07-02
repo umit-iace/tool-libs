@@ -3,7 +3,6 @@
  * Copyright (c) 2023 IACE
  */
 #pragma once
-#include <cstring>
 #include <cstdint>
 #include <cassert>
 #include <initializer_list>
