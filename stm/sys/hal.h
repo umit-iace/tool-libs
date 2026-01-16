@@ -13,4 +13,8 @@
 	#include "stm32f7xx_hal.h"
 #endif
 
+#ifdef STM32H7
+	#include "stm32h7xx_hal.h"
+#endif
+
 #endif //STM_HAL_H
