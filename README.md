@@ -123,7 +123,7 @@ doxygen docs/doxyfile && xdg-open html/index.html
 ```
 alternatively building the documentation is also available from a cmake target
 so you can build the documentation right alongside your project. The target is
-named `tool-libs-docs`
+named `tool-libs-docs`. An online version can be found [here](https://umit-iace.github.io/tool-libs/).
 
 # Contributing
 
