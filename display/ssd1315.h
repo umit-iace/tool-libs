@@ -139,6 +139,58 @@ namespace Display {
             });
         }
 
+        void reset() {
+            bus.push({
+                .dev = this,
+                .data = Frame{}
+                    .pack<uint8_t>( ControlByte::COMMANDS_ONLY)
+                    .pack<uint8_t>( Command::SET_START_LINE | (uint8_t) 0x00 )
+                    .pack<uint8_t>( Command::SET_MEMORY_ADDRESSINGMODE )
+                    .pack<uint8_t>( AddressingMode::HORIZONTAL )
+                    .pack<uint8_t>( Command::SET_COLUMN_ADDRESS )
+                    .pack<uint8_t>( 0x00 )
+                    .pack<uint8_t>( 0x7F )
+                    .pack<uint8_t>( Command::SET_PAGE_ADDRESS )
+                    .pack<uint8_t>( 0x00 )
+                    .pack<uint8_t>( 0x07 )
+                    .b,
+            });
+
+            Frame clearFrame{};
+            clearFrame.pack<uint8_t>( ControlByte::IMAGEDATA_ONLY);
+            uint16_t bytesInFrame = 1;
+
+            for (uint16_t i = 0; i<1024; ++i) {
+                clearFrame.pack<uint8_t>( 0x00 );
+                ++bytesInFrame;
+
+                // if I2C is full
+                if (bytesInFrame == 127) {
+                    // send
+                    bus.push({
+                        .dev = this,
+                        .data = clearFrame.b,
+                    });
+
+                    // reset Frame
+                    clearFrame = Frame{}.pack<uint8_t>( ControlByte::IMAGEDATA_ONLY);
+                    bytesInFrame = 1;
+                }
+            }
+
+            // if leftovers
+            if (bytesInFrame != 255) {
+                // send
+                bus.push({
+                    .dev = this,
+                    .data = clearFrame.b,
+                });
+
+                clearFrame = Frame{}.pack<uint8_t>( ControlByte::IMAGEDATA_ONLY);
+                bytesInFrame = 1;
+            }
+        }
+
         void setContrast(const uint8_t value) {
             bus.push({
                 .dev = this,
