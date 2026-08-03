@@ -14,10 +14,10 @@ namespace Display {
         uint8_t contrast;
 
         enum ControlByte {
-            COMMANDS_ONLY   = 0b0000000,     // only commands follow in transmission
-            IMAGEDATA_ONLY  = 0b0100000,     // only image data follows in transmission
-            COMMANDS        = 0b1000000,     // commands follow, same transmission will have (an) additional control byte(s)
-            IMAGEDATA       = 0b1100000      // image data follows, same transmission will have (an) additional control byte(s)
+            COMMANDS_ONLY   = 0b00000000,     // only commands follow in transmission
+            IMAGEDATA_ONLY  = 0b01000000,     // only image data follows in transmission
+            COMMANDS        = 0b10000000,     // commands follow, same transmission will have (an) additional control byte(s)
+            IMAGEDATA       = 0b11000000      // image data follows, same transmission will have (an) additional control byte(s)
         };
 
         enum Command {
@@ -27,9 +27,11 @@ namespace Display {
             SET_COM_PINS_HW             = 0xDA,     // COM Pins Hardware Configuration
             SET_VCOMH_DESELECT_LEVEL    = 0xDB,
 
-            // Setter commands according to next byte
+            // Setter commands according to next two bytes (start and end)
             SET_COLUMN_ADDRESS          = 0x21,
             SET_PAGE_ADDRESS            = 0x22,
+
+            // Setter commands according to next byte
             SET_DISPLAY_OFFSET          = 0xD3,     // vertical shift by COM (from 0-63)
             SET_DISPLAY_CLOCKDIV        = 0xD5,
             SET_CONTRAST_CONTROL        = 0x81,     // between 0x01 and 0xFF
@@ -101,7 +103,7 @@ namespace Display {
             bus.push({
                 .dev = this,
                 .data = Frame{}
-                    .pack<uint8_t>( ControlByte::COMMANDS)
+                    .pack<uint8_t>( ControlByte::COMMANDS_ONLY)
                     .pack<uint8_t>( Command::DISPLAY_OFF )
                     .pack<uint8_t>( Command::SET_DISPLAY_CLOCKDIV      ).pack<uint8_t>( 0x80 )
                     .pack<uint8_t>( Command::SET_MUX_RATIO             ).pack<uint8_t>( (height - 1) )
@@ -126,7 +128,7 @@ namespace Display {
             bus.push({
                 .dev = this,
                 .data = Frame{}
-                    .pack<uint8_t>( ControlByte::COMMANDS)
+                    .pack<uint8_t>( ControlByte::COMMANDS_ONLY)
                     .pack<uint8_t>( Command::SET_CONTRAST_CONTROL)
                     .pack<uint8_t>( value )
                     .b,
@@ -137,7 +139,7 @@ namespace Display {
             bus.push({
                 .dev = this,
                 .data = Frame{}
-                    .pack<uint8_t>( ControlByte::COMMANDS)
+                    .pack<uint8_t>( ControlByte::COMMANDS_ONLY)
                     .pack<uint8_t>( invert ? Command::INVERSION_ON : Command::INVERSION_OFF)
                     .b,
             });
@@ -147,7 +149,7 @@ namespace Display {
             bus.push({
                 .dev = this,
                 .data = Frame{}
-                    .pack<uint8_t>( ControlByte::COMMANDS)
+                    .pack<uint8_t>( ControlByte::COMMANDS_ONLY)
                     .pack<uint8_t>( light ? Command::PIXELS_ALL : Command::PIXELS_RAM)
                     .b,
             });
