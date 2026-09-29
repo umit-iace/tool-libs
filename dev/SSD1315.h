@@ -13,6 +13,11 @@ namespace Display {
         int16_t width;
         uint8_t contrast;
 
+        uint8_t colStart = 0;
+        uint8_t colEnd = 127;
+        uint8_t pageStart = 0;
+        uint8_t pageEnd = 7;
+
         /** Control Bytes 
         * need to be sent at the start of every transmission
         */
@@ -166,60 +171,79 @@ namespace Display {
                     .b,
             });
         }
+        
+        /**
+        * sends a section of arbitraty size via I2C into GDDRAM
+        * @param image pointer to imagedata
+        * @param new_colStart starting column
+        * @param new_colEnd end column
+        * @param new_pageStart starting page
+        * @param new_pageEnd end page
+        */
+        void sendSection(uint8_t* image, uint8_t new_colStart, uint8_t new_colEnd, uint8_t new_pageStart, uint8_t new_pageEnd, bool fill = false) {
+            Frame frameBuffer{};
+
+            uint16_t bytesInFrame = 0;
+
+            if ((colStart != new_colStart) || (colEnd != new_colEnd)) {
+                colEnd = new_colEnd;
+                colStart = new_colStart;
+
+                frameBuffer
+                    .pack<uint8_t>( ControlByte::SINGLE_COMMAND ).pack<uint8_t>( Command::SET_COLUMN_ADDRESS )
+                    .pack<uint8_t>( ControlByte::SINGLE_COMMAND ).pack<uint8_t>( colStart )
+                    .pack<uint8_t>( ControlByte::SINGLE_COMMAND ).pack<uint8_t>( colEnd );
+                bytesInFrame += 6;
+            }
+
+            if ((pageStart != new_pageStart) || (pageEnd != new_pageEnd)) {
+                pageEnd = new_pageEnd;
+                pageStart = new_pageStart;
+
+                frameBuffer
+                    .pack<uint8_t>( ControlByte::SINGLE_COMMAND ).pack<uint8_t>( Command::SET_PAGE_ADDRESS )
+                    .pack<uint8_t>( ControlByte::SINGLE_COMMAND ).pack<uint8_t>( pageStart )
+                    .pack<uint8_t>( ControlByte::SINGLE_COMMAND ).pack<uint8_t>( pageEnd );
+                bytesInFrame += 6;
+            }
+            
+            frameBuffer.pack<uint8_t>( ControlByte::IMAGEDATA_STREAM);
+            bytesInFrame += 1;
+            
+            uint16_t imageSize = (colEnd + 1 - colStart) * (pageEnd + 1 - pageStart);
+            for (uint16_t i = 0; i<imageSize; ++i) {
+                frameBuffer.pack<uint8_t>( fill ? image[0] : image[i] );
+                ++bytesInFrame;
+
+                // if Frame is full
+                if (bytesInFrame == 127) {
+                    // send
+                    bus.push({
+                        .dev = this,
+                        .data = frameBuffer.b,
+                    });
+
+                    // reset Frame
+                    frameBuffer = Frame{}.pack<uint8_t>( ControlByte::IMAGEDATA_STREAM);
+                    bytesInFrame = 1;
+                }
+            }
+
+            // send leftovers
+            if (bytesInFrame != 1) {
+                bus.push({
+                    .dev = this,
+                    .data = frameBuffer.b,
+                });
+            }
+        }
 
         /**
         * fills GDDRAM with all zeros and resets cursor address
         */
         void reset() {
-            bus.push({
-                .dev = this,
-                .data = Frame{}
-                    .pack<uint8_t>( ControlByte::COMMAND_STREAM )
-                    .pack<uint8_t>( Command::SET_START_LINE | (uint8_t) 0x00 )
-                    .pack<uint8_t>( Command::SET_MEMORY_ADDRESSINGMODE )
-                    .pack<uint8_t>( AddressingMode::HORIZONTAL )
-                    .pack<uint8_t>( Command::SET_COLUMN_ADDRESS )
-                    .pack<uint8_t>( 0x00 )
-                    .pack<uint8_t>( 0x7F )
-                    .pack<uint8_t>( Command::SET_PAGE_ADDRESS )
-                    .pack<uint8_t>( 0x00 )
-                    .pack<uint8_t>( 0x07 )
-                    .b,
-            });
-
-            Frame clearFrame{};
-            clearFrame.pack<uint8_t>( ControlByte::IMAGEDATA_STREAM );
-            uint16_t bytesInFrame = 1;
-
-            for (uint16_t i = 0; i<1024; ++i) {
-                clearFrame.pack<uint8_t>( 0x00 );
-                ++bytesInFrame;
-
-                // if I2C is full
-                if (bytesInFrame == 127) {
-                    // send
-                    bus.push({
-                        .dev = this,
-                        .data = clearFrame.b,
-                    });
-
-                    // reset Frame
-                    clearFrame = Frame{}.pack<uint8_t>( ControlByte::IMAGEDATA_STREAM );
-                    bytesInFrame = 1;
-                }
-            }
-
-            // if leftovers
-            if (bytesInFrame != 255) {
-                // send
-                bus.push({
-                    .dev = this,
-                    .data = clearFrame.b,
-                });
-
-                clearFrame = Frame{}.pack<uint8_t>( ControlByte::IMAGEDATA_STREAM );
-                bytesInFrame = 1;
-            }
+            uint8_t zero[1] = {0};
+            sendSection(zero, 0, 127, 0, 7, true);
         }
 
         /**
