@@ -14,10 +14,10 @@ namespace Display {
         uint8_t contrast;
 
         enum ControlByte {
-            COMMANDS_ONLY   = 0b00000000,     // only commands follow in transmission
-            IMAGEDATA_ONLY  = 0b01000000,     // only image data follows in transmission
-            COMMANDS        = 0b10000000,     // commands follow, same transmission will have (an) additional control byte(s)
-            IMAGEDATA       = 0b11000000      // image data follows, same transmission will have (an) additional control byte(s)
+            COMMAND_STREAM     = 0b00000000, // all following bytes in transmission will be interpreted as commands
+            IMAGEDATA_STREAM   = 0b01000000, // all following bytes in transmission will be interpreted as image data
+            SINGLE_COMMAND     = 0b10000000, // next byte will be interpreted as command
+            SINGLE_IMAGEBYTE   = 0b11000000  // next byte will be interpreted as image data
         };
 
         enum Command {
@@ -103,7 +103,7 @@ namespace Display {
             bus.push({
                 .dev = this,
                 .data = Frame{}
-                    .pack<uint8_t>( ControlByte::COMMANDS_ONLY)
+                    .pack<uint8_t>( ControlByte::COMMAND_STREAM )
                     .pack<uint8_t>( Command::DISPLAY_OFF )
                     .pack<uint8_t>( Command::SET_DISPLAY_CLOCKDIV )
                     .pack<uint8_t>( 0x80 )
@@ -143,7 +143,7 @@ namespace Display {
             bus.push({
                 .dev = this,
                 .data = Frame{}
-                    .pack<uint8_t>( ControlByte::COMMANDS_ONLY)
+                    .pack<uint8_t>( ControlByte::COMMAND_STREAM )
                     .pack<uint8_t>( Command::SET_START_LINE | (uint8_t) 0x00 )
                     .pack<uint8_t>( Command::SET_MEMORY_ADDRESSINGMODE )
                     .pack<uint8_t>( AddressingMode::HORIZONTAL )
@@ -157,7 +157,7 @@ namespace Display {
             });
 
             Frame clearFrame{};
-            clearFrame.pack<uint8_t>( ControlByte::IMAGEDATA_ONLY);
+            clearFrame.pack<uint8_t>( ControlByte::IMAGEDATA_STREAM );
             uint16_t bytesInFrame = 1;
 
             for (uint16_t i = 0; i<1024; ++i) {
@@ -173,7 +173,7 @@ namespace Display {
                     });
 
                     // reset Frame
-                    clearFrame = Frame{}.pack<uint8_t>( ControlByte::IMAGEDATA_ONLY);
+                    clearFrame = Frame{}.pack<uint8_t>( ControlByte::IMAGEDATA_STREAM );
                     bytesInFrame = 1;
                 }
             }
@@ -186,7 +186,7 @@ namespace Display {
                     .data = clearFrame.b,
                 });
 
-                clearFrame = Frame{}.pack<uint8_t>( ControlByte::IMAGEDATA_ONLY);
+                clearFrame = Frame{}.pack<uint8_t>( ControlByte::IMAGEDATA_STREAM );
                 bytesInFrame = 1;
             }
         }
@@ -195,8 +195,8 @@ namespace Display {
             bus.push({
                 .dev = this,
                 .data = Frame{}
-                    .pack<uint8_t>( ControlByte::COMMANDS_ONLY)
-                    .pack<uint8_t>( Command::SET_CONTRAST_CONTROL)
+                    .pack<uint8_t>( ControlByte::COMMAND_STREAM )
+                    .pack<uint8_t>( Command::SET_CONTRAST_CONTROL )
                     .pack<uint8_t>( value )
                     .b,
             });
@@ -206,8 +206,8 @@ namespace Display {
             bus.push({
                 .dev = this,
                 .data = Frame{}
-                    .pack<uint8_t>( ControlByte::COMMANDS_ONLY)
-                    .pack<uint8_t>( invert ? Command::INVERSION_ON : Command::INVERSION_OFF)
+                    .pack<uint8_t>( ControlByte::COMMAND_STREAM )
+                    .pack<uint8_t>( invert ? Command::INVERSION_ON : Command::INVERSION_OFF )
                     .b,
             });
         }
@@ -216,8 +216,8 @@ namespace Display {
             bus.push({
                 .dev = this,
                 .data = Frame{}
-                    .pack<uint8_t>( ControlByte::COMMANDS_ONLY)
-                    .pack<uint8_t>( light ? Command::PIXELS_ALL : Command::PIXELS_RAM)
+                    .pack<uint8_t>( ControlByte::COMMAND_STREAM )
+                    .pack<uint8_t>( light ? Command::PIXELS_ALL : Command::PIXELS_RAM )
                     .b,
             });
         }
