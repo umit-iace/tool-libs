@@ -237,6 +237,14 @@ namespace Display {
                 });
             }
         }
+        
+        /**
+        * sends a full sized image via I2C into GDDRAM
+        * @param image pointer to imagedata
+        */
+        void sendImage(uint8_t* image) {
+            sendSection(image, 0, 127, 0, 7);
+        }
 
         /**
         * fills GDDRAM with all zeros and resets cursor address
