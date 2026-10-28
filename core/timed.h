@@ -34,6 +34,9 @@ namespace Recurring {
         bool schedule(uint32_t now) override {
             if (now < next) return false;
             next += dt;
+            // don't try to catch up on missed calls, e.g. after
+            // registering late or after time jumped
+            if (next <= now) next = now + dt;
             time = now;
             return true;
         }
@@ -66,13 +69,13 @@ struct Registry : Schedule::Registry {
 
     /** register a function to be called every dt_ms */
     void every(uint32_t dt_ms, typename Func::Call func) {
-        if (dt_ms) list.append(new Func{func, dt_ms});
+        if (dt_ms) add(new Func{func, dt_ms});
     }
     /** register a method to be called every dt_ms */
     template<typename T>
     void every(uint32_t dt_ms, T& base,
             typename Method<T>::Call method) {
-        if (dt_ms) list.append(new Method<T>{&base, method, dt_ms});
+        if (dt_ms) add(new Method<T>{&base, method, dt_ms});
     }
     /** reset calling times of all registered functions
      *

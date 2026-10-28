@@ -30,11 +30,15 @@ class Queue : public Sink<T>, public Source<T> {
             return tmp;
         }
     } head, tail;
+    /** continue pushing behind elements already in the Buffer */
+    void initTail() {
+        if (q.size) tail.val = q.len % q.size;
+    }
 
 public:
     /** create Queue directly from filled Buffer */
-    Queue(const Buffer<T> &buf) : q(buf), head{q.size}, tail{q.size} {}
-    Queue(Buffer<T> &&buf) : q(std::move(buf)), head{q.size}, tail{q.size} {}
+    Queue(const Buffer<T> &buf) : q(buf), head{q.size}, tail{q.size} { initTail(); }
+    Queue(Buffer<T> &&buf) : q(std::move(buf)), head{q.size}, tail{q.size} { initTail(); }
     /** create Queue with constant size */
     Queue(size_t size=30)
         : q(size)

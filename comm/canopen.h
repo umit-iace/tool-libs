@@ -35,7 +35,7 @@ struct SDO {
 
     Message toMessage() {
         return {
-            .data = cmd | ix << 8 | sub << 24 | (uint64_t)data << 32,
+            .data = cmd | (uint64_t)ix << 8 | (uint64_t)sub << 24 | (uint64_t)data << 32,
             .id = (uint32_t)0x600 + nodeID,
             .opts = { .rtr = 0, .ide = 0, .dlc = 8},
         };
@@ -107,7 +107,7 @@ struct TPDO {
  */
 struct Dispatch : Sink<SDO>, Sink<Message> {
     enum LOGLEVEL { NONE, WARN, INFO} log;
-    Dispatch(CAN &can, LOGLEVEL=NONE) : can(can) { }
+    Dispatch(CAN &can, LOGLEVEL log=NONE) : log(log), can(can) { }
     CAN &can;
     Sink<SDO> *ids[128] {};
     struct PDO {
@@ -321,16 +321,14 @@ struct Device : Sink<TPDO>, Sink<SDO> {
     void process() {
         if (state.q.empty()) return;
         if (state.next.when && !state.next(k.time)) return;
+        if (full()) return; // try again later
         out.push(state.q.pop());
         state.next = {k.time + 2};
     }
     void pushorqueue(SDO &&sdo) {
-        if (state.next.when && !state.next(k.time)) {
-            state.q.trypush(std::move(sdo));
-        } else {
-            (*(Sink<SDO>*)&out).trypush(std::move(sdo));
-            state.next = {k.time + 2};
-        }
+        // always go through the queue to keep requests in order
+        state.q.trypush(std::move(sdo));
+        process();
     }
 };
 }

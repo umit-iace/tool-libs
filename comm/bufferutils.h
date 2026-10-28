@@ -63,7 +63,8 @@ struct SplitPull {
         bool empty() override {
             while (!q.full() && !from.empty()) {
                 auto b = from.pop();
-                other->push(b);
+                // other side not keeping up, it misses out on this one
+                if (!other->full()) other->push(b);
                 q.push(std::move(b));
             }
             return q.empty();

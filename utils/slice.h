@@ -32,11 +32,10 @@ struct Slice {
     }
     Slice(const Buffer<T> &b, size_t start, size_t end=0) : buf{&b}, start(start) {
         len = end == 0 ? b.len - start : end - start;
-        start = start;
         assert(end <= b.len);
     }
     Slice(Slice<T> slc, size_t start, size_t end=0) : buf{slc.buf}, start(slc.start + start) {
-        len = end == 0 ? slc.buf->len - slc.start - start : end - start;
-        assert(end <= slc.buf->len - slc.start);
+        len = end == 0 ? slc.len - start : end - start;
+        assert(end <= slc.len);
     }
 };

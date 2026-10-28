@@ -21,7 +21,7 @@ struct Frame {
     template<typename T>
     Frame &pack(T value) {
         const size_t sz = sizeof(T);
-        assert(cursor.pack + sz < b.size);
+        assert(cursor.pack + sz <= b.size);
         memcpy(b.buf+cursor.pack, &value, sz);
         cursor.pack += sz;
         b.len += sz;
@@ -34,7 +34,9 @@ struct Frame {
     template<typename T>
     void unPack(T &value) {
         const size_t sz = sizeof(T);
-        assert(cursor.unpack + sz < b.size);
+        // only read data that was actually received
+        assert(cursor.unpack + sz <= b.len);
+        if (cursor.unpack + sz > b.len) return;
         memcpy(&value, b.buf + cursor.unpack, sz);
         cursor.unpack += sz;
     }
@@ -45,8 +47,10 @@ struct Frame {
     template<typename T>
     T unpack() {
         const size_t sz = sizeof(T);
-        assert(cursor.unpack + sz < b.size);
+        // only read data that was actually received
+        assert(cursor.unpack + sz <= b.len);
         T ret{};
+        if (cursor.unpack + sz > b.len) return ret;
         memcpy(&ret, b.buf + cursor.unpack, sz);
         cursor.unpack += sz;
         return ret;

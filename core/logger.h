@@ -6,6 +6,7 @@
 
 #include <cstdio>
 #include <cstdarg>
+#include <cstring>
 template<typename T>
 struct DevNull: Sink<T>, Source<T> {
     bool empty() override { return true; }
@@ -26,14 +27,32 @@ struct Logger : Sink<Buffer<uint8_t>> {
     virtual Buffer<uint8_t> pre() {
         return Buffer<uint8_t>(256);
     }
+    /** space left in b, keeping `reserve` bytes free */
+    static size_t room(const Buffer<uint8_t> &b, size_t reserve=0) {
+        return b.size > b.len + reserve ? b.size - b.len - reserve : 0;
+    }
+    /** number of chars actually written by (v)snprintf into `room` bytes
+     *
+     * (v)snprintf returns the length it _would_ have written
+     */
+    static size_t written(int n, size_t room) {
+        if (n < 0 || room == 0) return 0;
+        return (size_t)n < room ? n : room - 1;
+    }
     virtual void mklog(Lvl lvl, const char *fmt, va_list args) {
         Buffer<uint8_t> b = pre();
+        // keep room for resetting the color, even if the message gets truncated
+        size_t reserve = lvl != NONE ? strlen(color[NONE]) + 1 : 0;
+        size_t r;
         if (lvl != NONE) {
-            b.len += snprintf((char*)b.buf+b.len, b.size-b.len, "%s", color[lvl]);
+            r = room(b, reserve);
+            b.len += written(snprintf((char*)b.buf+b.len, r, "%s", color[lvl]), r);
         }
-        b.len += vsnprintf((char*)b.buf+b.len, b.size-b.len, fmt, args);
+        r = room(b, reserve);
+        b.len += written(vsnprintf((char*)b.buf+b.len, r, fmt, args), r);
         if (lvl != NONE) {
-            b.len += snprintf((char*)b.buf+b.len, b.size-b.len, "%s", color[NONE]);
+            r = room(b);
+            b.len += written(snprintf((char*)b.buf+b.len, r, "%s", color[NONE]), r);
         }
         while (out.full());
         out.trypush(std::move(b));
@@ -83,24 +102,29 @@ struct BufferedLogger: public Logger {
     char buf[MAXLEN];
     size_t ix = 0;
 
+    void put(const char *fmt, ...) {
+        va_list args;
+        va_start(args, fmt);
+        vput(fmt, args);
+        va_end(args);
+    }
+    /** append formatted string, flush first if it doesn't fit anymore */
+    void vput(const char *fmt, va_list args) {
+        // args can only be traversed once, probe with a copy
+        va_list probe;
+        va_copy(probe, args);
+        int need = vsnprintf(nullptr, 0, fmt, probe);
+        va_end(probe);
+        if (need < 0) return;
+        if ((size_t)need >= MAXLEN - ix) {
+            flush();
+        }
+        ix += written(vsnprintf(buf+ix, MAXLEN - ix, fmt, args), MAXLEN - ix);
+    }
     void mklog(Lvl lvl, const char *fmt, va_list args) override {
-        size_t need = snprintf(buf, 0, "%s", color[lvl]);
-        if (need >= MAXLEN - ix) {
-            flush();
-        }
-        ix += snprintf(buf+ix, MAXLEN - ix, "%s", color[lvl]);
-
-        need = vsnprintf(buf, 0, fmt, args);
-        if (need >= MAXLEN - ix) {
-            flush();
-        }
-        ix += vsnprintf(buf+ix, MAXLEN - ix, fmt, args);
-
-        need = snprintf(buf, 0, "%s", color[NONE]);
-        if (need >= MAXLEN - ix) {
-            flush();
-        }
-        ix += snprintf(buf+ix, MAXLEN - ix, "%s", color[NONE]);
+        put("%s", color[lvl]);
+        vput(fmt, args);
+        put("%s", color[NONE]);
     }
 
 public:
@@ -112,7 +136,8 @@ public:
         ix = 0;
     }
     bool full() override {
-        return ix == MAXLEN;
+        // last byte is always taken by the terminating '\0'
+        return ix >= MAXLEN - 1;
     }
 };
 

@@ -624,6 +624,10 @@ struct BNO085 : I2C::Device {
             const Channel chan = (Channel)rq.data[2];
             const uint8_t seq = rq.data[3];
             if (len == 0) return; // length of 0 indicates 'no data'
+            if (chan >= C_LAST) { // garbled header
+                if (lg) lg->warn("unknown channel: %d\n", chan);
+                return;
+            }
             if (seq != this->seq[chan]) {
                 //error?
                 if (lg) lg->warn("expected seq: %d, got %d\n", this->seq[chan], seq);

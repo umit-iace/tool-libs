@@ -122,7 +122,10 @@ struct Min {
                 case RECEIVING_LENGTH:
                     frame_length = b;
                     crc.step(b);
-                    if (frame_length > 0) {
+                    if (frame_length > frame.b.size) {
+                        // doesn't fit into Frame, drop it
+                        state = SEARCHING_FOR_SOF;
+                    } else if (frame_length > 0) {
                         state = RECEIVING_PAYLOAD;
                     } else {
                         state = RECEIVING_CHECKSUM_3;
@@ -207,7 +210,7 @@ struct Min {
      **/
     class Out : public Sink<Frame> {
         CRC32 crc{};
-        Buffer<uint8_t> req = 128;
+        Buffer<uint8_t> req;
         Sink<Buffer<uint8_t>> &out;
         uint8_t header_countdown = 2;
         void stuff(uint8_t b) {
@@ -236,7 +239,10 @@ struct Min {
         }
         /** push Frame through to underlying Buffer stream */
         void push(Frame &&f) override {
-            req = 128;
+            // id, length, payload & crc may be stuffed: worst case every
+            // second byte is followed by a stuff byte
+            size_t stuffed = 2 + f.b.len + 4;
+            req = 3 + stuffed + stuffed / 2 + 1;
             crc.init();
             nostuff(HEADER_BYTE);
             nostuff(HEADER_BYTE);

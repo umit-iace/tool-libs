@@ -61,19 +61,19 @@ namespace Evented {
 struct Registry : Schedule::Registry {
     /** register function to be scheduled for calling on Event */
     void call(Func::Call func) {
-        list.append(new Func{func});
+        add(new Func{func});
     }
     /** register method to be scheduled for calling on Event */
     template<typename T>
     void call(T& base, typename Method<T>::Call method) {
-        list.append(new Method<T>{&base, method});
+        add(new Method<T>{&base, method});
     }
     /** register plain Schedulable
      *
      * moves the ownership of the Schedulable to this registry
      */
     void call(Schedule::Schedulable *obj) {
-        list.append(obj);
+        add(obj);
     }
 };
 }}

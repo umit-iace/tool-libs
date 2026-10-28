@@ -154,3 +154,41 @@ TEST_CASE("tool-libs: frame: bool double bug") {
     CHECK(snd.b == b);
     CHECK(snd.d - d == doctest::Approx(0));
 }
+
+TEST_CASE("tool-libs: min: rx drops frame too big for Frame") {
+    Queue<Buffer<uint8_t>> q{2};
+    Min min{.in=q, .out=hex};
+    Buffer<uint8_t> in = 300;
+    in.append({0xaa, 0xaa, 0xaa, 0x1, 200});
+    for (int i = 0; i < 200; ++i) in.append(0x11);
+    // followed by a valid frame
+    in.append({
+        0xaa, 0xaa, 0xaa,
+        0x1, 0xc,
+        0x1f, 0x85, 0xeb, 0x51, 0xb8, 0x1e, 0x9, 0x40,
+        0x10, 0xe, 0x0, 0x0,
+        0x13, 0x96, 0x30, 0x3c,
+        0x55,
+    });
+    q.push(std::move(in));
+    REQUIRE(!min.in.empty());
+    Frame f = min.in.pop();
+    CHECK(f.id == 1);
+    CHECK(f.unpack<double>() == 3.14);
+    CHECK(min.in.empty());
+}
+TEST_CASE("tool-libs: min: full frame of header bytes roundtrip") {
+    Queue<Buffer<uint8_t>> q{3};
+    Min m{.in=q, .out=q};
+    Frame f{1};
+    // maximum number of stuff bytes
+    while (f.b.len < f.b.size) f.pack<uint8_t>(Min::HEADER_BYTE);
+    m.out.push(std::move(f));
+    REQUIRE(!m.in.empty());
+    Frame r = m.in.pop();
+    CHECK(r.id == 1);
+    REQUIRE(r.b.len == r.b.size);
+    for (size_t i = 0; i < r.b.len; ++i) {
+        CHECK(r.unpack<uint8_t>() == Min::HEADER_BYTE);
+    }
+}

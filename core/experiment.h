@@ -122,6 +122,8 @@ private:
         if (state != old) switch(old) { // handle state transitions == events
         case IDLE:
             time_ = 0;
+            // deadline may still be set relative to the old time
+            if (heartbeat) heartbeat.reset(time);
             k.schedule(time, init);
             idle.reset(); running.reset();
             break;
