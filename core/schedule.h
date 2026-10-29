@@ -38,18 +38,27 @@ struct Registry {
     Buffer<Schedulable *> list = 20;
     /** append Schedulable, growing the list if necessary */
     void add(Schedulable *s) {
+        // the Kernel might be iterating the list from an interrupt:
+        // allocate outside, publish under the CriticalSection, which also
+        // keeps the compiler from storing len before the entry (or before
+        // *s is fully constructed)
+        Schedulable **bigger = nullptr, **old = nullptr;
+        size_t sz = 0;
         if (list.len == list.size) {
-            // fully build the bigger list before swapping it in,
-            // the Kernel might be iterating the old one from an interrupt
-            size_t sz = list.size ? 2 * list.size : 20;
-            Schedulable **bigger = new Schedulable*[sz];
+            sz = list.size ? 2 * list.size : 20;
+            bigger = new Schedulable*[sz];
             for (size_t i = 0; i < list.len; ++i) bigger[i] = list.buf[i];
-            Schedulable **old = list.buf;
-            list.buf = bigger;
-            list.size = sz;
-            delete[] old;
         }
-        list.append(s);
+        {
+            CriticalSection cs;
+            if (bigger) {
+                old = list.buf;
+                list.buf = bigger;
+                list.size = sz;
+            }
+            list.append(s);
+        }
+        delete[] old;
     }
     ~Registry() {
         for (auto &entry: list) {

@@ -29,6 +29,9 @@ void _rx_complete(CAN_HandleTypeDef *handle) {
     CAN_RxHeaderTypeDef header{};
     Message msg{};
     HAL_CAN_GetRxMessage(handle, N?CAN_RX_FIFO1:CAN_RX_FIFO0, &header, (uint8_t*)&msg.data);
+    // the HAL copies all 8 bytes, the ones beyond dlc are stale register content
+    if (header.RTR) msg.data = 0;
+    else if (header.DLC < 8) msg.data &= (1ull << (8 * header.DLC)) - 1;
     msg.id = header.IDE ? header.ExtId : header.StdId;
     msg.opts = {
         .rtr = (bool)header.RTR,

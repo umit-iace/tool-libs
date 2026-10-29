@@ -105,9 +105,11 @@ void startTransmit(HW *uart) {
         }
     }
 
-    // need = ms/s * Bytes * (bit/Byte + Stop + Parity) / (bit/s)
-    size_t need = 1000. * b.len * (8+2) / uart->handle.Init.BaudRate + 1;
-    uart->tx.deadline = Deadline{k.time + need};
+    // need = ms/s * Bytes * (bit/Byte + Stop + Parity) / (bit/s), rounded up
+    // + 2ms margin, so transfers don't time out on tick granularity
+    uint32_t baud = uart->handle.Init.BaudRate;
+    uint32_t need = (1000ull * b.len * (8+2) + baud - 1) / baud + 2;
+    uart->tx.deadline = Deadline{uwTick + need};
 }
 void startReceive(HW *uart) {
     auto ret = HAL_OK;
@@ -118,15 +120,21 @@ void startReceive(HW *uart) {
     }
 }
 
+/** HAL errors (overrun, framing, noise, parity) are all on the receiving side,
+ * a running transmission is left alone */
 void _errcallback(UART_HandleTypeDef *handle) {
     auto uart = HW::reg.from(handle);
-    HAL_UART_Abort(handle);
+    HAL_UART_AbortReceive(handle);
     startReceive(uart);
+}
+/** retry a transmission that didn't finish in time, leaves reception alone */
+void _txtimeout(HW *uart) {
+    HAL_UART_AbortTransmit(&uart->handle);
     startTransmit(uart);
 }
 
 void poll(HW *uart) {
-    if (uart->tx.active && uart->tx.deadline(uwTick)) return _errcallback(&uart->handle);
+    if (uart->tx.active && uart->tx.deadline(uwTick)) return _txtimeout(uart);
     if (!uart->tx.active) return startTransmit(uart);
 }
 

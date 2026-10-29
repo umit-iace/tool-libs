@@ -79,12 +79,28 @@ void poll(HW *spi) {
     if (!spi->active.xfer && !spi->q.empty()) return _startMaster(spi);
 }
 
+/** stop the transfer on register level
+ *
+ * HAL_SPI_Abort(_IT) busy wait for the SPI interrupt to acknowledge, which
+ * never comes inside the CriticalSection of push() (~30ms at 216MHz)
+ */
+void _abort(SPI_HandleTypeDef *handle) {
+    CLEAR_BIT(handle->Instance->CR2, SPI_CR2_TXEIE | SPI_CR2_RXNEIE | SPI_CR2_ERRIE);
+    __HAL_SPI_DISABLE(handle);
+    while (__HAL_SPI_GET_FLAG(handle, SPI_FLAG_RXNE)) (void)handle->Instance->DR;
+    __HAL_SPI_CLEAR_OVRFLAG(handle);
+    handle->TxXferCount = 0;
+    handle->RxXferCount = 0;
+    handle->State = HAL_SPI_STATE_READY;
+    __HAL_UNLOCK(handle);
+}
+
 void _error(SPI_HandleTypeDef *handle) {
     auto spi = HW::reg.from(handle);
     if (spi->active.xfer) {
         auto &rq = spi->q.front();
         rq.dev->select(false);
-        HAL_SPI_Abort_IT(handle);
+        _abort(handle);
         // give up on this request, a broken device would block the bus
         // forever otherwise. drop instead of pop: don't free memory in here
         spi->q.drop();
@@ -93,6 +109,8 @@ void _error(SPI_HandleTypeDef *handle) {
     }
     __HAL_SPI_DISABLE(handle);
     __HAL_SPI_ENABLE(handle);
+    // called from the HAL error interrupt as well, nobody else restarts the queue
+    if (!spi->q.empty()) _startMaster(spi);
 }
 
 void _complete(SPI_HandleTypeDef *handle) {
