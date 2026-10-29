@@ -17,7 +17,7 @@ struct TTY:
     int fd{};
     static constexpr size_t BLEN = 512;
     Queue<Buffer<uint8_t>> tx, rx;
-    Buffer<uint8_t> wrk = BLEN;
+    Buffer<uint8_t> wrk = Buffer<uint8_t>(BLEN);
     /** open given path */
     TTY (const char *path) {
         fd = open(path, O_RDWR | O_NONBLOCK | O_CLOEXEC);
@@ -52,7 +52,7 @@ struct TTY:
         }
         wrk.len = l;
         rx.push(std::move(wrk));
-        wrk = BLEN;
+        wrk = Buffer<uint8_t>(BLEN);
         return false;
     }
     Buffer<uint8_t> pop() override {
@@ -95,7 +95,7 @@ struct UDP:
     } peer;
     static constexpr size_t BLEN = 128;
     Queue<Buffer<uint8_t>> tx, rx;
-    Buffer<uint8_t> wrk = BLEN;
+    Buffer<uint8_t> wrk = Buffer<uint8_t>(BLEN);
     /** create UDP Server listening on ip/port, answering whoever sends data
      *
      * data pushed before the first datagram arrived is dropped
@@ -171,7 +171,7 @@ struct UDP:
         }
         wrk.len = l;
         rx.push(std::move(wrk));
-        wrk = BLEN;
+        wrk = Buffer<uint8_t>(BLEN);
         return false;
     }
     Buffer<uint8_t> pop() override {

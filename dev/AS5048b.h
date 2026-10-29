@@ -27,7 +27,7 @@ public:
     void measure() {
         bus.trypush({
             .dev = this,
-            .data = 2,
+            .data = Buffer<uint8_t>(2),
             .opts = {
                 .read = true,
                 .mem = true,

@@ -17,7 +17,7 @@ struct Out : Sink<Buffer<uint8_t>> {
 
 /** response without '\0', followed by more digits in memory */
 static Buffer<uint8_t> response(const char *s) {
-    Buffer<uint8_t> b = 128;
+    Buffer<uint8_t> b(128);
     memset(b.buf, '5', b.size);
     for (; *s; ++s) b.append(*s);
     return b;

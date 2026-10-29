@@ -58,7 +58,7 @@ struct QMC5883L : I2C::Device {
     void measure() {
         bus.trypush({
             .dev = this,
-            .data = 9,
+            .data = Buffer<uint8_t>(9),
             .opts = {
                 .read = true,
                 .mem = true,

@@ -10,7 +10,7 @@
 
 namespace {
 struct Capture : Sink<Buffer<uint8_t>> {
-    Buffer<uint8_t> last{1};
+    Buffer<uint8_t> last;
     int pushed{};
     bool full() override { return false; }
     void push(Buffer<uint8_t> &&b) override {

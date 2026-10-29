@@ -48,7 +48,7 @@ struct AS5145 : SPI::Device {
     void sense() {
         bus.trypush({
             .dev = this,
-            .data = BYTES,
+            .data = Buffer<uint8_t>(BYTES),
             .dir = SPI::Request::MISO,
             });
     }

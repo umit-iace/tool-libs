@@ -167,7 +167,7 @@ struct BNO085 : I2C::Device {
      * returns the sequence of sent message
      */
     uint8_t sendMessage(const Message &msg) {
-        Data data = msg.cargo.len + 4;
+        Data data(msg.cargo.len + 4);
         uint8_t sq = seq[msg.chan]++;
         // build header
         data.append({
@@ -687,7 +687,7 @@ struct BNO085 : I2C::Device {
             if (len > rq.data.len) { // need to get more data
                 bus.trypush({
                         .dev = this,
-                        .data = len,
+                        .data = Data(len),
                         .opts = {
                             .read = true,
                         },
@@ -726,7 +726,7 @@ struct BNO085 : I2C::Device {
     void poll(uint32_t, uint32_t) {
         bus.trypush({
             .dev = this,
-            .data = 4,
+            .data = Buffer<uint8_t>(4),
             .opts = { .read = true },
         });
     }

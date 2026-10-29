@@ -82,7 +82,7 @@ static void vprint(const char *fmt, va_list args) {
     int n = vsnprintf(nullptr, 0, fmt, probe);
     va_end(probe);
     if (n <= 0 || !board::vcp) return;
-    Buffer<uint8_t> b = n + 1;
+    Buffer<uint8_t> b(n + 1);
     vsnprintf((char *)b.buf, b.size, fmt, args);
     b.len = n;
     while (board::vcp->full()) barrier();

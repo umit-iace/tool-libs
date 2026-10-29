@@ -46,7 +46,7 @@ struct MAX31855 : SPI::Device {
     void sense() {
         bus.trypush({
             .dev = this,
-            .data = 4,
+            .data = Buffer<uint8_t>(4),
             .dir = SPI::Request::MISO,
             });
     }

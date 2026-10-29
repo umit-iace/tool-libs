@@ -39,7 +39,7 @@ struct BMI160 : I2C::Device {
     void measure() {
         bus.trypush({
             .dev = this,
-            .data = 12,
+            .data = Buffer<uint8_t>(12),
             .opts = {
                 .read = true,
                 .mem = true,

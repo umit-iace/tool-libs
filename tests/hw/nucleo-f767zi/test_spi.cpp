@@ -61,7 +61,7 @@ Dev &dev3() {
 }
 
 SPI::Request request(Dev &d, size_t len, SPI::Request::Direction dir, uint8_t start=1) {
-    Buffer<uint8_t> b = len;
+    Buffer<uint8_t> b(len);
     for (size_t i = 0; i < len; ++i) b.buf[i] = start + i;
     if (dir != SPI::Request::MISO) b.len = len;
     return {.dev = &d, .data = std::move(b), .dir = dir};

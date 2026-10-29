@@ -28,13 +28,14 @@ public:
         for (size_t i = 0; i < diffs.size; ++i) diffs.append(0);
     }
 
-    Buffer<double> operator()(double dx) {
+    /** value & derivatives at dx, valid until the next call */
+    const Buffer<double> &operator()(double dx) {
         return getValue(dx);
     }
 
-    virtual Buffer<double> getValue(double) {
+    virtual const Buffer<double> &getValue(double) {
         assert(false); // ups, virtual call didn't work?
-        return 0;
+        return diffs;
     }
 };
 
@@ -62,7 +63,7 @@ public:
         }
     }
 
-    Buffer<double> getValue(double dx) override {
+    const Buffer<double> &getValue(double dx) override {
         if (!P.size) {
             diffs[0] = 0;
             diffs[1] = 0;
@@ -112,8 +113,9 @@ class SmoothTrajectory : public Curve {
     Buffer<Vec> P;
 public:
     SmoothTrajectory(Buffer<double> coeffs, size_t n)
-        : Curve(coeffs.len), n(n + 1 < coeffs.len ? coeffs.len - 1 : n), coeffs(coeffs) {
-        assert(n + 1 >= coeffs.len); // more coefficients than the degree allows
+        : Curve(coeffs.len), n(n + 1 < coeffs.len ? coeffs.len - 1 : n),
+          coeffs(std::move(coeffs)) {
+        assert(n + 1 >= this->coeffs.len); // more coefficients than the degree allows
     }
 
     void setData(Buffer<double> &&b) override {
@@ -125,7 +127,7 @@ public:
         }
     }
 
-    Buffer<double> getValue(double x) override {
+    const Buffer<double> &getValue(double x) override {
         for (auto &d: diffs) d = 0;
         if (!P.size) return diffs;
 

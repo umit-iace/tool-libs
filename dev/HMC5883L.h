@@ -72,7 +72,7 @@ struct HMC5883L : I2C::Device {
     void measure() {
         bus.trypush({
             .dev = this,
-            .data = 6,
+            .data = Buffer<uint8_t>(6),
             .opts = {
                 .read = true,
                 .mem = true,

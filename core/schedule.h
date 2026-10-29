@@ -36,7 +36,7 @@ struct Schedulable {
  * where scheduling is necessary. see Experiment for inspiration
  */
 struct Registry {
-    Buffer<Schedulable *> list = 20;
+    Buffer<Schedulable *> list = Buffer<Schedulable *>(20);
     /** append Schedulable, growing the list if necessary */
     void add(Schedulable *s) {
         // the Kernel might be iterating the list from an interrupt:

@@ -151,7 +151,7 @@ void deliver(HW *uart, uint16_t nbs) {
     } else {
         // dropping Buffer, reader should call more often...
     }
-    uart->rx.buf = 512;
+    uart->rx.buf = Buffer<uint8_t>(512);
 }
 void _rxevent(UART_HandleTypeDef *handle, uint16_t nbs) {
     auto uart = HW::reg.from(handle);

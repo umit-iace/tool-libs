@@ -23,7 +23,7 @@ extern class Kernel :
         KLog(const Time &t): Logger(), time(t) {}
         const Time &time;
         virtual Buffer<uint8_t> pre() override {
-            Buffer<uint8_t> ret = 256;
+            Buffer<uint8_t> ret(256);
             ret.len = written(snprintf((char*)ret.buf, ret.size, "(@%" PRIu32 "ms): ",
                         time.load(std::memory_order_relaxed)), ret.size);
             return ret;

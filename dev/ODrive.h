@@ -58,7 +58,7 @@ struct ODrive {
                 pos = vel = 0;
                 return;
             }
-            Buffer<uint8_t> cmd = 32;
+            Buffer<uint8_t> cmd(32);
             cmd.len = snprintf((char*)cmd.buf, cmd.size, cmds.velocity, side, speed, 0.);
             drive->q.trypush({
                     .cmd = VELO,
@@ -73,7 +73,7 @@ struct ODrive {
                 pos = vel = 0;
                 return;
             }
-            Buffer<uint8_t> cmd = 32;
+            Buffer<uint8_t> cmd(32);
             cmd.len = snprintf((char*)cmd.buf, cmd.size, cmds.get, side);
             drive->q.trypush({
                     .cmd = GET,

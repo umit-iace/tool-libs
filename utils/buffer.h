@@ -23,10 +23,14 @@ struct Buffer {
     size_t size;
     /** implicit cast to pointer to T */
     operator T*() { return buf; }
-    //XXX: how about a slice into a buffer?
+    operator const T*() const { return buf; }
 
     /** access into known length of buffer */
     T& at(size_t ix) {
+        assert(ix < len);
+        return buf[ix];
+    }
+    const T& at(size_t ix) const {
         assert(ix < len);
         return buf[ix];
     }
@@ -36,7 +40,7 @@ struct Buffer {
         return buf[ix];
     }
     /** access into known size of buffer */
-    T& operator[](size_t ix) const {
+    const T& operator[](size_t ix) const {
         assert(ix < size);
         return buf[ix];
     }
@@ -56,11 +60,11 @@ struct Buffer {
         return *this;
     }
     /** begin method for range-based for loops */
-    T* begin() { return &buf[0]; }
-    T* begin() const { return &buf[0]; }
+    T* begin() { return buf; }
+    const T* begin() const { return buf; }
     /** end method for range-based for loops */
-    T* end() { return &buf[len]; }
-    T* end() const { return &buf[len]; }
+    T* end() { return buf + len; }
+    const T* end() const { return buf + len; }
 
     /* Rule of Five */
     /** destructor */
@@ -70,17 +74,22 @@ struct Buffer {
     /** copy from naked array with known length */
     Buffer(const T *src, size_t len, size_t sz=0) : buf{}, len(0), size(sz) {
         if (sz == 0) size = len;
-        buf = new T[size];
+        buf = alloc(size);
         for (size_t i = 0; i < len; ++i) append(src[i]);
     }
     /** initializer list constructor */
-    Buffer(std::initializer_list<T> list) : buf{new T[list.size()]}, len(0), size(list.size()) {
+    Buffer(std::initializer_list<T> list) : buf{alloc(list.size())}, len(0), size(list.size()) {
         append(list);
     }
-    /** constructor with fixed size */
-    Buffer(size_t sz=0) : buf{new T[sz]}, len(0), size(sz) { }
+    /** empty Buffer, no allocation */
+    Buffer() : buf{}, len(0), size(0) { }
+    /** constructor with fixed size
+     *
+     * explicit: `push(5)` must not quietly become a Buffer of 5 elements
+     */
+    explicit Buffer(size_t sz) : buf{alloc(sz)}, len(0), size(sz) { }
     /** copy constructor */
-    Buffer(const Buffer &b) : buf{new T[b.size]}, len(0), size(b.size) {
+    Buffer(const Buffer &b) : buf{alloc(b.size)}, len(0), size(b.size) {
         for (auto el : b) append(el);
     }
     /** copy assignment operator */
@@ -88,10 +97,9 @@ struct Buffer {
         if (this == &b) return *this; // copy to self
         if (!size || size != b.size) { // necessary to realloc
             delete[] buf;
-            buf = new T[b.size];
+            buf = alloc(b.size);
             size = b.size;
         }
-        assert(buf != nullptr);
         assert(size >= b.len);
         len = 0;
         for (auto el: b) append(el);
@@ -115,4 +123,6 @@ struct Buffer {
         b.buf = nullptr;
         return *this;
     }
+private:
+    static T *alloc(size_t n) { return n ? new T[n] : nullptr; }
 };

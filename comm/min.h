@@ -242,7 +242,7 @@ struct Min {
             // id, length, payload & crc may be stuffed: worst case every
             // second byte is followed by a stuff byte
             size_t stuffed = 2 + f.b.len + 4;
-            req = 3 + stuffed + stuffed / 2 + 1;
+            req = Buffer<uint8_t>(3 + stuffed + stuffed / 2 + 1);
             crc.init();
             nostuff(HEADER_BYTE);
             nostuff(HEADER_BYTE);

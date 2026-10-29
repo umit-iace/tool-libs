@@ -158,7 +158,7 @@ TEST_CASE("tool-libs: frame: bool double bug") {
 TEST_CASE("tool-libs: min: rx drops frame too big for Frame") {
     Queue<Buffer<uint8_t>> q{2};
     Min min{.in=q, .out=hex};
-    Buffer<uint8_t> in = 300;
+    Buffer<uint8_t> in(300);
     in.append({0xaa, 0xaa, 0xaa, 0x1, 200});
     for (int i = 0; i < 200; ++i) in.append(0x11);
     // followed by a valid frame
