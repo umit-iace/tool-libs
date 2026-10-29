@@ -101,7 +101,7 @@ struct ODrive {
                     _alive = true;
                 }
             } else if (k.time % 500 == 0) {
-                out.trypush({(const uint8_t*)"r vbus_voltage\n", 16});
+                out.trypush({(const uint8_t*)"r vbus_voltage\n", 15});
             }
             return;
         }

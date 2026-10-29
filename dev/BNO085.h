@@ -112,6 +112,11 @@ struct BNO085 : I2C::Device {
         }
     };
 
+    /** Acceleration in direction of axes, in m/s^2 */
+    struct Acceleration {
+        double x, y, z;
+    } acceleration;
+
     /** high-speed Gyro-Integrated Rotation Vector
      * includes estimation of rotation velocities
      */
@@ -306,6 +311,7 @@ struct BNO085 : I2C::Device {
 
     void handleWakeNormal(View cargo) {
         while (cargo.len) switch (cargo[0]) {
+        case 0x01: cargo = handleAccelerationReport(cargo); break;
         case 0x05: cargo = handleRotVecReport(cargo); break;
         case 0xFA: cargo = handleRebaseTimeStamp(cargo); break;
         case 0xFB: cargo = handleBaseTimeStamp(cargo); break;
@@ -315,6 +321,16 @@ struct BNO085 : I2C::Device {
                if (lg) logData({*cargo.buf,0});
                return;
         }
+    }
+
+    View handleAccelerationReport(View cargo) {
+        assert(cargo[0] == 0x01); // report ID
+        this->acceleration = {
+            .x = read16({cargo, 4}) * Q(8),
+            .y = read16({cargo, 6}) * Q(8),
+            .z = read16({cargo, 8}) * Q(8),
+        };
+        return {cargo, 10};
     }
 
     View handleRotVecReport(View cargo) {
@@ -673,6 +689,22 @@ struct BNO085 : I2C::Device {
             .dev = this,
             .data = 4,
             .opts = { .read = true },
+        });
+    }
+
+    /** enable raw acceleration sensor at given frequency */
+    void enableAcceleration(uint32_t Hz = 100) {
+        setFeature({
+            .report_interval = 1'000'000 / Hz,
+            .reportID = 0x01,
+        });
+    }
+
+    /** disable raw acceleration sensor */
+    void disableAcceleration() {
+        setFeature({
+            .report_interval = 0,
+            .reportID = 0x01,
         });
     }
 
