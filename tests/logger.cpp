@@ -43,3 +43,34 @@ TEST_CASE("tool-libs: logger: buffered logger truncates long messages") {
     l.flush();
     CHECK(c.last.len < (size_t)BufferedLogger::MAXLEN);
 }
+
+struct Full : Sink<Buffer<uint8_t>> {
+    int pushed = 0;
+    bool full() override { return true; }
+    void push(Buffer<uint8_t> &&) override { ++pushed; }
+};
+
+TEST_CASE("tool-libs: logger: a full sink doesn't block, messages are counted") {
+    Full f;
+    Logger l{f};
+    l.info("lost %d\n", 1);
+    l.push(Buffer<uint8_t>{1, 2, 3});
+    CHECK(f.pushed == 0);
+    CHECK(l.dropped == 2);
+
+    BufferedLogger b{f};
+    b.info("lost too\n");
+    b.flush();
+    CHECK(f.pushed == 0);
+    CHECK(b.dropped == 1);
+}
+
+TEST_CASE("tool-libs: logger: pushing more than the prefix buffer holds") {
+    Collect c;
+    Logger l{c};
+    Buffer<uint8_t> big(600);
+    for (int i = 0; i < 600; ++i) big.append('a' + i % 26);
+    l.push(std::move(big));
+    REQUIRE(c.last.len == 600); // the default prefix is empty
+    CHECK(c.last[599] == 'a' + 599 % 26);
+}

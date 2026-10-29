@@ -7,6 +7,8 @@
 #include <cstdio>
 #include <cstdarg>
 #include <cstring>
+#include <cstdint>
+#include "critical.h"
 template<typename T>
 struct DevNull: Sink<T>, Source<T> {
     bool empty() override { return true; }
@@ -54,9 +56,25 @@ struct Logger : Sink<Buffer<uint8_t>> {
             r = room(b);
             b.len += written(snprintf((char*)b.buf+b.len, r, "%s", color[NONE]), r);
         }
-        while (out.full());
-        out.trypush(std::move(b));
+        send(std::move(b));
     }
+    /** hand b to the sink, waiting a little if it is full
+     *
+     * waiting only helps if something else drains the sink meanwhile, i.e.
+     * not in an interrupt, not with interrupts disabled, not single threaded
+     */
+    void send(Buffer<uint8_t> &&b) {
+        if (!CriticalSection::blocking()) {
+            for (uint32_t spin = 0; spin < SPIN && out.full(); ++spin) { }
+        }
+        if (out.full()) {
+            ++dropped;
+            return;
+        }
+        out.push(std::move(b));
+    }
+    /** polls of a full sink before giving up, ~tens of ms on a Cortex-M7 */
+    static constexpr uint32_t SPIN = 1000000;
 public:
     /** Info log level */
     void info(const char *fmt, ...) {
@@ -84,10 +102,14 @@ public:
     }
     /** push otherwisely prepared Buffer through Logger */
     void push(Buffer<uint8_t> &&b) override {
-        Buffer<uint8_t> tmp = pre();
+        Buffer<uint8_t> prefix = pre();
+        Buffer<uint8_t> tmp(prefix.len + b.len);
+        for (auto &c : prefix) { tmp.append(c); }
         for (auto &c : b) { tmp.append(c); }
-        out.push(std::move(tmp));
+        send(std::move(tmp));
     }
+    /** messages lost because the sink was full */
+    uint32_t dropped{};
     /** create Logger wrapping a Buffer Sink */
     Logger(Sink<Buffer<uint8_t>> &snk) : out{snk} { }
     Logger() : out{devnull<Buffer<uint8_t>>} {}
@@ -132,7 +154,7 @@ public:
     BufferedLogger() : Logger{devnull<Buffer<uint8_t>>} {}
     void flush() {
         if (!ix) return;
-        out.push(std::move(Buffer<uint8_t>((const uint8_t *)buf, ix)));
+        send(Buffer<uint8_t>((const uint8_t *)buf, ix));
         ix = 0;
     }
     bool full() override {
