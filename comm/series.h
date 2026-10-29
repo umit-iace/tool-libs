@@ -10,7 +10,7 @@
  */
 template<typename T, int FRAMELEN=80, size_t MAXLEN=32768/sizeof(T)>
 struct SeriesUnpacker {
-    static constexpr size_t LEN = FRAMELEN / sizeof(T);
+    // FRAMELEN is unused, the values are taken from the received bytes
     bool start {true};
     Buffer<T> buf; ///< Buffer of data received. only
                    ///valid after unpack returns non-null
@@ -25,7 +25,9 @@ struct SeriesUnpacker {
             if (len == 0 || len > MAXLEN) return nullptr;
             buf = Buffer<T>(len);
         }
-        for (unsigned int i = 0; i < LEN - start; i++) {
+        // the first frame starts with the uint32_t length, the values
+        // fill the rest of each frame, whatever sizeof(T) is
+        while (f.remaining() >= sizeof(T)) {
             buf.append(f.unpack<T>());
             if (buf.len == buf.size) {
                 start = true;

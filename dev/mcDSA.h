@@ -84,15 +84,17 @@ struct mcDSA : CAN::Open::Device {
         return msrPDO.map[1].data;
     }
 
-    void callback(CAN::Open::SDO rq) {
+    void callback(CAN::Open::SDO rq) override {
+        // measurements are signed 32 bit values
+        int32_t val = (int32_t)rq.data;
         switch(rq.ix) {
-        case 0x3a04: assert(rq.sub == 1); meas.speed = rq.data; break;
-        case 0x3361: assert(rq.sub == 0); meas.speedDes = rq.data; break;
-        case 0x3262: assert(rq.sub == 1); meas.current = rq.data; break;
-        case 0x394a: assert(rq.sub == 0); meas.position = rq.data; break;
+        case 0x3a04: assert(rq.sub == 1); meas.speed = val; break;
+        case 0x3361: assert(rq.sub == 0); meas.speedDes = val; break;
+        case 0x3262: assert(rq.sub == 1); meas.current = val; break;
+        case 0x394a: assert(rq.sub == 0); meas.position = val; break;
         case 0x3001: assert(rq.sub == 0); meas.error = rq.data; break;
         }
     }
-    void callback(CAN::Open::TPDO rq) {
+    void callback(CAN::Open::TPDO) override {
     }
 };
