@@ -94,7 +94,15 @@ public:
     }
 };
 
-/** Class implementing polynom interpolation */
+/** Class implementing polynom interpolation
+ *
+ * between two points the polynom p(tau) of degree `n` is used, tau in [0, 1].
+ * `coeffs` are its highest coefficients in ascending order, i.e. for the
+ * powers n-coeffs.len+1 .. n, the lower ones are 0.
+ * e.g. smoothstep 3tau^2 - 2tau^3: n = 3, coeffs = {3, -2}
+ *
+ * getValue returns the value and its first coeffs.len-1 derivatives
+ */
 class SmoothTrajectory : public Curve {
     size_t n;
     Buffer<double> coeffs;
@@ -103,7 +111,10 @@ class SmoothTrajectory : public Curve {
     };
     Buffer<Vec> P;
 public:
-    SmoothTrajectory(Buffer<double> coeffs, size_t n) : Curve(coeffs.len), n(n), coeffs(coeffs) {}
+    SmoothTrajectory(Buffer<double> coeffs, size_t n)
+        : Curve(coeffs.len), n(n + 1 < coeffs.len ? coeffs.len - 1 : n), coeffs(coeffs) {
+        assert(n + 1 >= coeffs.len); // more coefficients than the degree allows
+    }
 
     void setData(Buffer<double> &&b) override {
         size_t off{b.size / 2};
@@ -116,13 +127,14 @@ public:
 
     Buffer<double> getValue(double x) override {
         for (auto &d: diffs) d = 0;
+        if (!P.size) return diffs;
 
         size_t i = (P.size - 1) / 2;
         size_t left = 0, right = P.size - 1;
         while (true) {
             if (left == right) {
+                // outside the points: hold the value, derivatives are 0
                 diffs[0] = P[right].y;
-                diffs[1] = 0;
                 break;
             }
             if (x < P[i].x) {
@@ -139,21 +151,25 @@ public:
             double dx = P[i + 1].x - P[i].x;
             double tau = (x - P[i].x) / dx;
 
-            for (int k = n; k >= 0; --k) {
-                for (int j = n - diffs.len; j > 0; --j) {
+            // Horner, also dividing out the derivatives:
+            // afterwards diffs[l] = p^(l)(tau) / l!
+            const size_t lowest = n + 1 - coeffs.len; // power of coeffs[0]
+            for (size_t k = n + 1; k-- > 0; ) {
+                for (size_t j = diffs.len - 1; j > 0; --j) {
                     diffs[j] = diffs[j] * tau + diffs[j - 1];
                 }
-                if (n - k >= coeffs.len)
-                    diffs[0] *= tau;
-                else
-                    diffs[0] = diffs[0] * tau + coeffs[k - coeffs.len];
+                diffs[0] = diffs[0] * tau + (k >= lowest ? coeffs[k - lowest] : 0);
             }
 
+            // scale from tau to x: d^l/dx^l = l! * diffs[l] * dy / dx^l
+            double factorial = 1;
             for (size_t l = 0; l < diffs.len; ++l) {
-                if (l > 0)
-                    diffs[l] *= dy * l / pow(dx, l);
-                else
+                if (l > 0) {
+                    factorial *= l;
+                    diffs[l] *= factorial * dy / pow(dx, l);
+                } else {
                     diffs[l] = P[i].y + diffs[l] * dy;
+                }
             }
             break;
         }
@@ -175,19 +191,22 @@ struct Reference {
         return y;
     }
 
-    Reference &operator+(const Reference &other) {
+    Reference &operator+=(const Reference &other) {
         for (int i = 0; i < n; ++i) {
             this->y[i] += other.y[i];
         }
         return *this;
     }
 
-    Reference &operator-(const Reference &other) {
+    Reference &operator-=(const Reference &other) {
         for (int i = 0; i < n; ++i) {
             this->y[i] -= other.y[i];
         }
         return *this;
     }
+
+    friend Reference operator+(Reference a, const Reference &b) { return a += b; }
+    friend Reference operator-(Reference a, const Reference &b) { return a -= b; }
     Reference() { }
     Reference(std::initializer_list<double> list) {
         assert(list.size() == n);
