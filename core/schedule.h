@@ -5,6 +5,7 @@
 #pragma once
 #include "utils/queue.h"
 #include "critical.h"
+struct Scheduler;
 /** namespace wrapping all functionality to do with scheduling */
 namespace Schedule {
 //XXX: figure out a way to simplify this whole namespace
@@ -60,6 +61,33 @@ struct Registry {
         }
         delete[] old;
     }
+    /** take Schedulable out of the list, ownership goes to the caller
+     *
+     * it may still be queued in a Scheduler, see remove(s, scheduler)
+     * @return false if s isn't in this registry
+     */
+    bool remove(Schedulable *s) {
+        CriticalSection cs;
+        for (size_t i = 0; i < list.len; ++i) {
+            if (list.buf[i] != s) continue;
+            for (; i + 1 < list.len; ++i) list.buf[i] = list.buf[i + 1];
+            --list.len;
+            return true;
+        }
+        return false;
+    }
+    /** unregister and destroy Schedulable, e.g. before the object it calls
+     * dies
+     *
+     * also removes pending calls from the Scheduler this registry is
+     * scheduled with. call from the main loop only, the Schedulable may
+     * remove itself from within its call.
+     */
+    inline bool remove(Schedulable *s, Scheduler &sched);
+    Registry() = default;
+    // owns the Schedulables
+    Registry(const Registry &) = delete;
+    Registry& operator=(const Registry &) = delete;
     ~Registry() {
         for (auto &entry: list) {
             delete entry;
@@ -85,6 +113,14 @@ struct Scheduler {
         }
         return true;
     }
+    /** drop pending calls of s */
+    void forget(Schedule::Schedulable *s) {
+        CriticalSection cs;
+        for (size_t n = q.size(); n; --n) {
+            auto c = q.pop();
+            if (c != s) q.push(std::move(c));
+        }
+    }
     /** run scheduled calls */
     void run() {
         while (true) {
@@ -98,3 +134,10 @@ struct Scheduler {
         }
     }
 };
+
+inline bool Schedule::Registry::remove(Schedulable *s, Scheduler &sched) {
+    if (!remove(s)) return false;
+    sched.forget(s);
+    delete s;
+    return true;
+}

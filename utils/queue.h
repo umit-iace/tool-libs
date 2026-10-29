@@ -52,6 +52,8 @@ public:
      **/
     void push(T &&val) override {
         assert(q.len < q.size);
+        // dropped when full, also in release builds (NDEBUG)
+        if (q.len >= q.size) return;
         q[tail++] = std::move(val);
         q.len++;
     }
@@ -63,11 +65,12 @@ public:
     /**
      * remove front of queue and return it
      *
-     * does not check that there's something in the queue
-     * guard with `if (size()) ...` or `if (! empty()) ...`
+     * guard with `if (size()) ...` or `if (! empty()) ...`,
+     * returns a default constructed T if empty
      */
     T pop() override {
         assert(q.len != 0);
+        if (q.len == 0) return T{};
         q.len--;
         return std::move(q[head++]);
     }
@@ -76,6 +79,7 @@ public:
      */
     void drop() {
         assert(q.len != 0);
+        if (q.len == 0) return;
         q.len--;
         head++;
     }

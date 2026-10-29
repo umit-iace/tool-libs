@@ -29,18 +29,29 @@ namespace Recurring {
      */
     struct Schedulable: public Schedule::Schedulable {
         uint32_t next{}, time{}, dt{};
+        bool armed{};
         Schedulable(uint32_t dt) : dt{dt} { }
-        /** only schedule if dt ms passed since last run */
+        /** only schedule if dt ms passed since last run
+         *
+         * wrap-around safe for periods below ~24.8 days
+         */
         bool schedule(uint32_t now) override {
-            if (now < next) return false;
-            next += dt;
-            // don't try to catch up on missed calls, e.g. after
-            // registering late or after time jumped
-            if (next <= now) next = now + dt;
+            if (!armed) {
+                // first call right away, then aligned to multiples of dt
+                // if registered before dt passed
+                armed = true;
+                next = now < dt ? dt : now + dt;
+            } else {
+                if ((int32_t)(now - next) < 0) return false;
+                next += dt;
+                // don't try to catch up on missed calls, e.g. after
+                // registering late or after time jumped
+                if ((int32_t)(next - now) <= 0) next = now + dt;
+            }
             time = now;
             return true;
         }
-        void reset() { next = 0; }
+        void reset() { armed = false; }
     };
     /** recurringly callable function wrapper */
     struct Func: public Schedulable {
@@ -67,15 +78,27 @@ namespace Recurring {
 /** registry of recurring calls */
 struct Registry : Schedule::Registry {
 
-    /** register a function to be called every dt_ms */
-    void every(uint32_t dt_ms, typename Func::Call func) {
-        if (dt_ms) add(new Func{func, dt_ms});
+    /** register a function to be called every dt_ms
+     *
+     * @return handle for `remove`, nullptr if dt_ms is 0
+     */
+    Schedulable *every(uint32_t dt_ms, typename Func::Call func) {
+        if (!dt_ms) return nullptr;
+        auto s = new Func{func, dt_ms};
+        add(s);
+        return s;
     }
-    /** register a method to be called every dt_ms */
+    /** register a method to be called every dt_ms
+     *
+     * @return handle for `remove`, nullptr if dt_ms is 0
+     */
     template<typename T>
-    void every(uint32_t dt_ms, T& base,
+    Schedulable *every(uint32_t dt_ms, T& base,
             typename Method<T>::Call method) {
-        if (dt_ms) add(new Method<T>{&base, method, dt_ms});
+        if (!dt_ms) return nullptr;
+        auto s = new Method<T>{&base, method, dt_ms};
+        add(s);
+        return s;
     }
     /** reset calling times of all registered functions
      *
@@ -85,7 +108,7 @@ struct Registry : Schedule::Registry {
      */
     void reset() {
         for (auto &c: list) {
-            reinterpret_cast<Schedulable *>(c)->reset();
+            static_cast<Schedulable *>(c)->reset();
         }
     }
 };

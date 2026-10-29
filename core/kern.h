@@ -5,6 +5,7 @@
 #pragma once
 #include "timed.h"
 #include "logger.h"
+#include <atomic>
 #include <setjmp.h>
 #include <inttypes.h>
 
@@ -15,19 +16,25 @@
 extern class Kernel :
     public Schedule::Recurring::Registry,
     public Scheduler {
+    using Time = std::atomic<uint32_t>;
     struct KLog: Logger {
-        KLog(const uint32_t &t, Sink<Buffer<uint8_t>> &snk): Logger(snk), time(t) {}
-        KLog(const uint32_t &t): Logger(), time(t) {}
-        const uint32_t &time;
+        KLog(const Time &t, Sink<Buffer<uint8_t>> &snk): Logger(snk), time(t) {}
+        KLog(const Time &t): Logger(), time(t) {}
+        const Time &time;
         virtual Buffer<uint8_t> pre() override {
             Buffer<uint8_t> ret = 256;
-            ret.len = snprintf((char*)ret.buf, ret.size, "(@%" PRIu32 "ms): ", time);
+            ret.len = written(snprintf((char*)ret.buf, ret.size, "(@%" PRIu32 "ms): ",
+                        time.load(std::memory_order_relaxed)), ret.size);
             return ret;
         }
     };
 public:
-    /** const access to global uptime */
-    const uint32_t &time{time_};
+    /** const access to global uptime [ms]
+     *
+     * advanced from the tick interrupt, atomic so reading it in loops
+     * always sees the current value
+     */
+    const Time &time{time_};
     KLog log{time};
     /** point logger to new sink */
     void initLog(Sink<Buffer<uint8_t>> &snk) {
@@ -37,7 +44,14 @@ public:
     void tick(uint32_t dt_ms) {
         auto ok = schedule(time, *this);
         if (!ok) exit( 127 ); // too many items in scheduled queue. DYING.
-        time_ += dt_ms;
+        time_.fetch_add(dt_ms, std::memory_order_relaxed);
+    }
+    /** unregister and destroy a recurring call, e.g. before its object dies
+     *
+     * takes the handle returned by `every`. call from the main loop.
+     */
+    bool remove(Schedule::Schedulable *s) {
+        return Registry::remove(s, *this);
     }
     /** kernel entry point */
     int run () {
@@ -68,7 +82,7 @@ public:
      */
     void setTimeStep(uint16_t dt_us);
 private:
-    uint32_t time_{};
+    Time time_{};
     bool go{true};
     int exit_code{};
     jmp_buf jbf{};

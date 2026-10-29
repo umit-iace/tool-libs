@@ -40,9 +40,13 @@ struct Buffer {
         assert(ix < size);
         return buf[ix];
     }
-    /** simple append single item */
+    /** simple append single item
+     *
+     * items not fitting are dropped, also in release builds (NDEBUG)
+     */
     Buffer& append(T b) {
         assert(len < size);
+        if (len >= size) return *this;
         buf[len++] = b;
         return *this;
     }
