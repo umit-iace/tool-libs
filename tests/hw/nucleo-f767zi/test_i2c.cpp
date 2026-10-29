@@ -35,9 +35,9 @@ struct Ghost : I2C::Device {
     void callback(const I2C::Request &) override { calls = calls + 1; }
 };
 
-I2C::Request request(Ghost &g, decltype(I2C::Request::Type::type) type) {
+I2C::Request request(Ghost &g, I2C::Request::Type::Kind type) {
     I2C::Request rq{.dev = &g, .data = Buffer<uint8_t>(6)};
-    rq.opts.type = type;
+    rq.opts.set(type);
     rq.mem = 0x0c;
     if (!rq.opts.read) {
         rq.data.append(0xaa).append(0x55);

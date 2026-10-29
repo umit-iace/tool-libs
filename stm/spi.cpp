@@ -119,7 +119,7 @@ void _complete(SPI_HandleTypeDef *handle) {
     if (!spi) return;
     auto& rq = spi->q.front();
     rq.dev->select(false);
-    rq.dev->callback(rq);
+    spi->completed.complete(std::move(rq));
     spi->q.drop();
     spi->deadline = {};
     spi->active.xfer = false;

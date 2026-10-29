@@ -24,7 +24,7 @@ void _startMaster(HW *i2c) {
     i2c->active = i2c->Q;
     i2c->deadline = until(sz, uwTick);
     HAL_StatusTypeDef ret = HAL_ERROR;
-    switch(rq.opts.type) {
+    switch(rq.opts.type()) {
     case Request::Type::MASTER_WRITE:
         ret = HAL_I2C_Master_Transmit_IT(&i2c->handle, rq.dev->address << 1,
                                    rq.data.buf, rq.data.len);
@@ -118,14 +118,15 @@ void _complete(I2C_HandleTypeDef *handle) {
     if (!i2c) return;
     switch (i2c->active) {
     case i2c->Q:
-        i2c->q.front().dev->callback(i2c->q.front());
+        i2c->completed.complete(std::move(i2c->q.front()));
         i2c->q.drop();
         break;
+    // slave requests stay in place for the next transfer: hand on a copy
     case i2c->IN:
-        i2c->in.dev->callback(std::move(i2c->in));
+        i2c->completed.complete(Request{i2c->in});
         break;
     case i2c->OUT:
-        i2c->out.dev->callback(std::move(i2c->out));
+        i2c->completed.complete(Request{i2c->out});
         break;
     case i2c->NONE:
         // potentially called after a finished abort?
@@ -144,7 +145,7 @@ bool HW::full() {
 void HW::push(Request &&rq) {
     // state is shared with the interrupt handlers
     CriticalSection cs;
-    switch (rq.opts.type) {
+    switch (rq.opts.type()) {
         case Request::Type::SLAVE_WRITE:
             out = std::move(rq);
             break;

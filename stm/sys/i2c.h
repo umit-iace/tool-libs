@@ -9,6 +9,7 @@
 
 #include "gpio.h"
 #include "registry.h"
+#include "deferred.h"
 namespace I2C {
 class Request; //< forward declaration
 /**
@@ -28,7 +29,9 @@ struct Device {
     /**
      * callback. is called as soon as transmission completed successfully
      */
+    /** runs in the main loop (Kernel scheduler), not in the interrupt */
     virtual void callback(const Request &req)=0;
+    virtual ~Device() = default;
 };
 
 /**
@@ -38,27 +41,35 @@ struct Device {
 struct Request {
     Device *dev; ///< pointer to the calling I2C::Device instance
     Buffer<uint8_t> data; ///< transfer data
-    union Type {
-        struct {
+    /** transfer options. bitfield with fields
+     *  name | comment
+     * ------|------------------
+     *  read | read transmission
+     *  slave| as slave
+     *  mem  | memory transmission
+     */
+    struct Type {
         uint8_t read:1; ///< read transmission
         uint8_t slave:1; ///< as slave
         uint8_t mem:1; ///< memory transmission
-        };
-        enum {
+        /** the combinations of the bits above */
+        enum Kind {
             MASTER_WRITE,
             MASTER_READ,
             SLAVE_WRITE,
             SLAVE_READ,
             MEM_WRITE,
             MEM_READ,
-        } type;
-    } opts; /**< transfer options. bitfield with fields
-              *  name | comment
-              * ------|------------------
-              *  read | read transmission
-              *  slave| as slave
-              *  mem  | memory transmission
-              */
+        };
+        /** which kind of transfer the bits describe */
+        Kind type() const { return Kind(read | slave << 1 | mem << 2); }
+        /** set the bits for given kind of transfer */
+        void set(Kind k) {
+            read = k & 1;
+            slave = k >> 1 & 1;
+            mem = k >> 2 & 1;
+        }
+    } opts;
     uint8_t mem; ///< memory address for memory transmissions
 };
 
@@ -67,6 +78,8 @@ struct HW : public Sink<Request> {
     inline static Registry<HW, I2C_HandleTypeDef, 4> reg{};
 
     Queue<Request> q; //< master
+    /** completed requests, their callbacks run in the main loop */
+    Deferred<Request> completed;
     Request in, out; //< slave
     Deadline deadline{};
     enum {NONE, IN, OUT, Q} active{};

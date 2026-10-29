@@ -96,14 +96,14 @@ struct UART_INST {
 /* General functions hidden from Interface */
 void startTransmit(HW *uart) {
     if (uart->tx.q.empty()) return;
-    uart->tx.active = true;
     auto &b = uart->tx.q.front();
-    auto ret = HAL_OK;
-    if ((ret = HAL_UART_Transmit_IT(&uart->handle, b.buf, b.len))) {
-        if (ret != HAL_OK) {
-            asm("bkpt");
-        }
+    if (HAL_UART_Transmit_IT(&uart->handle, b.buf, b.len) != HAL_OK) {
+        // e.g. still busy: HW::service tries again
+        ++uart->tx.errors;
+        uart->tx.active = false;
+        return;
     }
+    uart->tx.active = true;
 
     // need = ms/s * Bytes * (bit/Byte + Stop + Parity) / (bit/s), rounded up
     // + 2ms margin, so transfers don't time out on tick granularity
@@ -112,12 +112,10 @@ void startTransmit(HW *uart) {
     uart->tx.deadline = Deadline::after(uwTick, need);
 }
 void startReceive(HW *uart) {
-    auto ret = HAL_OK;
-    if ((ret = HAL_UARTEx_ReceiveToIdle_IT(&uart->handle, uart->rx.buf.buf, uart->rx.buf.size))) {
-        if (ret != HAL_OK) {
-            asm("bkpt");
-        }
-    }
+    uart->rx.running = HAL_UARTEx_ReceiveToIdle_IT(&uart->handle,
+            uart->rx.buf.buf, uart->rx.buf.size) == HAL_OK;
+    // HW::service tries again
+    if (!uart->rx.running) ++uart->rx.errors;
 }
 
 /** HAL errors (overrun, framing, noise, parity) are all on the receiving side,
@@ -143,15 +141,26 @@ void poll(HW *uart) {
     if (!uart->tx.active) return startTransmit(uart);
 }
 
-/** queue the nbs bytes received into rx.buf, start a fresh buffer */
+/** queue the nbs bytes received into rx.buf, continue with a fresh buffer
+ *
+ * runs in the interrupt: takes a spare buffer, allocates only if none left
+ */
 void deliver(HW *uart, uint16_t nbs) {
-    uart->rx.buf.len = nbs;
-    if (!uart->rx.q.full()) {
-        uart->rx.q.push(std::move(uart->rx.buf));
-    } else {
-        // dropping Buffer, reader should call more often...
+    auto &rx = uart->rx;
+    if (rx.q.full()) {
+        // dropping the data, reader should call more often...
+        // the buffer is reused, nothing to free in here
+        rx.buf.len = 0;
+        return;
     }
-    uart->rx.buf = Buffer<uint8_t>(512);
+    rx.buf.len = nbs;
+    rx.q.push(std::move(rx.buf));
+    if (!rx.spare.empty()) {
+        rx.buf = rx.spare.pop();
+    } else {
+        rx.buf = Buffer<uint8_t>(HW::RXSIZE);
+        ++rx.allocs;
+    }
 }
 void _rxevent(UART_HandleTypeDef *handle, uint16_t nbs) {
     auto uart = HW::reg.from(handle);
@@ -175,6 +184,7 @@ void _txcallback(UART_HandleTypeDef *handle) {
 }
 void init(HW *uart, UART_HandleTypeDef *handle) {
     halInit();
+    k.every(1, *uart, &HW::service);
     HW::reg.reg(uart, handle);
     while (HAL_UART_Init(handle) != HAL_OK);
     HAL_UART_RegisterRxEventCallback(handle, _rxevent);
@@ -226,6 +236,17 @@ void HW::push(Buffer<uint8_t> &&b) {
 }
 bool HW::empty() {
     return rx.q.empty();
+}
+void HW::service(uint32_t, uint32_t) {
+    // allocate here, outside the interrupt and the CriticalSection
+    while (rx.spare.size() < rx.spare.capacity()) {
+        Buffer<uint8_t> b(RXSIZE);
+        CriticalSection cs;
+        rx.spare.push(std::move(b));
+    }
+    CriticalSection cs;
+    if (!rx.running) startReceive(this);
+    poll(this);
 }
 Buffer<uint8_t> HW::pop() {
     CriticalSection cs;

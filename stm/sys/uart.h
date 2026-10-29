@@ -62,17 +62,28 @@ struct HW : public Sink<Buffer<uint8_t>>, public Source<Buffer<uint8_t>> {
     void irqHandler();
     /** stm glue registry for internal use */
     inline static Registry<HW, UART_HandleTypeDef, 8> reg;
+    /** size of the receive buffers */
+    static constexpr size_t RXSIZE = 512;
     /** rx state */
     struct RX {
         Queue<Buffer<uint8_t>> q;
-        Buffer<uint8_t> buf = Buffer<uint8_t>(512);
+        Buffer<uint8_t> buf = Buffer<uint8_t>(RXSIZE);
+        /** allocated in the main loop, the interrupt takes them */
+        Queue<Buffer<uint8_t>> spare{4};
+        bool running; ///< reception started
+        uint32_t errors; ///< reception the HAL refused to start
+        uint32_t allocs; ///< buffers allocated in the interrupt (no spare)
     } rx{};
     /** tx state */
     struct TX {
         Queue<Buffer<uint8_t>> q;
         Deadline deadline;
         bool active;
+        uint32_t errors; ///< transmissions the HAL refused to start
     } tx{};
+    /** main loop housekeeping, registered with the kernel: retries
+     * refused starts, provides spare receive buffers */
+    void service(uint32_t, uint32_t);
 
     /** HAL handle for use with unwrapped UART capabilities */
     UART_HandleTypeDef handle{};

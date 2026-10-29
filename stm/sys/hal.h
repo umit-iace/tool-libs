@@ -2,8 +2,7 @@
  *
  * Copyright (c) 2020 IACE
  */
-#ifndef STM_HAL_H
-#define STM_HAL_H
+#pragma once
 
 #ifdef STM32F4
 	#include "stm32f4xx_hal.h"
@@ -19,5 +18,3 @@
  * objects may be constructed before the global initialization in hal.cpp
  */
 void halInit();
-
-#endif //STM_HAL_H
