@@ -13,6 +13,7 @@ extern "C" {
 #endif
 
 #define HAL_MODULE_ENABLED
+#define HAL_ADC_MODULE_ENABLED
 #define HAL_CORTEX_MODULE_ENABLED
 #define HAL_DMA_MODULE_ENABLED
 #define HAL_FLASH_MODULE_ENABLED
@@ -71,6 +72,7 @@ extern "C" {
 #include "stm32f7xx_hal_rcc.h"
 #include "stm32f7xx_hal_gpio.h"
 #include "stm32f7xx_hal_dma.h"
+#include "stm32f7xx_hal_adc.h"
 #include "stm32f7xx_hal_cortex.h"
 #include "stm32f7xx_hal_can.h"
 #include "stm32f7xx_hal_flash.h"

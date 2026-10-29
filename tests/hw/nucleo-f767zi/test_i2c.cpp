@@ -112,3 +112,39 @@ void test_i2c_scan() {
     CHECK(hwt::waitFor(10, [&]{ return idle(i2c); }));
     unstick(i2c);
 }
+
+/* a transfer whose interrupt never comes is given up at the next push,
+ * the HAL has to accept the next request right away
+ */
+void test_i2c_timeout() {
+    auto &i2c = bus();
+    auto &g = ghost();
+    g.calls = 0;
+    REQUIRE(hwt::waitFor(10, [&]{ return idle(i2c); }));
+
+    HAL_NVIC_DisableIRQ(I2C1_EV_IRQn);
+    HAL_NVIC_DisableIRQ(I2C1_ER_IRQn);
+    i2c.push(request(g, I2C::Request::Type::MASTER_WRITE));
+    uint32_t when = i2c.deadline.when;
+    while ((int32_t)(uwTick - when) <= 1) ;
+
+    // polls the bus: drops the stuck request, starts this one
+    i2c.push(request(g, I2C::Request::Type::MEM_WRITE));
+    CHECK_EQ(i2c.q.size(), 1);
+    CHECK_EQ(i2c.active, i2c.Q);
+    CHECK_EQ(i2c.handle.State, HAL_I2C_STATE_BUSY_TX);
+
+    HAL_NVIC_EnableIRQ(I2C1_EV_IRQn);
+    HAL_NVIC_EnableIRQ(I2C1_ER_IRQn);
+    // NACKed right away, not dropped by its deadline
+    uint32_t start = uwTick;
+    CHECK(hwt::waitFor(20, [&]{ return idle(i2c); }));
+    CHECK(uwTick - start <= 1);
+    CHECK_EQ(g.calls, 0);
+
+    // and the bus keeps working
+    i2c.push(request(g, I2C::Request::Type::MASTER_READ));
+    CHECK(hwt::waitFor(20, [&]{ return idle(i2c); }));
+    CHECK_EQ(i2c.handle.State, HAL_I2C_STATE_READY);
+    unstick(i2c);
+}

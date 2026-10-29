@@ -4,6 +4,8 @@
  */
 #pragma once
 
+#include <algorithm>
+#include <cmath>
 #include "hal.h"
 #include "gpio.h"
 #include "timer.h"
@@ -19,6 +21,8 @@ namespace TIMER {
          * @param perc [0..1]
          */
         void pwm(double perc) {
+            // out of range (or NaN) would be undefined in the conversion
+            perc = std::isnan(perc) ? 0. : std::clamp(perc, 0., 1.);
             _perc = perc;
             _ticks = perc * _period;
             __HAL_TIM_SET_COMPARE(&hTim, chan, _ticks);
@@ -40,7 +44,7 @@ namespace TIMER {
          * counter is blocked while period = 0
          * @param period []
          */
-        void period(uint16_t period) {
+        void period(uint32_t period) {
             if (period == _period) return;
             bool needupdate = _period == 0;
             _period = period;
@@ -52,7 +56,7 @@ namespace TIMER {
                 hTim.Instance->EGR |= TIM_EGR_UG;
         }
 
-        uint16_t period() {
+        uint32_t period() {
             return _period;
         }
 

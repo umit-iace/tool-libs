@@ -109,7 +109,7 @@ void startTransmit(HW *uart) {
     // + 2ms margin, so transfers don't time out on tick granularity
     uint32_t baud = uart->handle.Init.BaudRate;
     uint32_t need = (1000ull * b.len * (8+2) + baud - 1) / baud + 2;
-    uart->tx.deadline = Deadline{uwTick + need};
+    uart->tx.deadline = Deadline::after(uwTick, need);
 }
 void startReceive(HW *uart) {
     auto ret = HAL_OK;

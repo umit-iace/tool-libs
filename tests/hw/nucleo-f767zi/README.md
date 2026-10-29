@@ -48,6 +48,7 @@ then open the VCP at 115200 baud and send `g`.
 | CAN1 | PD0 RX, PD1 TX | silent loopback, no transceiver needed |
 | TIM3 CH1 | PB4 (D25) | PWM, duty cycle measured on the pin |
 | TIM6, TIM7 | – | interrupt load for the stress tests |
+| ADC1, DMA2 stream 0 | PA3 (A0) analog | measures the internal VREFINT, A0 is only configured |
 
 Optional:
 - jumper **PB5 ↔ PA6** (MOSI ↔ MISO) enables `spi_loopback_data`
@@ -70,9 +71,11 @@ Optional:
 | `spi_queue_stress` | 2000 requests pushed while completions run in the interrupt |
 | `i2c_nack` | NACKed requests are dropped, queued requests keep going without another push |
 | `i2c_scan` | lists devices, async driver still works afterwards |
+| `i2c_timeout` | a transfer whose interrupt never comes is given up, the HAL accepts the next one right away |
 | `can_bittiming` | BTR prescaler/segments give 500kbit/s, sample point 80–90% |
 | `can_loopback` | std/ext ids, all DLCs (no stale bytes beyond DLC), more messages than TX mailboxes |
 | `can_rx_overflow` | full RX queue drops in the interrupt, recovers |
+| `adc_dcache` | `ADC::HW` with circular DMA into cached SRAM1: sequence length, cache maintenance, VREFINT vs. factory calibration |
 | `uart_min_echo` | host driven: `UART::HW` + `Min::In`/`Min::Out` echo incl. worst case byte stuffing, then a burst at full line rate; fails if `stm/uart.cpp` had to abort a transfer (counted by wrapping `HAL_UART_AbortReceive/Transmit`) |
 
 ## Adding tests
@@ -82,6 +85,10 @@ added to `CMakeLists.txt`), using `CHECK`, `CHECK_EQ`, `REQUIRE`,
 `hwt::info`, `hwt::warn` and `hwt::skip` from `hwtest.h`, and list it in
 the `tests[]` table in `main.cpp`. Peripherals that interrupt handlers need
 are published through the pointers in `board.h`.
+
+RAM below 0x20020000 is DTCM, which the D-cache doesn't cover. Buffers
+that have to exercise cache maintenance go into SRAM1 with
+`__attribute__((section(".sram1")))`, see `test_adc.cpp`.
 
 The firmware reports over the VCP with lines starting with `HWT `, see
 `hwtest.h` for the format.

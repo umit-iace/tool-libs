@@ -36,6 +36,8 @@ void test_i2c_scan();
 void test_can_bittiming();
 void test_can_loopback();
 void test_can_rx_overflow();
+void test_i2c_timeout();
+void test_adc_dcache();
 
 static const struct {
     const char *name;
@@ -57,9 +59,11 @@ static const struct {
     {"spi_queue_stress", test_spi_queue_stress},
     {"i2c_nack", test_i2c_nack},
     {"i2c_scan", test_i2c_scan},
+    {"i2c_timeout", test_i2c_timeout},
     {"can_bittiming", test_can_bittiming},
     {"can_loopback", test_can_loopback},
     {"can_rx_overflow", test_can_rx_overflow},
+    {"adc_dcache", test_adc_dcache},
 };
 
 namespace hwt {

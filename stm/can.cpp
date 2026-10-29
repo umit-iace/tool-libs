@@ -119,6 +119,7 @@ HW::~HW() {
                                    CAN_IT_RX_FIFO1_MSG_PENDING |
                                    CAN_IT_TX_MAILBOX_EMPTY);
     HAL_CAN_Stop(&handle);
+    HW::reg.unreg(this);
 }
 bool HW::full() {
     return tx.q.full();

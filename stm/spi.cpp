@@ -15,7 +15,7 @@ Deadline until(SPI_HandleTypeDef *handle, size_t datasize, uint32_t now) {
     uint32_t bits_per_ms = pclk / div / 1000;
     if (!bits_per_ms) bits_per_ms = 1;
     // + 2ms margin, so short transfers don't time out on tick granularity
-    return {now + (uint32_t)(datasize * 8 / bits_per_ms) + 2};
+    return Deadline::after(now, (uint32_t)(datasize * 8 / bits_per_ms) + 2);
 }
 }
 

@@ -96,6 +96,19 @@ SECTIONS
         __bss_end__ = _ebss;
     } >RAM
 
+    /* the first 128K of RAM are DTCM, which the D-cache doesn't cover.
+     * DMA buffers that have to go through cache maintenance (e.g. the
+     * ADC test) are put into SRAM1 with __attribute__((section(".sram1"))),
+     * the heap follows them */
+    ASSERT(_ebss <= 0x20020000, "data & bss outgrew the DTCM")
+    .sram1 0x20020000 (NOLOAD) :
+    {
+        . = ALIGN(32);
+        *(.sram1)
+        *(.sram1*)
+        . = ALIGN(32);
+    } >RAM
+
     /* only checks that heap & stack minimums fit, the heap grows up to the stack */
     ._user_heap_stack :
     {

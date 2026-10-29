@@ -46,6 +46,17 @@ void test_pwm_registers() {
 
     p.period(1000);
     CHECK_EQ(TIM3->ARR, 1000);
+
+    // out of range duty cycles are clamped
+    p.pwm(1.5);
+    CHECK_EQ(TIM3->CCR1, 1000);
+    CHECK(p.pwm() == 1);
+    p.pwm(-0.5);
+    CHECK_EQ(TIM3->CCR1, 0);
+    p.pwm(NAN);
+    CHECK_EQ(TIM3->CCR1, 0);
+    CHECK(p.pwm() == 0);
+
     p.pwm(0);
     CHECK_EQ(TIM3->CCR1, 0);
 }

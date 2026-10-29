@@ -57,7 +57,7 @@ target_include_directories(stm32f7-hal INTERFACE
 )
 foreach(m hal hal_cortex hal_rcc hal_rcc_ex hal_pwr hal_pwr_ex hal_flash hal_flash_ex
         hal_gpio hal_dma hal_dma_ex hal_uart hal_uart_ex hal_tim hal_tim_ex
-        hal_spi hal_spi_ex hal_i2c hal_i2c_ex hal_can)
+        hal_spi hal_spi_ex hal_i2c hal_i2c_ex hal_can hal_adc hal_adc_ex)
     target_sources(stm32f7-hal INTERFACE ${stm32f7_hal_SOURCE_DIR}/Src/stm32f7xx_${m}.c)
 endforeach()
 target_sources(stm32f7-hal INTERFACE
@@ -83,6 +83,7 @@ add_executable(hwtest
     test_spi.cpp
     test_i2c.cpp
     test_can.cpp
+    test_adc.cpp
 )
 target_compile_definitions(hwtest PRIVATE HWTEST_BAUD=${HWTEST_BAUD})
 target_link_libraries(hwtest PRIVATE

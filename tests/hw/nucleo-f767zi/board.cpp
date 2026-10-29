@@ -129,6 +129,11 @@ static void enable(IRQn_Type irq) {
 }
 
 extern "C" {
+void HAL_ADC_MspInit(ADC_HandleTypeDef *h) {
+    if (h->Instance == ADC1) {
+        __HAL_RCC_ADC1_CLK_ENABLE();
+    }
+}
 void HAL_UART_MspInit(UART_HandleTypeDef *h) {
     if (h->Instance == USART3) {
         __HAL_RCC_USART3_CLK_ENABLE();
