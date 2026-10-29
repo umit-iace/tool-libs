@@ -12,11 +12,14 @@ void _start(CAN_HandleTypeDef *handle, const Message &msg) {
         .DLC = msg.opts.dlc,
     };
     HAL_CAN_AddTxMessage(handle, &header, (uint8_t*)&msg.data, &mbox);
-    HW::reg.from(handle)->tx.active |= mbox;
+    auto can = HW::reg.from(handle);
+    if (!can) return;
+    can->tx.active |= mbox;
 }
 template<int N>
 void _tx_complete(CAN_HandleTypeDef *handle) {
     auto can = HW::reg.from(handle);
+    if (!can) return;
     assert(can->tx.active & 1<<N);
     can->tx.active &= ~(1<<N);
     while (can->tx.q.size() && HAL_CAN_GetTxMailboxesFreeLevel(handle)) {
@@ -38,7 +41,9 @@ void _rx_complete(CAN_HandleTypeDef *handle) {
         .ide = (bool)header.IDE,
         .dlc = (uint8_t)header.DLC,
     };
-    auto &rx = HW::reg.from(handle)->rx;
+    auto can = HW::reg.from(handle);
+    if (!can) return;
+    auto &rx = can->rx;
     if (!rx.full()) {
         rx.push(std::move(msg));
     } else {
@@ -47,6 +52,7 @@ void _rx_complete(CAN_HandleTypeDef *handle) {
 }
 
 HW::HW(const Config &c) {
+    halInit();
     HW::reg.reg(this, &handle);
 
     /* Can speed configuration, derived from the CAN (APB1) clock. */

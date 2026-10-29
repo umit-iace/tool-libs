@@ -122,9 +122,14 @@ void startReceive(HW *uart) {
 
 /** HAL errors (overrun, framing, noise, parity) are all on the receiving side,
  * a running transmission is left alone */
+void deliver(HW *uart, uint16_t nbs);
 void _errcallback(UART_HandleTypeDef *handle) {
     auto uart = HW::reg.from(handle);
+    if (!uart) return;
+    // hand on what arrived before the error, only the broken byte is lost
+    uint16_t got = handle->RxXferSize - handle->RxXferCount;
     HAL_UART_AbortReceive(handle);
+    if (got && got <= uart->rx.buf.size) deliver(uart, got);
     startReceive(uart);
 }
 /** retry a transmission that didn't finish in time, leaves reception alone */
@@ -138,8 +143,8 @@ void poll(HW *uart) {
     if (!uart->tx.active) return startTransmit(uart);
 }
 
-void _rxevent(UART_HandleTypeDef *handle, uint16_t nbs) {
-    auto uart = HW::reg.from(handle);
+/** queue the nbs bytes received into rx.buf, start a fresh buffer */
+void deliver(HW *uart, uint16_t nbs) {
     uart->rx.buf.len = nbs;
     if (!uart->rx.q.full()) {
         uart->rx.q.push(std::move(uart->rx.buf));
@@ -147,14 +152,21 @@ void _rxevent(UART_HandleTypeDef *handle, uint16_t nbs) {
         // dropping Buffer, reader should call more often...
     }
     uart->rx.buf = 512;
+}
+void _rxevent(UART_HandleTypeDef *handle, uint16_t nbs) {
+    auto uart = HW::reg.from(handle);
+    if (!uart) return;
+    deliver(uart, nbs);
     startReceive(uart);
 }
 void _rxcallback(UART_HandleTypeDef *handle) {
     auto uart = HW::reg.from(handle);
+    if (!uart) return;
     _rxevent(handle, uart->rx.buf.size);
 }
 void _txcallback(UART_HandleTypeDef *handle) {
     auto uart = HW::reg.from(handle);
+    if (!uart) return;
     auto& tx = uart->tx;
     tx.q.drop();
     tx.active = false;
@@ -162,6 +174,7 @@ void _txcallback(UART_HandleTypeDef *handle) {
     poll(uart);
 }
 void init(HW *uart, UART_HandleTypeDef *handle) {
+    halInit();
     HW::reg.reg(uart, handle);
     while (HAL_UART_Init(handle) != HAL_OK);
     HAL_UART_RegisterRxEventCallback(handle, _rxevent);

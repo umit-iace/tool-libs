@@ -38,7 +38,10 @@ public:
             return;
         }
     }
-    /** get registered class instance from handle */
+    /** get registered class instance from handle
+     *
+     * nullptr if it isn't registered, e.g. because the registry was full
+     */
     T* from(H *handle) {
         for (unsigned int i = 0; i < len; ++i) {
             if (h[i] == handle) return t[i];

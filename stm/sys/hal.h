@@ -13,4 +13,11 @@
 	#include "stm32f7xx_hal.h"
 #endif
 
+/** HAL_Init, exactly once
+ *
+ * the peripheral drivers call this in their constructors: global driver
+ * objects may be constructed before the global initialization in hal.cpp
+ */
+void halInit();
+
 #endif //STM_HAL_H

@@ -3,7 +3,12 @@
 
 #include "sys/hal.h"
 
-HAL_StatusTypeDef hal = HAL_Init();
+void halInit() {
+    static const HAL_StatusTypeDef status = HAL_Init();
+    (void)status;
+}
+// also before main when there are no global drivers
+[[maybe_unused]] static const bool hal = (halInit(), true);
 void Kernel::idle() {
     asm("wfi");
 }

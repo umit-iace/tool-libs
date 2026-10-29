@@ -18,6 +18,7 @@ namespace TIMER {
          * @param period value to write into period register
          */
         HW(TIM_TypeDef *dTim, uint32_t prescaler, uint32_t period) {
+            halInit();
             handle = {
                 .Instance = dTim,
                 .Init = {

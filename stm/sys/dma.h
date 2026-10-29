@@ -16,6 +16,7 @@ namespace DMA {
 
         /** initialize DMA peripheral */
         HW(const Conf &conf) {
+            halInit();
             handle.Instance = conf.stream;
             handle.Init = conf.init;
             while (HAL_DMA_Init(&handle) != HAL_OK);

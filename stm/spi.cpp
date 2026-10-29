@@ -97,6 +97,7 @@ void _abort(SPI_HandleTypeDef *handle) {
 
 void _error(SPI_HandleTypeDef *handle) {
     auto spi = HW::reg.from(handle);
+    if (!spi) return;
     if (spi->active.xfer) {
         auto &rq = spi->q.front();
         rq.dev->select(false);
@@ -115,6 +116,7 @@ void _error(SPI_HandleTypeDef *handle) {
 
 void _complete(SPI_HandleTypeDef *handle) {
     auto spi = HW::reg.from(handle);
+    if (!spi) return;
     auto& rq = spi->q.front();
     rq.dev->select(false);
     rq.dev->callback(rq);
@@ -136,6 +138,7 @@ void HW::push(Request &&rq) {
 }
 
 HW::HW(const HW::Conf &conf) {
+    halInit();
     HW::reg.reg(this, &handle);
     handle = {
         .Instance = conf.spi,

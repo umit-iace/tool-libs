@@ -54,6 +54,7 @@ void _startMaster(HW *i2c) {
 
 void _startSlave(I2C_HandleTypeDef *handle, uint8_t recv, uint16_t addr) {
     auto i2c = HW::reg.from(handle);
+    if (!i2c) return;
     assert(addr == handle->Init.OwnAddress1);
     assert(i2c->active == i2c->NONE);
     HAL_I2C_DisableListen_IT(handle);
@@ -95,6 +96,7 @@ void _reset(I2C_HandleTypeDef *handle) {
 void poll(HW *i2c);
 void _error(I2C_HandleTypeDef *handle) {
     auto i2c = HW::reg.from(handle);
+    if (!i2c) return;
     if (i2c->active == i2c->Q) {
         // drop instead of pop: don't free memory in here
         i2c->q.drop();
@@ -113,6 +115,7 @@ void poll(HW *i2c) {
 
 void _complete(I2C_HandleTypeDef *handle) {
     auto i2c = HW::reg.from(handle);
+    if (!i2c) return;
     switch (i2c->active) {
     case i2c->Q:
         i2c->q.front().dev->callback(i2c->q.front());
@@ -156,6 +159,7 @@ void HW::push(Request &&rq) {
 }
 
 HW::HW(const HW::Conf &conf) {
+    halInit();
     HW::reg.reg(this, &handle);
     handle.Instance = conf.i2c;
     handle.Init = {
