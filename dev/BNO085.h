@@ -126,8 +126,11 @@ struct BNO085 : I2C::Device {
     using Data = Buffer<uint8_t>;
     using View = Slice<uint8_t>;
     int8_t read8(View d) { return d[0]; }
-    int16_t read16(View d) { return d[0] | d[1] << 8; }
-    int32_t read32(View d) { return d[0] | d[1] << 8 | d[2] << 16 | d[3] << 24; }
+    int16_t read16(View d) { return (int16_t)(d[0] | d[1] << 8); }
+    int32_t read32(View d) {
+        return (int32_t)((uint32_t)d[0] | (uint32_t)d[1] << 8
+                | (uint32_t)d[2] << 16 | (uint32_t)d[3] << 24);
+    }
 
     constexpr double Q(uint8_t p) {
         return 1. / (1 << p);

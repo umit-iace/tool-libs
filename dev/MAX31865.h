@@ -128,7 +128,7 @@ struct MAX31865 : SPI::Device {
     /*
      * callback when async read is finished
      */
-    void callback(const SPI::Request rq) override {
+    void callback(const SPI::Request &rq) override {
         if (rq.dir == SPI::Request::MOSI) return;
         const uint8_t *raw = rq.data.buf;
         switch (rq.data.len) {

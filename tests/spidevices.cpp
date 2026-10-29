@@ -30,3 +30,18 @@ TEST_CASE("tool-libs: MAX31865: high resistance") {
     CHECK(m.tempLin() == doctest::Approx((300 - 100) / (100 * 0.00385055)).epsilon(0.001));
     CHECK(m.temp() > 500);
 }
+
+#include <dev/MAX31855.h>
+TEST_CASE("tool-libs: MAX31855: negative temperatures") {
+    Bus bus;
+    MAX31855 m{bus, DIO{}};
+    // -25°C thermocouple (14 bit, 0.25°C), 20°C internal (12 bit, 0.0625°C)
+    uint32_t raw = (uint32_t)(-100 & 0x3fff) << 18 | (uint32_t)(320 & 0xfff) << 4;
+    m.callback(SPI::Request{
+        .dev = &m,
+        .data = {(uint8_t)(raw >> 24), (uint8_t)(raw >> 16), (uint8_t)(raw >> 8), (uint8_t)raw},
+        .dir = SPI::Request::MISO,
+    });
+    CHECK(m.temp() == -25);
+    CHECK(m.internal() == 20);
+}

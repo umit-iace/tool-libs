@@ -58,7 +58,7 @@ struct AS5145 : SPI::Device {
      *
      * copy data from buffer into struct.
      */
-    void callback(const SPI::Request rq) override {
+    void callback(const SPI::Request &rq) override {
         BitStream bs{rq.data.buf};
         for (int i = 0, n=0; i < chainlength; ++i, n+=BITS) {
             chain[i].COF = bs.range<decltype(sensor::COF)>(n + 14, n + 15);

@@ -45,7 +45,7 @@ struct Device {
     }
 
     /** is called as soon as requested data arrived over wire */
-    virtual void callback(const Request req)=0;
+    virtual void callback(const Request &req)=0;
 };
 
 /**

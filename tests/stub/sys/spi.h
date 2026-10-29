@@ -29,7 +29,7 @@ struct Device {
     void select(bool sel) {
         cs.set(!sel);
     }
-    virtual void callback(const Request req)=0;
+    virtual void callback(const Request &req)=0;
 };
 
 struct Request {

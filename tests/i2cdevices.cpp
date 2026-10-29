@@ -4,6 +4,15 @@
 #include <dev/QMC5883L.h>
 #include <dev/BMI160.h>
 
+void Kernel::idle() { }
+Kernel k;
+static void tickrun(int ms) {
+    for (int i = 0; i < ms; ++i) {
+        k.tick(1);
+        k.Scheduler::run();
+    }
+}
+
 struct Bus : Sink<I2C::Request> {
     std::vector<I2C::Request> got;
     bool isfull = false;
@@ -56,4 +65,37 @@ TEST_CASE("tool-libs: BMI160") {
     CHECK((bool)rq.opts.mem);
     CHECK(rq.mem == 0xc);
     CHECK(rq.data.size == 12);
+}
+
+TEST_CASE("tool-libs: BMI160: power up commands are spaced out") {
+    Bus bus;
+    BMI160 b{bus};
+    auto cmds = [&]{
+        int n = 0;
+        for (auto &rq : bus.got) n += rq.mem == 0x7e;
+        return n;
+    };
+    CHECK(cmds() == 1); // accelerometer only
+    tickrun(4);
+    CHECK(cmds() == 1); // accelerometer needs 3.8ms
+    tickrun(4);
+    CHECK(cmds() == 2);
+    CHECK(bus.got.back().data[0] == 0x15); // gyroscope
+    CHECK_FALSE(b.ready());
+    tickrun(90);
+    CHECK(b.ready());
+    size_t registered = k.list.len;
+    tickrun(10);
+    CHECK(k.list.len == registered); // startup helper is gone
+}
+
+TEST_CASE("tool-libs: BMI160: unregisters when destroyed early") {
+    Bus bus;
+    size_t before = k.list.len;
+    {
+        BMI160 b{bus};
+        CHECK(k.list.len == before + 1);
+    }
+    CHECK(k.list.len == before);
+    tickrun(10);
 }

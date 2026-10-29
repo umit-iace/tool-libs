@@ -37,7 +37,7 @@ struct Dev : SPI::Device {
     bool sequence{}; ///< expect lengths 1..32, 1..32, ...
     Dev(SPI::HW &bus, uint32_t cspin, SPI::Mode m, SPI::FirstBit fb)
         : Device(bus, DIO(cspin, GPIOD), {m, fb}) { }
-    void callback(const SPI::Request rq) override {
+    void callback(const SPI::Request &rq) override {
         if (sequence) {
             if (rq.data.len != seq % 32 + 1) bad = bad + 1;
             seq = seq + 1;
