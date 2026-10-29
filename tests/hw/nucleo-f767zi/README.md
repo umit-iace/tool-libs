@@ -71,15 +71,16 @@ Optional:
 | `spi_transfers` | MOSI/MISO/BOTH, chip selects, mode switching, long transfer vs. deadline |
 | `spi_loopback_data` | received data (needs the jumper) |
 | `spi_timeout` | a transfer whose interrupt never comes is dropped quickly (interrupts are off meanwhile), bus continues |
-| `spi_queue_stress` | 2000 requests pushed while completions run in the interrupt |
+| `spi_queue_stress` | 2000 requests pushed while completions run in the interrupt, the device callbacks run in the main loop, none lost |
 | `i2c_nack` | NACKed requests are dropped, queued requests keep going without another push |
 | `i2c_scan` | lists devices, async driver still works afterwards |
 | `i2c_timeout` | a transfer whose interrupt never comes is given up, the HAL accepts the next one right away |
 | `can_bittiming` | BTR prescaler/segments give 500kbit/s, sample point 80–90% |
 | `can_loopback` | std/ext ids, all DLCs (no stale bytes beyond DLC), more messages than TX mailboxes |
 | `can_rx_overflow` | full RX queue drops in the interrupt, recovers |
+| `uart_retry` | the HAL refusing to start a transmission is counted and retried, no breakpoint |
 | `adc_dcache` | `ADC::HW` with circular DMA into cached SRAM1: sequence length, cache maintenance, VREFINT vs. factory calibration |
-| `uart_min_echo` | host driven: `UART::HW` + `Min::In`/`Min::Out` echo incl. worst case byte stuffing, then a burst at full line rate; fails if `stm/uart.cpp` had to abort a transfer (counted by wrapping `HAL_UART_AbortReceive/Transmit`) |
+| `uart_min_echo` | host driven: `UART::HW` + `Min::In`/`Min::Out` echo incl. worst case byte stuffing, then a burst at full line rate; fails if `stm/uart.cpp` had to abort a transfer (counted by wrapping `HAL_UART_AbortReceive/Transmit`) or allocated in the receive interrupt |
 | `uart_overrun` | host driven: 6000 bytes while interrupts are blocked 3ms every 10ms, only what arrives while blocked may get lost |
 
 ## Adding tests

@@ -341,8 +341,9 @@ class Session:
                     results["uart_min_echo"] = "FAIL"
                 return
             if line.startswith("HWT ECHO"):
-                aborts = re.search(r"errors=(\d+).*tx_timeouts=(\d+)", line)
-                bad = aborts and aborts.groups() != ("0", "0")
+                # aborts and heap use in the receive interrupt
+                aborts = re.search(r"errors=(\d+).*tx_timeouts=(\d+).*isr_allocs=(\d+)", line)
+                bad = aborts and aborts.groups() != ("0", "0", "0")
                 ok = ok and not bad
                 self.log("     " + line[4:], "FAIL" if bad else None)
             if line.startswith("HWT OVR START"):

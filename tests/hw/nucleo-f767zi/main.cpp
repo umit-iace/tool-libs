@@ -41,6 +41,7 @@ void test_adc_dcache();
 void test_kernel_early();
 void test_kernel_overrun();
 void test_logger_blocking();
+void test_uart_retry();
 
 static const struct {
     const char *name;
@@ -70,6 +71,7 @@ static const struct {
     {"can_loopback", test_can_loopback},
     {"can_rx_overflow", test_can_rx_overflow},
     {"adc_dcache", test_adc_dcache},
+    {"uart_retry", test_uart_retry},
 };
 
 namespace hwt {
@@ -177,7 +179,9 @@ static void echo(UART::HW &uart) {
     hwt::print("HWT ECHO START\n");
     hwt::flush();
     uint32_t last = uwTick;
+    uint32_t allocs = uart.rx.allocs;
     while (uwTick - last < 20000) {
+        k.Scheduler::run(); // like any application: the drivers' housekeeping
         if (min.in.empty()) continue;
         Frame f = min.in.pop();
         last = uwTick;
@@ -187,9 +191,11 @@ static void echo(UART::HW &uart) {
             min.out.push(std::move(r));
             hwt::flush();
             hwt::print("HWT ECHO END echoed=%lu counted=%lu bytes=%lu "
-                    "aborts: errors=%lu (code 0x%lx) tx_timeouts=%lu\n",
+                    "aborts: errors=%lu (code 0x%lx) tx_timeouts=%lu "
+                    "isr_allocs=%lu\n",
                     echoed, counted, bytes, uartAborts.errors,
-                    uartAborts.codes, uartAborts.timeouts);
+                    uartAborts.codes, uartAborts.timeouts,
+                    uart.rx.allocs - allocs);
             return;
         } else if (f.id == 0x3e) {
             ++counted;
@@ -220,6 +226,7 @@ static void overrun(UART::HW &uart) {
     uint32_t bytes = 0, blocks = 0;
     uint32_t start = uwTick, last = uwTick, next = 0;
     while (uwTick - start < 10000) {
+        k.Scheduler::run();
         while (!uart.empty()) {
             bytes += uart.pop().len;
             last = uwTick;

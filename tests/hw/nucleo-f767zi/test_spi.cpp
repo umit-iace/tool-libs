@@ -29,9 +29,9 @@ SPI::HW &bus() {
     return spi;
 }
 
-/** records what got completed, runs in the interrupt */
+/** records what got completed, the callback runs in the main loop */
 struct Dev : SPI::Device {
-    uint32_t calls{}, bad{}, seq{};
+    uint32_t calls{}, bad{}, seq{}, inIsr{};
     uint32_t lastlen{};
     uint8_t rx[64]{};
     bool sequence{}; ///< expect lengths 1..32, 1..32, ...
@@ -45,9 +45,10 @@ struct Dev : SPI::Device {
         lastlen = rq.data.len;
         memcpy(rx, rq.data.buf, rq.data.len < sizeof rx ? rq.data.len : sizeof rx);
         calls = calls + 1;
+        if (CriticalSection::inInterrupt()) inIsr = inIsr + 1;
     }
     void reset() {
-        calls = bad = seq = lastlen = 0;
+        calls = bad = seq = lastlen = inIsr = 0;
         sequence = false;
     }
 };
@@ -67,9 +68,10 @@ SPI::Request request(Dev &d, size_t len, SPI::Request::Direction dir, uint8_t st
     return {.dev = &d, .data = std::move(b), .dir = dir};
 }
 
+/** nothing transferring, all callbacks delivered */
 bool idle(SPI::HW &spi) {
     hwt::barrier();
-    return !spi.active.xfer && spi.q.empty();
+    return !spi.active.xfer && spi.q.empty() && spi.completed.done.empty();
 }
 }
 
@@ -96,6 +98,7 @@ void test_spi_transfers() {
     CHECK(hwt::waitFor(20, [&]{ return idle(spi); }));
     CHECK_EQ(a.calls, 2);
     CHECK_EQ(b.calls, 2);
+    CHECK_EQ(a.inIsr + b.inIsr, 0);
     CHECK_EQ(a.lastlen, 9);
     CHECK_EQ(b.lastlen, 12);
     // chip selects released
@@ -180,12 +183,12 @@ void test_spi_queue_stress() {
     a.sequence = true;
     constexpr uint32_t N = 2000;
     for (uint32_t i = 0; i < N; ++i) {
-        while (spi.full()) hwt::barrier();
+        while (spi.full()) k.Scheduler::run();
         auto dir = i % 3 == 0 ? SPI::Request::MOSI : SPI::Request::BOTH;
         spi.push(request(a, i % 32 + 1, dir));
         // interleave the other device, forcing mode switches
         if (i % 50 == 0) {
-            while (spi.full()) hwt::barrier();
+            while (spi.full()) k.Scheduler::run();
             spi.push(request(b, 2, SPI::Request::BOTH));
         }
     }
@@ -193,4 +196,7 @@ void test_spi_queue_stress() {
     CHECK_EQ(a.calls, N);
     CHECK_EQ(a.bad, 0);
     CHECK_EQ(b.calls, N / 50);
+    // the callbacks ran in the main loop, none got lost
+    CHECK_EQ(a.inIsr + b.inIsr, 0);
+    CHECK_EQ(spi.completed.lost, 0);
 }

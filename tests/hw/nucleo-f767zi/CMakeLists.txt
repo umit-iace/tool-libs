@@ -86,6 +86,7 @@ add_executable(hwtest
     test_i2c.cpp
     test_can.cpp
     test_adc.cpp
+    test_uart.cpp
 )
 target_compile_definitions(hwtest PRIVATE HWTEST_BAUD=${HWTEST_BAUD})
 target_link_libraries(hwtest PRIVATE
