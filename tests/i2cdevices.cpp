@@ -99,3 +99,14 @@ TEST_CASE("tool-libs: BMI160: unregisters when destroyed early") {
     CHECK(k.list.len == before);
     tickrun(10);
 }
+
+TEST_CASE("tool-libs: I2C request kinds from the option bits") {
+    I2C::Request::Type t{.read = 1, .slave = 0, .mem = 1};
+    CHECK(t.type() == I2C::Request::Type::MEM_READ);
+    for (auto k : {I2C::Request::Type::MASTER_WRITE, I2C::Request::Type::MASTER_READ,
+                   I2C::Request::Type::SLAVE_WRITE, I2C::Request::Type::SLAVE_READ,
+                   I2C::Request::Type::MEM_WRITE, I2C::Request::Type::MEM_READ}) {
+        t.set(k);
+        CHECK(t.type() == k);
+    }
+}

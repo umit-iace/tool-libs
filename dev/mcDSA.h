@@ -54,8 +54,6 @@ struct mcDSA : CAN::Open::Device {
      */
     void speed(double speed) {
         speed = fmin(1, fmax(-1, speed));
-        /* int iSpeed = (int) (6000 / M_PI / CAR_WHEEL_DIAMETER * dSpeed); // calculates from m/s to (U/100) / min */
-        /* int iSpeed; */
         speedPDO.map[0].data = 6000 / M_PI * speed;
         wPDO(speedPDO);
     }
@@ -70,11 +68,11 @@ struct mcDSA : CAN::Open::Device {
      * motor position (angle), motor error.
      */
     void readData() {
-        read(0x3a04, 1);//, &this->tData.tSpeed);
-        read(0x3361, 0);//, &this->tData.tSpeedDes);
-        read(0x3262, 1);//, &this->tData.tCurrent);
-        read(0x394a, 0);//, &this->tData.tPosition);
-        read(0x3001, 0);//, &this->tData.tError);
+        read(0x3a04, 1); // speed
+        read(0x3361, 0); // desired speed
+        read(0x3262, 1); // current
+        read(0x394a, 0); // position
+        read(0x3001, 0); // error
     }
 
     /**

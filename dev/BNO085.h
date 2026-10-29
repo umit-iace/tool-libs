@@ -179,7 +179,7 @@ struct BNO085 : I2C::Device {
             .dev = this,
             .data = data,
         });
-        return sq-1;
+        return sq;
     }
 
     void sendTransaction(Queue<Transaction> &q, Transaction &&t) {
@@ -655,17 +655,10 @@ struct BNO085 : I2C::Device {
 
     void callback(const I2C::Request &rq) override {
         if (!rq.opts.read) {
-            //delete
-            /* if (rq.data.len >4) { */
-            /*     lg->info("sent: "); */
-            /*     logData({rq.data,0}); */
-            /* } */
-            //delete
             return; // do nothing on successful writes
         }
 
         if (rq.data.len >= 4) {
-            /* bool continuation = rq.data[1] & 0x80; */
             const unsigned int raw = (unsigned)rq.data[1] << 8 | rq.data[0];
             if (raw == 0xffff) return; // 'length of 65535 is an error.'
             unsigned int len = raw & 0x7fff;
@@ -698,7 +691,6 @@ struct BNO085 : I2C::Device {
             View data {rq.data, 4};
             switch (chan) {
             case C_SHTP: handleSHTP(data); return;
-            /* case C_DEV: handleDevice(data); return; */
             case C_CTRL: handleControl(data); return;
             case C_NORM ... C_WAKE: handleWakeNormal(data); return;
             case C_GIRV: handleGIRV(data); return;

@@ -115,3 +115,14 @@ TEST_CASE("tool-libs: BNO085: stray FRS read response") {
                             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}));
     CHECK(bno.qs.read.empty());
 }
+
+TEST_CASE("tool-libs: BNO085: sendMessage returns the sequence number it sent") {
+    Requests bus;
+    BNO085 bno{bus};
+    bno.seq[BNO085::C_CTRL] = 7;
+    uint8_t sq = bno.sendMessage({.chan = BNO085::C_CTRL, .cargo = {1, 2}});
+    REQUIRE(bus.got.size() == 1);
+    CHECK(sq == 7);
+    CHECK(bus.got[0].data[3] == 7);
+    CHECK(bno.seq[BNO085::C_CTRL] == 8);
+}

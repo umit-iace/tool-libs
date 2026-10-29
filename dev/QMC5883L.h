@@ -2,8 +2,7 @@
  *
  * Copyright (c) 2023 IACE
  */
-#ifndef QMC5883L_H
-#define QMC5883L_H
+#pragma once
 
 #include "sys/i2c.h"
 #include <cmath>
@@ -20,26 +19,18 @@ struct QMC5883L : I2C::Device {
         DEFAULT = 0b0001101,
         ALT = 0b0001111,
     };
-    enum MODE {
-        STANDBY = 0b00000000,
-        CONT = 0b00000001,
-    };
-    enum ODR {
-        Hz10 = 0b00000000,
-        Hz50 = 0b00000100,
-        Hz100 = 0b00001000,
-        Hz200 = 0b00001100,
-    };
-    enum RANGE {
-        G2 = 0b00000000,
-        G8 = 0b00010000,
-    };
-    enum OSR {
-        S512 = 0b00000000,
-        S256 = 0b01000000,
-        S128 = 0b10000000,
-        S64 = 0b11000000,
-    };
+    static constexpr uint8_t STANDBY = 0b00000000;
+    static constexpr uint8_t CONT = 0b00000001;
+    static constexpr uint8_t Hz10 = 0b00000000;
+    static constexpr uint8_t Hz50 = 0b00000100;
+    static constexpr uint8_t Hz100 = 0b00001000;
+    static constexpr uint8_t Hz200 = 0b00001100;
+    static constexpr uint8_t G2 = 0b00000000;
+    static constexpr uint8_t G8 = 0b00010000;
+    static constexpr uint8_t S512 = 0b00000000;
+    static constexpr uint8_t S256 = 0b01000000;
+    static constexpr uint8_t S128 = 0b10000000;
+    static constexpr uint8_t S64 = 0b11000000;
 
     /**
      * initialize the sensor
@@ -109,5 +100,3 @@ private:
     double heading = 0;
     double declinationAngle = 0.0303; // http://www.magnetic-declination.com/
 };
-
-#endif //QMC5883L_H

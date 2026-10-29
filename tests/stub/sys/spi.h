@@ -30,6 +30,7 @@ struct Device {
         cs.set(!sel);
     }
     virtual void callback(const Request &req)=0;
+    virtual ~Device() = default;
 };
 
 struct Request {

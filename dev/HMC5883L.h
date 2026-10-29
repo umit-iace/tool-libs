@@ -2,8 +2,7 @@
  *
  * Copyright (c) 2023 IACE
  */
-#ifndef HMC5883L_H
-#define HMC5883L_H
+#pragma once
 
 #include "sys/i2c.h"
 #include <cmath>
@@ -18,41 +17,31 @@ struct HMC5883L : I2C::Device {
     enum ADDR {
         DEFAULT = 0x1e,
     };
-    enum MODE {
-        CONT = 0b00000000,
-        SINGLE = 0b00000001,
-        IDLE = 0b00000011,
-    };
-    enum SAMPLES {
-        S1 = 0b00000000,
-        S2 = 0b00100000,
-        S4 = 0b01000000,
-        S8 = 0b01100000,
-    };
-    enum SPEED {
-        Hz0_75 = 0b0000000,
-        Hz1_5 = 0b00000100,
-        Hz3 = 0b00001000,
-        Hz7_5 = 0b00001100,
-        Hz15 = 0b00010000,
-        Hz30 = 0b00010100,
-        Hz75 = 0b00011000
-    };
-    enum GAIN {
-        G0_88 = 0b00000000,
-        G1_3 = 0b00100000,
-        G1_9 = 0b01000000,
-        G2_5 = 0b01100000,
-        G4_0 = 0b10000000,
-        G4_7 = 0b10100000,
-        G5_6 = 0b11000000,
-        G8_1 = 0b11100000,
-    };
-    enum MEAS {
-        NORMAL = 0b00000000,
-        POS = 0b00000001,
-        NEG = 0b00000010,
-    };
+    static constexpr uint8_t CONT = 0b00000000;
+    static constexpr uint8_t SINGLE = 0b00000001;
+    static constexpr uint8_t IDLE = 0b00000011;
+    static constexpr uint8_t S1 = 0b00000000;
+    static constexpr uint8_t S2 = 0b00100000;
+    static constexpr uint8_t S4 = 0b01000000;
+    static constexpr uint8_t S8 = 0b01100000;
+    static constexpr uint8_t Hz0_75 = 0b0000000;
+    static constexpr uint8_t Hz1_5 = 0b00000100;
+    static constexpr uint8_t Hz3 = 0b00001000;
+    static constexpr uint8_t Hz7_5 = 0b00001100;
+    static constexpr uint8_t Hz15 = 0b00010000;
+    static constexpr uint8_t Hz30 = 0b00010100;
+    static constexpr uint8_t Hz75 = 0b00011000;
+    static constexpr uint8_t G0_88 = 0b00000000;
+    static constexpr uint8_t G1_3 = 0b00100000;
+    static constexpr uint8_t G1_9 = 0b01000000;
+    static constexpr uint8_t G2_5 = 0b01100000;
+    static constexpr uint8_t G4_0 = 0b10000000;
+    static constexpr uint8_t G4_7 = 0b10100000;
+    static constexpr uint8_t G5_6 = 0b11000000;
+    static constexpr uint8_t G8_1 = 0b11100000;
+    static constexpr uint8_t NORMAL = 0b00000000;
+    static constexpr uint8_t POS = 0b00000001;
+    static constexpr uint8_t NEG = 0b00000010;
     /**
      * initialize the sensor
      */
@@ -120,5 +109,3 @@ struct HMC5883L : I2C::Device {
     double heading = 0;
     double declinationAngle = 0.0303; // http://www.magnetic-declination.com/
 };
-
-#endif //HMC5883L_H

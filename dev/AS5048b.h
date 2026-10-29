@@ -18,7 +18,7 @@ public:
      */
     AS5048B(Sink<I2C::Request> &bus, bool A0, bool A1)
         : I2C::Device{bus, (uint8_t)(0x40 | (A1 << 1) | A0)}
-        , bInit(false)
+        , initialized(false)
     { }
 
     /**
@@ -38,25 +38,25 @@ public:
 
     void callback(const I2C::Request &rq) override {
         if (rq.mem != 0xfe) return;
-        uint16_t iRawAngle = ((uint16_t) rq.data.buf[0] << 6);
-        iRawAngle += (rq.data.buf[1] & 0x3F);
+        uint16_t raw = ((uint16_t) rq.data.buf[0] << 6);
+        raw += (rq.data.buf[1] & 0x3F);
 
-        if (!bInit) {
-            this->dLastAngle = ((double) iRawAngle);
-            bInit = true;
+        if (!initialized) {
+            this->lastAngle = ((double) raw);
+            initialized = true;
         } else {
-            double dCurAngle = ((double) iRawAngle);
-            double dDiffAngle = this->dLastAngle - dCurAngle;
-            if (this->dLastAngle == -1 || (this->dLastAngle == 0 && (dDiffAngle > 1000 || dDiffAngle < -1000))) {
-                dDiffAngle = 0;
-            } else if (dDiffAngle < -10000) {
-                dDiffAngle += 16384;
-            } else if (dDiffAngle > 10000) {
-                dDiffAngle -= 16384;
+            double current = ((double) raw);
+            double diff = this->lastAngle - current;
+            if (this->lastAngle == -1 || (this->lastAngle == 0 && (diff > 1000 || diff < -1000))) {
+                diff = 0;
+            } else if (diff < -10000) {
+                diff += 16384;
+            } else if (diff > 10000) {
+                diff -= 16384;
             }
 
-            this->dAngle += dDiffAngle;
-            this->dLastAngle = dCurAngle;
+            this->angle += diff;
+            this->lastAngle = current;
         }
     }
 
@@ -64,23 +64,23 @@ public:
      * Returns the angle in radians
      */
     double get() {
-        return this->dAngle / 16384 * 2 * M_PI;
+        return this->angle / 16384 * 2 * M_PI;
     }
 
     /**
      * Resets the angles
      */
      void reset() {
-         this->dAngle = 0;
-         this->dLastAngle = 0;
-         bInit = false;
+         this->angle = 0;
+         this->lastAngle = 0;
+         initialized = false;
      }
 
 private:
     ///\cond false
-    bool bInit = false;
+    bool initialized = false;
 
-    double dAngle = 0;              // difference angle for rotational movement
-    double dLastAngle = 0;          // difference angle for rotational movement
+    double angle = 0;              // difference angle for rotational movement
+    double lastAngle = 0;          // difference angle for rotational movement
     ///\endcond
 };

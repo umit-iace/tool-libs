@@ -60,6 +60,9 @@ make_test(i2cdevices)
 target_include_directories(test-i2cdevices PRIVATE stub)
 make_test(spidevices)
 target_include_directories(test-spidevices PRIVATE stub)
+# register bits are or-ed together, keep that free of enum arithmetic
+target_compile_options(test-i2cdevices PRIVATE -Werror=deprecated-enum-enum-conversion)
+target_compile_options(test-spidevices PRIVATE -Werror=deprecated-enum-enum-conversion)
 
 make_test_standalone(canlinux tool-libs-linux-can)
 make_test_standalone(iface tool-libs-linux)

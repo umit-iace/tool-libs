@@ -32,19 +32,15 @@ struct MAX31865 : SPI::Device {
     };
 
     // Register Addresses
-    enum {
-        REG_CONFIG = 0,
-        REG_RTD = 1,
-        REG_HIGH_FAULT_THRESHOLD = 3,
-        REG_LOW_FAULT_THRESHOLD = 5,
-        REG_STATUS = 7
-    };
+    static constexpr uint8_t REG_CONFIG = 0;
+    static constexpr uint8_t REG_RTD = 1;
+    static constexpr uint8_t REG_HIGH_FAULT_THRESHOLD = 3;
+    static constexpr uint8_t REG_LOW_FAULT_THRESHOLD = 5;
+    static constexpr uint8_t REG_STATUS = 7;
 
     // Operation on register
-    enum {
-        READ = 0,
-        WRITE = 0x80
-    };
+    static constexpr uint8_t READ = 0;
+    static constexpr uint8_t WRITE = 0x80;
     /// Sensor configuration
     struct Config {
         Type wires; ///< number of wires
@@ -74,8 +70,6 @@ struct MAX31865 : SPI::Device {
                     1 << 1 | // clear faults
                     1 << 0 // 50Hz filter
                     );
-        /* setLThr(0); */
-        /* setHThr(0xffff); */
         getAllData();
     }
 
@@ -196,11 +190,6 @@ private:
     const double a = 3.9083e-3;
     const double b = -5.775e-7;
     const double a2b = a/(2*b);
-    // from application note
-    /* const double Z1 = -3.9083e-3; */
-    /* const double Z2 = 17.58480889e-6; */
-    /* const double Z3 = 4 * b / Rnom; */
-    /* const double Z4 = 2*b; */
 
     struct sensor {
         uint8_t config;
@@ -257,7 +246,6 @@ private:
         // R(t) = R0 (1 + aT + bT^2)
         // !! ONLY for temperatures > 0°C !!
         double dTemp = -a2b - sqrt(a2b*a2b - (Rnom - Rrtd)/(b*Rnom));
-        /* double dTemp = (Z1 + sqrt(Z2 + Z3 * Rrtd)) / Z4; */
         return dTemp;
     }
 };

@@ -2,8 +2,7 @@
  *
  * Copyright (c) 2020 IACE
  */
-#ifndef ADS1115_H
-#define ADS1115_H
+#pragma once
 
 #include "sys/i2c.h"
 
@@ -29,7 +28,7 @@ private:
         HI_THRESH
     };
 
-    const double uV[6] = {
+    static constexpr double uV[6] = {
         187.5,
         125,
         62.5,
@@ -168,5 +167,3 @@ private:
             });
     }
 };
-
-#endif //ADS1115_H

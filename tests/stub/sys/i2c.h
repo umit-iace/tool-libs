@@ -13,25 +13,30 @@ struct Device {
     const uint8_t address;
     Device(Sink<Request> &bus, uint8_t address) : bus(bus), address(address) {}
     virtual void callback(const Request &req)=0;
+    virtual ~Device() = default;
 };
 
 struct Request {
     Device *dev;
     Buffer<uint8_t> data;
-    union Type {
-        struct {
+    struct Type {
         uint8_t read:1;
         uint8_t slave:1;
         uint8_t mem:1;
-        };
-        enum {
+        enum Kind {
             MASTER_WRITE,
             MASTER_READ,
             SLAVE_WRITE,
             SLAVE_READ,
             MEM_WRITE,
             MEM_READ,
-        } type;
+        };
+        Kind type() const { return Kind(read | slave << 1 | mem << 2); }
+        void set(Kind k) {
+            read = k & 1;
+            slave = k >> 1 & 1;
+            mem = k >> 2 & 1;
+        }
     } opts;
     uint8_t mem;
 };
