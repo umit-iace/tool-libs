@@ -66,15 +66,23 @@ public:
     /// construct. if FrameRegistry is not available at this point,
     /// call `registerWith` at the earliest convenience
     Experiment(FrameRegistry *fr=nullptr) {
-        k.every(1, *this, &Experiment::tick);
+        ticker = k.every(1, *this, &Experiment::tick);
         if (fr) registerWith(*fr);
         onEvent(INIT).call(log, &ELog::start);
         onEvent(STOP).call(log, &ELog::stop);
         onEvent(TIMEOUT).call(log, &ELog::timeout);
     }
+    /// unregisters from the Kernel and the FrameRegistry
+    ~Experiment() {
+        k.remove(ticker);
+        if (frames) frames->removeHandler(1);
+    }
+    Experiment(const Experiment &) = delete;
+    Experiment& operator=(const Experiment &) = delete;
     /// set frame registry from which Experiment will receive frames
     void registerWith(FrameRegistry &reg) {
         reg.setHandler(1, *this, &Experiment::handleFrame);
+        frames = &reg;
     }
     /// register callbacks for Experiment state change events
     Schedule::Evented::Registry& onEvent(Event e) {
@@ -95,7 +103,7 @@ public:
     const State& state{state_};
     /// const access to Experiment time
     const uint32_t& time{time_};
-    /// set Heartbeat timeout in ms
+    /// set Heartbeat timeout in ms, replaces an earlier notify Sink
     void setHeartbeatTimeout(uint32_t ms, Sink<Frame> &notify) {
         heartbeat.timeout = ms;
         heartbeat.reset(time);
@@ -107,7 +115,8 @@ public:
                     auto f = Frame{1}.pack(false);
                     s.trypush(std::move(f));
                 }};
-        timeout.call(new TMP{notify});
+        if (notifier) timeout.remove(notifier, k);
+        notifier = timeout.call(new TMP{notify});
     }
     /// Logging facility
     ELog log{time, k.log};
@@ -115,6 +124,8 @@ public:
 private:
     State state_{};
     bool alive{};
+    Schedule::Schedulable *notifier{}, *ticker{};
+    FrameRegistry *frames{};
     void statemachine() {
         State old = state;
         // very simple state machine
@@ -154,7 +165,7 @@ private:
             return timeout;
         }
         bool reset(uint32_t now) {
-            when = now + timeout;
+            when = Deadline::after(now, timeout).when;
             return true;
         }
     } heartbeat{};

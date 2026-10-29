@@ -76,7 +76,7 @@ struct FrameRegistry {
     };
     /** pure function FrameHandler */
     struct FuncHandler: public FrameHandler {
-        typedef void (*Func)(Frame &f);
+        using Func = void (*)(Frame &f);
         Func func{};
         FuncHandler(Func f) : func(f) { }
         void handle(Frame &f) override {
@@ -86,7 +86,7 @@ struct FrameRegistry {
     /** class method FrameHandler */
     template<typename T>
     struct MethodHandler: public FrameHandler {
-        typedef void(T::*Method)(Frame &f);
+        using Method = void (T::*)(Frame &f);
         T* base;
         Method method;
         MethodHandler(T* b, Method m) : base(b), method(m) { }

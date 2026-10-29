@@ -74,3 +74,14 @@ TEST_CASE("tool-libs: logger: pushing more than the prefix buffer holds") {
     REQUIRE(c.last.len == 600); // the default prefix is empty
     CHECK(c.last[599] == 'a' + 599 % 26);
 }
+
+TEST_CASE("tool-libs: logger: point it to another sink") {
+    Collect a, b;
+    Logger l{a};
+    l.print("one");
+    l.setSink(b);
+    l.print("two");
+    CHECK(a.last.len == 3);
+    CHECK(b.last.len == 3);
+    CHECK(memcmp(b.last.buf, "two", 3) == 0);
+}

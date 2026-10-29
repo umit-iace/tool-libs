@@ -16,13 +16,20 @@ struct CRC32 {
     void init() {
         *this = CRC32{};
     }
-    /** calculate step with given byte */
+    /** calculate step with given byte
+     *
+     * a nibble at a time: 16 entry table (64 bytes), ~4x the bitwise speed
+     */
     void step(uint8_t byte) {
+        static constexpr uint32_t table[16] = {
+            0x00000000, 0x1db71064, 0x3b6e20c8, 0x26d930ac,
+            0x76dc4190, 0x6b6b51f4, 0x4db26158, 0x5005713c,
+            0xedb88320, 0xf00f9344, 0xd6d6a3e8, 0xcb61b38c,
+            0x9b64c2b0, 0x86d3d2d4, 0xa00ae278, 0xbdbdf21c,
+        };
         checksum ^= byte;
-        for (uint32_t j = 0; j < 8; j++) {
-            uint32_t mask = (uint32_t) -(checksum & 1U);
-            checksum = (checksum >> 1) ^ (0xedb88320U & mask);
-        }
+        checksum = (checksum >> 4) ^ table[checksum & 0xf];
+        checksum = (checksum >> 4) ^ table[checksum & 0xf];
     }
     /** get final CRC32 value */
     uint32_t finalize() {
@@ -65,6 +72,8 @@ struct Min {
         Frame frame{};
         Queue<Frame> queue{20};
         Source<Buffer<uint8_t>> &source;
+        Buffer<uint8_t> pending; // received, not parsed yet
+        size_t pos{};
         uint8_t header_seen{0}, frame_length{0};
         uint32_t frame_crc{0};
         // Receiving state machine
@@ -172,12 +181,20 @@ struct Min {
     public:
         /** unwrap given Buffer stream into Frame */
         In(Source<Buffer<uint8_t>> &from) : source{from} { }
-        /** check if Frame available */
+        /** check if Frame available
+         *
+         * stops reading when the Frame queue is full, the rest of the
+         * current Buffer is kept for the next call
+         */
         bool empty() override {
-            while (!queue.full() && !source.empty()) {
-                for (auto b: source.pop()) {
-                    byte(b);
+            while (!queue.full()) {
+                if (pos >= pending.len) {
+                    if (source.empty()) break;
+                    pending = source.pop();
+                    pos = 0;
+                    continue;
                 }
+                byte(pending.buf[pos++]);
             }
             return queue.empty();
         }
@@ -188,9 +205,6 @@ struct Min {
          */
         Frame pop() override {
             return queue.pop();
-        }
-        void *operator new(size_t sz, In *where) {
-            return where;
         }
     };
     /** outgoing Min stream
@@ -259,9 +273,6 @@ struct Min {
             stuff((uint8_t) ((sum >> 0) & 0xff));
             nostuff(EOF_BYTE);
             out.trypush(std::move(req));
-        }
-        void *operator new(size_t sz, Out *where) {
-            return where;
         }
     };
     /** incoming Frame stream */

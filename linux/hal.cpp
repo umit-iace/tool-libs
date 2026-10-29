@@ -11,15 +11,12 @@
 #include <setjmp.h>
 using namespace std::chrono;
 
-time_point start{steady_clock::now()};
 auto dt{microseconds{1000}};
 time_point next{steady_clock::now() + dt};
 
 void Kernel::idle() {
     std::this_thread::sleep_until(next);
-    auto now = steady_clock::now();
     next += dt;
-    auto runtime = duration_cast<milliseconds>(now-start);
     this->tick(1);
 }
 
@@ -31,8 +28,9 @@ void sighandler(int signum) {
     k.exit(signum == SIGINT ? 0 : -1);
     if (signum == SIGSEGV
             || signum == SIGABRT) {
-        /* fprintf(stderr, "detected SIGSEGV, attempting clean shutdown\n"); */
-        longjmp(k.jbf, 1);
+        // back into Kernel::run, which returns for a clean shutdown.
+        // siglongjmp restores the signal mask blocked during the handler
+        siglongjmp(k.jbf, 1);
     }
 }
 

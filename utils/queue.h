@@ -106,8 +106,9 @@ public:
     bool full() override {
         return q.len == q.size;
     }
-    /** return element at idx */
-    T getAt(size_t idx) {
+    /** return element at idx, counted from the front */
+    T& getAt(size_t idx) {
+        assert(idx < q.len);
         return q[(head + idx) % head.sz];
     }
 };

@@ -28,7 +28,7 @@ struct SplitPush : Sink<Buffer<uint8_t>> {
     }
     void push(Buffer<uint8_t> &&in) override {
         left.push(in);
-        right.push(in);
+        right.push(std::move(in));
     }
     /** set sinks for splitter */
     SplitPush(Sink<Buffer<uint8_t>> &left, Sink<Buffer<uint8_t>> &right) : left(left), right(right) {}

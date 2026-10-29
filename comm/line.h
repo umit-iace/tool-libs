@@ -13,31 +13,39 @@
 class LineFilter : public Source<Buffer<uint8_t>> {
     static constexpr size_t linelen = 128;
     Queue<Buffer<uint8_t>> q;
-    Buffer<uint8_t> l = linelen; // stash
+    Buffer<uint8_t> l = Buffer<uint8_t>(linelen); // stash
     Source<Buffer<uint8_t>> &source;
+    Buffer<uint8_t> pending; // received, not split yet
+    size_t pos{};
     void recv(uint8_t b) {
         // handle both \n and \r\n newlines
         if (b == '\n' || b == '\r') {
             if (l.len == 0) return;
             q.trypush(std::move(l));
-            l = linelen;
+            l = Buffer<uint8_t>(linelen);
             return;
         }
         if (l.len + 1 > linelen) {
             // XXX: failure: line was longer than our buffer
             // Drop Line
-            l = linelen;
+            l = Buffer<uint8_t>(linelen);
         }
         l.append(b);
     }
 public:
     /** set underlying Source */
     LineFilter(Source<Buffer<uint8_t>> &p): source(p) { }
+    /** stops reading when the line queue is full, the rest of the
+     * current Buffer is kept for the next call */
     bool empty() override {
-        while (!q.full() && !source.empty()) {
-            for (auto b: source.pop()) {
-                recv(b);
+        while (!q.full()) {
+            if (pos >= pending.len) {
+                if (source.empty()) break;
+                pending = source.pop();
+                pos = 0;
+                continue;
             }
+            recv(pending.buf[pos++]);
         }
         return q.empty();
     }

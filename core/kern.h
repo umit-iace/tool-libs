@@ -39,7 +39,7 @@ public:
     KLog log{time};
     /** point logger to new sink */
     void initLog(Sink<Buffer<uint8_t>> &snk) {
-        new(&log) KLog{time, snk};
+        log.setSink(snk);
     }
     Kernel() {
         // calls registered by constructors of globals that ran before ours
@@ -88,7 +88,11 @@ public:
     }
     /** kernel entry point */
     int run () {
-        setjmp(jbf);
+#if defined(__unix__)
+        // the linux backend jumps back here from SIGSEGV/SIGABRT, restore
+        // the signal mask then (savemask = 1)
+        sigsetjmp(jbf, 1);
+#endif
         while(go) {
             Scheduler::run();
             idle();
@@ -124,7 +128,9 @@ private:
     Time time_{};
     bool go{true};
     int exit_code{};
-    jmp_buf jbf{};
+#if defined(__unix__)
+    sigjmp_buf jbf{};
+#endif
     friend void sighandler(int);
 } k;
 

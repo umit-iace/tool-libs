@@ -204,5 +204,5 @@ struct UDP:
  * useful for creating simple user interactions
  */
 struct IFACE: public TTY, public Logger {
-    IFACE(const char *path): TTY(path), Logger(*(TTY*)this) {}
+    IFACE(const char *path): TTY(path), Logger(static_cast<TTY&>(*this)) {}
 };

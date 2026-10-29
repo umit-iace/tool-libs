@@ -29,3 +29,22 @@ TEST_CASE("tool-libs: experiment: heartbeat timeout relative to start") {
     CHECK(timedOutAt > 0);
     CHECK(timedOutAt <= 110);
 }
+
+TEST_CASE("tool-libs: experiment: setting the heartbeat timeout again replaces it") {
+    size_t before = k.list.len;
+    {
+        FrameRegistry reg;
+        Experiment e{&reg};
+        Queue<Frame> first{5}, second{5};
+        e.setHeartbeatTimeout(100, first);
+        e.setHeartbeatTimeout(50, second);
+        reg.handle(std::move(Frame{1}.pack<uint8_t>(0b01))); // start, no heartbeats
+        step(200);
+        CHECK(e.state == e.IDLE); // timed out
+        CHECK(first.size() == 0);
+        CHECK(second.size() == 1);
+    }
+    // the Experiment unregistered itself from the kernel
+    CHECK(k.list.len == before);
+    step(10);
+}

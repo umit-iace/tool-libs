@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <string>
 #include <comm/min.h>
 #include <comm/bufferutils.h>
 #include <doctest/doctest.h>
@@ -191,4 +192,49 @@ TEST_CASE("tool-libs: min: full frame of header bytes roundtrip") {
     for (size_t i = 0; i < r.b.len; ++i) {
         CHECK(r.unpack<uint8_t>() == Min::HEADER_BYTE);
     }
+}
+
+TEST_CASE("tool-libs: min: CRC32 matches the standard check value") {
+    CRC32 crc;
+    for (char c : std::string("123456789")) crc.step(c);
+    CHECK(crc.finalize() == 0xcbf43926);
+}
+
+struct Concat : Sink<Buffer<uint8_t>> {
+    std::string all;
+    bool full() override { return false; }
+    void push(Buffer<uint8_t> &&b) override { all.append((char*)b.buf, b.len); }
+};
+
+TEST_CASE("tool-libs: min: more frames in one buffer than the queue holds") {
+    Concat c;
+    Min::Out out{c};
+    for (int i = 0; i < 25; ++i) out.push(Frame{(uint8_t)i}.pack<uint32_t>(i));
+    Queue<Buffer<uint8_t>> q{2};
+    q.push(Buffer<uint8_t>((const uint8_t*)c.all.data(), c.all.size()));
+    Min::In in{q};
+    int got = 0;
+    while (!in.empty()) {
+        Frame f = in.pop();
+        CHECK(f.id == got);
+        CHECK(f.unpack<uint32_t>() == (uint32_t)got);
+        ++got;
+    }
+    CHECK(got == 25); // used to be 20, the rest was thrown away
+}
+
+#include <comm/line.h>
+TEST_CASE("tool-libs: line filter: more lines in one buffer than the queue holds") {
+    std::string text;
+    for (int i = 0; i < 40; ++i) text += std::to_string(i) + "\n";
+    Queue<Buffer<uint8_t>> q{2};
+    q.push(Buffer<uint8_t>((const uint8_t*)text.data(), text.size()));
+    LineFilter lines{q};
+    int got = 0;
+    while (!lines.empty()) {
+        auto l = lines.pop();
+        CHECK(std::string((char*)l.buf, l.len) == std::to_string(got));
+        ++got;
+    }
+    CHECK(got == 40);
 }

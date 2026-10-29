@@ -23,8 +23,11 @@ inline DevNull<T> devnull;
 /** simple printf-style logging infrastructure */
 struct Logger : Sink<Buffer<uint8_t>> {
     enum Lvl {NONE, INFO, WARN};
-    const char *color[3] = {"\u001b[0m","\u001b[32m", "\u001b[31m"};
-    Sink<Buffer<uint8_t>> &out;
+    static constexpr const char *color[3] = {"\u001b[0m","\u001b[32m", "\u001b[31m"};
+    /** the sink everything is logged into */
+    Sink<Buffer<uint8_t>> &out() { return *sink; }
+    /** point the logger to another sink */
+    void setSink(Sink<Buffer<uint8_t>> &snk) { sink = &snk; }
 
     virtual Buffer<uint8_t> pre() {
         return Buffer<uint8_t>(256);
@@ -65,13 +68,13 @@ struct Logger : Sink<Buffer<uint8_t>> {
      */
     void send(Buffer<uint8_t> &&b) {
         if (!CriticalSection::blocking()) {
-            for (uint32_t spin = 0; spin < SPIN && out.full(); ++spin) { }
+            for (uint32_t spin = 0; spin < SPIN && sink->full(); ++spin) { }
         }
-        if (out.full()) {
+        if (sink->full()) {
             ++dropped;
             return;
         }
-        out.push(std::move(b));
+        sink->push(std::move(b));
     }
     /** polls of a full sink before giving up, ~tens of ms on a Cortex-M7 */
     static constexpr uint32_t SPIN = 1000000;
@@ -98,7 +101,7 @@ public:
         va_end(args);
     }
     bool full() override {
-        return out.full();
+        return sink->full();
     }
     /** push otherwisely prepared Buffer through Logger */
     void push(Buffer<uint8_t> &&b) override {
@@ -111,11 +114,11 @@ public:
     /** messages lost because the sink was full */
     uint32_t dropped{};
     /** create Logger wrapping a Buffer Sink */
-    Logger(Sink<Buffer<uint8_t>> &snk) : out{snk} { }
-    Logger() : out{devnull<Buffer<uint8_t>>} {}
-    void *operator new(size_t, Logger *where) {
-        return where;
-    }
+    Logger(Sink<Buffer<uint8_t>> &snk) : sink{&snk} { }
+    Logger() : sink{&devnull<Buffer<uint8_t>>} {}
+    virtual ~Logger() = default;
+private:
+    Sink<Buffer<uint8_t>> *sink;
 };
 
 /** buffered logging facility */

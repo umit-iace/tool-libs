@@ -60,3 +60,7 @@ TEST_CASE("tool-libs: buffer: no implicit conversion from a size, const access")
     CHECK(copy.buf == nullptr);
 }
 
+TEST_CASE("tool-libs: streams: virtual destructors for the interfaces") {
+    static_assert(std::has_virtual_destructor_v<Sink<int>>);
+    static_assert(std::has_virtual_destructor_v<Source<int>>);
+}

@@ -20,12 +20,12 @@
  */
 template<typename T>
 struct Later {
-    T& where{};
+    T *where{};
     Later *nested{};
     enum Op {NOP, ADD, SUB} op{};
-    ~Later() { delete nested; nested = nullptr; op = NOP; }
-    Later(T& val): where(val) {} // unable to store temporaries. cast the first operand to this type first
-    Later(T& v, Later *n, Op op): where(v), nested(n), op(op) {}
+    ~Later() { delete nested; }
+    Later(T& val): where(&val) {} // unable to store temporaries. cast the first operand to this type first
+    Later(T& v, Later *n, Op op): where(&v), nested(n), op(op) {}
     // copying impossible. who'd own nested Laters?
     Later(const Later &)=delete;
     Later& operator=(const Later &)=delete;
@@ -36,34 +36,35 @@ struct Later {
     }
     Later& operator=(Later &&l) noexcept {
         if (this == &l) return *this;
-        new (this) Later(std::move(l));
+        Later *old = nested;
+        where = l.where;
+        nested = l.nested;
+        op = l.op;
+        l.nested = nullptr;
+        l.op = NOP;
+        delete old; // after taking over: l may live inside it
         return *this;
     }
     Later operator+(T &val) {
         return {
             val,
-            ::new Later{std::move(*this)},
+            new Later{std::move(*this)},
             ADD,
         };
     }
     Later operator-(T &val) {
         return {
             val,
-            ::new Later{std::move(*this)},
+            new Later{std::move(*this)},
             SUB,
         };
     }
     /** get value */
     T get() const {
         switch (op) {
-        case ADD: return nested->get() + where;
-        case SUB: return nested->get() - where;
-        default: return where;
+        case ADD: return nested->get() + *where;
+        case SUB: return nested->get() - *where;
+        default: return *where;
         }
-    }
-    // placement new for copying into place
-    void *operator new(size_t sz, Later *where) {
-        where->~Later();
-        return where;
     }
 };

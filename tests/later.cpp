@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <cstdint>
+#include <type_traits>
 #include <utils/later.h>
 #include <doctest/doctest.h>
 
@@ -74,3 +75,12 @@ TEST_CASE("tool-libs: later: reset") {
     CHECK(m.l.get() == Approx(m.a - m.b));
 }
 
+
+TEST_CASE("tool-libs: later: assign a part of itself") {
+    double a{1}, b{2}, c{4};
+    auto l = (Later<double>)a + b - c;
+    // the nested part is owned by l itself
+    l = std::move(*l.nested);
+    CHECK(l.get() == Approx(a + b));
+    static_assert(std::is_move_assignable_v<Later<double>>);
+}

@@ -109,7 +109,8 @@ struct TPDO {
  *
  * use this as a middle layer between the CAN bus and the Device devices to
  * handle translation between the protocols.
- * call this class' `process` directly after the CAN irqHandler
+ * received messages are processed every ms from the main loop (Kernel),
+ * so the device callbacks don't run in the CAN interrupt
  *
  * cf. https://www.microcontrol.net/wp-content/uploads/2021/10/td-03011e.pdf
  *
@@ -117,7 +118,12 @@ struct TPDO {
  */
 struct Dispatch : Sink<SDO>, Sink<Message> {
     enum LOGLEVEL { NONE, WARN, INFO} log;
-    Dispatch(CAN &can, LOGLEVEL log=NONE) : log(log), can(can) { }
+    Dispatch(CAN &can, LOGLEVEL log=NONE) : log(log), can(can) {
+        ticker = k.every(1, *this, &Dispatch::poll);
+    }
+    ~Dispatch() { k.remove(ticker); }
+    Dispatch(const Dispatch &) = delete;
+    Dispatch& operator=(const Dispatch &) = delete;
     CAN &can;
     Sink<SDO> *ids[128] {};
     struct PDO {
@@ -143,7 +149,7 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
     void guard(uint8_t id) {
         can.trypush({.id = (uint32_t)0x700 + id, .opts = {.rtr = true}});
     }
-    /** call directly after CAN interrupt handler processed */
+    /** handle received messages, runs every ms from the Kernel */
     void process() {
         // TODO: what to do to CAN messages that _aren't_ CanOpen
         while (!can.empty()) {
@@ -217,6 +223,9 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
         }
         pdo.n = n;
     }
+
+    void poll(uint32_t, uint32_t) { process(); }
+    Schedule::Schedulable *ticker{};
 
     bool handlePDO(Message msg) {
         for (int i = 0; i < pdo.n; ++i) {
@@ -310,7 +319,7 @@ struct Device : Sink<TPDO>, Sink<SDO> {
     }
     /** send PDO */
     void wPDO(const RPDO &rpdo) {
-        (*(Sink<Message>*)&out).trypush(rpdo.toMessage());
+        static_cast<Sink<Message>&>(out).trypush(rpdo.toMessage());
     }
     /** enable receiving PDO on device */
     void enablePDO(RPDO &pdo) {
@@ -350,7 +359,7 @@ struct Device : Sink<TPDO>, Sink<SDO> {
         w32(0x1800+pdo.N-1, 0x1, 1u<<31); // clear
     };
     bool full() override {
-        return (*(Sink<Message>*)&out).full();
+        return static_cast<Sink<Message>&>(out).full();
     }
     using Sink<SDO>::push;
     void push(SDO &&sdo) override {

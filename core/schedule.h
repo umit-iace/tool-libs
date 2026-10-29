@@ -130,6 +130,19 @@ struct Scheduler {
         }
         return true;
     }
+    /** run s once from the main loop, safe in interrupts
+     *
+     * @return false if the queue was full (counted in overruns)
+     */
+    bool post(Schedule::Schedulable *s) {
+        CriticalSection cs;
+        if (q.full()) {
+            ++overruns;
+            return false;
+        }
+        q.push(std::move(s));
+        return true;
+    }
     /** drop pending calls of s */
     void forget(Schedule::Schedulable *s) {
         CriticalSection cs;
