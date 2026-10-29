@@ -5,6 +5,7 @@
 #include <doctest/doctest.h>
 #include <utils/queue.h>
 #include <comm/frameregistry.h>
+#include <utils/slice.h>
 
 TEST_CASE("tool-libs: NDEBUG: Buffer drops what doesn't fit") {
     Buffer<uint8_t> b(2);
@@ -34,4 +35,13 @@ TEST_CASE("tool-libs: NDEBUG: Frame::pack drops what doesn't fit") {
     for (int i = 0; i < 17; ++i) f.pack<uint64_t>(i); // 128 bytes fit
     CHECK(f.b.len == 128);
     CHECK(f.remaining() == 128);
+}
+
+TEST_CASE("tool-libs: NDEBUG: Slice reads beyond its range give a default value") {
+    Buffer<int> b{1, 2, 3};
+    Slice<int> tail{b, 2};
+    CHECK(tail[0] == 3);
+    CHECK(tail[1] == 0);
+    Slice<int> past{b, 5};
+    CHECK(past[0] == 0);
 }

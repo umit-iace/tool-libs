@@ -223,10 +223,14 @@ struct BNO085 : I2C::Device {
         lg->info("advertisement\n");
         uint8_t last_guid {};
         while (data.len) {
-            assert (data.len > 2);
+            if (data.len < 2) break; // truncated
             AdvTag tag {data[0]};
             size_t len {data[1]};
-            int val;
+            if (data.len < len + 2) { // truncated, don't read beyond
+                lg->warn("truncated advertisement\n");
+                break;
+            }
+            int val = 0;
             switch (len) {
                 case 1: val = read8({data,2}); break;
                 case 2: val = read16({data,2}); break;
@@ -312,8 +316,27 @@ struct BNO085 : I2C::Device {
         }
     }
 
+    /** length of the sensor reports we know, 0 for unknown ones */
+    static size_t reportLength(uint8_t id) {
+        switch (id) {
+        case 0x01: return 10;
+        case 0x05: return 14;
+        case 0xFA: return 5;
+        case 0xFB: return 5;
+        case 0xFC: return 17;
+        default: return 0;
+        }
+    }
+
     void handleWakeNormal(View cargo) {
-        while (cargo.len) switch (cargo[0]) {
+        while (cargo.len) {
+        // the device decides the lengths, don't read beyond what came in
+        size_t need = reportLength(cargo[0]);
+        if (need && cargo.len < need) {
+            if (lg) lg->warn("truncated Report: [0x%.2x]\n", cargo[0]);
+            return;
+        }
+        switch (cargo[0]) {
         case 0x01: cargo = handleAccelerationReport(cargo); break;
         case 0x05: cargo = handleRotVecReport(cargo); break;
         case 0xFA: cargo = handleRebaseTimeStamp(cargo); break;
@@ -323,6 +346,7 @@ struct BNO085 : I2C::Device {
                if (lg) lg->warn("unrecognized Report: [0x%.2x]\n", cargo[0]);
                if (lg) logData({*cargo.buf,0});
                return;
+        }
         }
     }
 
@@ -350,6 +374,7 @@ struct BNO085 : I2C::Device {
 
     void handleGIRV(View cargo) {
         // note: does not contain report ID
+        if (cargo.len < 14) return; // truncated
         this->girv.pose = {
             .r = read16({cargo, 6}) * Q(14),
             .i = read16({cargo, 0}) * Q(14),
@@ -491,7 +516,10 @@ struct BNO085 : I2C::Device {
         case 0: // progress
             break;
         default: // complete or error
-            qs.read.pop(); sendQueued(qs.read); break;
+            if (qs.read.empty()) break; // nothing requested, stray response
+            qs.read.drop();
+            sendQueued(qs.read);
+            break;
         }
     }
 
@@ -638,8 +666,9 @@ struct BNO085 : I2C::Device {
 
         if (rq.data.len >= 4) {
             /* bool continuation = rq.data[1] & 0x80; */
-            const unsigned int len = (uint16_t)(rq.data[1] & 0x7f) << 8 | rq.data[0];
-            if (len == 0xffff) return; // 'length of 65535 is an error.'
+            const unsigned int raw = (unsigned)rq.data[1] << 8 | rq.data[0];
+            if (raw == 0xffff) return; // 'length of 65535 is an error.'
+            unsigned int len = raw & 0x7fff;
             const Channel chan = (Channel)rq.data[2];
             const uint8_t seq = rq.data[3];
             if (len == 0) return; // length of 0 indicates 'no data'
@@ -652,6 +681,9 @@ struct BNO085 : I2C::Device {
                 if (lg) lg->warn("expected seq: %d, got %d\n", this->seq[chan], seq);
             }
             this->seq[chan] = seq + 1;
+            // the length comes from the device: don't allocate whatever it
+            // says, longer messages are cut (the rest follows as continuation)
+            if (len > MAXREAD) len = MAXREAD;
             if (len > rq.data.len) { // need to get more data
                 bus.trypush({
                         .dev = this,
@@ -771,4 +803,6 @@ struct BNO085 : I2C::Device {
     }
 
     BufferedLogger *lg = nullptr;
+    /** biggest read we do, bigger messages are cut */
+    static constexpr unsigned int MAXREAD = 1024;
 };

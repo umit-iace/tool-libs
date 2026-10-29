@@ -16,3 +16,15 @@ TEST_CASE("tool-libs: slice: slice of slice") {
     REQUIRE(mid.len == 1);
     CHECK(mid[0] == 4);
 }
+
+TEST_CASE("tool-libs: slice: ranges beyond the data are clamped") {
+    Buffer<int> b{1,2,3};
+    Slice<int> past{b, 5};
+    CHECK(past.len == 0);
+    Slice<int> s{b, 1};
+    Slice<int> past2{s, 7};
+    CHECK(past2.len == 0);
+    Slice<int> tail{s, 1};
+    REQUIRE(tail.len == 1);
+    CHECK(tail[0] == 3);
+}
