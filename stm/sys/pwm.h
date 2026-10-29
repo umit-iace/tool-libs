@@ -29,7 +29,7 @@ namespace TIMER {
          * @param ticks [0..TIMER::HW period]
          */
         void ticks(uint32_t ticks) {
-            _perc = ticks / _period;
+            _perc = _period ? (double)ticks / _period : 0;
             _ticks = ticks;
             __HAL_TIM_SET_COMPARE(&hTim, chan, _ticks);
         }

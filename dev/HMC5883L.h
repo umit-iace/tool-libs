@@ -60,10 +60,10 @@ struct HMC5883L : I2C::Device {
         : I2C::Device{bus, addr} {
         // Config register 1: 1 sample averages, 75 Hz output rate
         writeReg(0x00, S1 | Hz75 | NORMAL);
-        // Config register 2: set 1.9 Gauss
+        // Config register 2: set 1.3 Gauss
         writeReg(0x01, G1_3);
         // Mode register: cont operation mode
-        writeReg(0x01, CONT);
+        writeReg(0x02, CONT);
     }
 
     /**
@@ -95,9 +95,10 @@ struct HMC5883L : I2C::Device {
     void callback(const I2C::Request &rq) override {
         if (rq.data.size != 6) return;
 
+        // data registers are ordered X, Z, Y
         this->Axes.x = rq.data.buf[1] | (rq.data.buf[0] << 8);
-        this->Axes.y = rq.data.buf[3] | (rq.data.buf[2] << 8);
-        this->Axes.z = rq.data.buf[5] | (rq.data.buf[4] << 8);
+        this->Axes.z = rq.data.buf[3] | (rq.data.buf[2] << 8);
+        this->Axes.y = rq.data.buf[5] | (rq.data.buf[4] << 8);
 
         this->heading = atan2(this->Axes.y, this->Axes.x);
 
@@ -113,7 +114,7 @@ struct HMC5883L : I2C::Device {
     }
 
     struct {
-        uint16_t x, y, z;
+        int16_t x, y, z;
     } Axes;
 
     double heading = 0;

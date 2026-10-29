@@ -22,7 +22,7 @@ struct AS5145 : SPI::Device {
         uint8_t LIN:1;
         uint8_t COF:1;
         uint8_t OCF:1;
-        int16_t POS:12;
+        uint16_t POS:12;
         uint8_t :1;
     } chain[chainlength];
 
@@ -38,7 +38,7 @@ struct AS5145 : SPI::Device {
      * @param i index of sensor in chain
      * @return measured sensor angle
      */
-    int16_t getVal(int i = 0) {
+    uint16_t getVal(int i = 0) {
         return chain[i].POS;
     }
 

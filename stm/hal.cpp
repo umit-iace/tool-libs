@@ -1,4 +1,5 @@
 #include <core/kern.h>
+#include <core/critical.h>
 
 #include "sys/hal.h"
 
@@ -15,6 +16,20 @@ void __assert_func(const char *file, int line, const char *func, const char *ass
 }
 
 extern "C" {
+/* make newlib's malloc & free interrupt safe:
+ * buffers get (de)allocated from interrupt handlers as well as from the
+ * main loop. newlib calls these around every heap operation, possibly nested.
+ */
+static uint32_t malloc_primask;
+static uint32_t malloc_nesting;
+void __malloc_lock(struct _reent *) {
+    uint32_t primask = CriticalSection::enter();
+    if (malloc_nesting++ == 0) malloc_primask = primask;
+}
+void __malloc_unlock(struct _reent *) {
+    if (--malloc_nesting == 0) CriticalSection::leave(malloc_primask);
+}
+
 /**
   * @brief This function handles Non maskable interrupt.
   */

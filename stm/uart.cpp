@@ -198,6 +198,8 @@ bool HW::full() {
     return tx.q.full();
 }
 void HW::push(Buffer<uint8_t> &&b) {
+    // tx state is shared with the interrupt handlers
+    CriticalSection cs;
     tx.q.push(std::move(b));
     poll(this);
 }
@@ -205,5 +207,6 @@ bool HW::empty() {
     return rx.q.empty();
 }
 Buffer<uint8_t> HW::pop() {
+    CriticalSection cs;
     return rx.q.pop();
 }

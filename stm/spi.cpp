@@ -6,8 +6,16 @@
 
 using namespace SPI;
 namespace SPI {
-Deadline until(size_t datasize) {
-    return {};
+/** generous deadline for transferring datasize bytes */
+Deadline until(SPI_HandleTypeDef *handle, size_t datasize, uint32_t now) {
+    // SPI peripherals sit on either APB, assume the slower one
+    uint32_t pclk = HAL_RCC_GetPCLK1Freq();
+    if (HAL_RCC_GetPCLK2Freq() < pclk) pclk = HAL_RCC_GetPCLK2Freq();
+    uint32_t div = 2U << ((handle->Init.BaudRatePrescaler & SPI_CR1_BR) >> SPI_CR1_BR_Pos);
+    uint32_t bits_per_ms = pclk / div / 1000;
+    if (!bits_per_ms) bits_per_ms = 1;
+    // + 2ms margin, so short transfers don't time out on tick granularity
+    return {now + (uint32_t)(datasize * 8 / bits_per_ms) + 2};
 }
 }
 
@@ -46,7 +54,7 @@ void _startMaster(HW *spi) {
     if (spi->active.conf != rq.dev->conf) switchmode(spi, rq.dev->conf);
     // activate the chip
     rq.dev->select(true);
-    spi->deadline = until(sz);
+    spi->deadline = until(&spi->handle, sz, uwTick);
 
     // transfer the data
     switch (rq.dir) {
@@ -73,10 +81,13 @@ void poll(HW *spi) {
 
 void _error(SPI_HandleTypeDef *handle) {
     auto spi = HW::reg.from(handle);
-    auto &rq= spi->q.front();
     if (spi->active.xfer) {
+        auto &rq = spi->q.front();
         rq.dev->select(false);
         HAL_SPI_Abort_IT(handle);
+        // give up on this request, a broken device would block the bus
+        // forever otherwise. drop instead of pop: don't free memory in here
+        spi->q.drop();
         spi->deadline = {};
         spi->active.xfer = false;
     }
@@ -100,6 +111,8 @@ bool HW::full() {
 }
 
 void HW::push(Request &&rq) {
+    // state is shared with the interrupt handlers
+    CriticalSection cs;
     q.push(std::move(rq));
     poll(this);
 }

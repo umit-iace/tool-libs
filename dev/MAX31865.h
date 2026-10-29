@@ -208,8 +208,8 @@ private:
         struct threshold {
             uint16_t high, low;
         } threshold;
-        int16_t rtd;
-    } data;
+        uint16_t rtd;
+    } data{};
 
     void setConfig(uint8_t val) {
         data.config = val;

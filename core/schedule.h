@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "utils/queue.h"
+#include "critical.h"
 /** namespace wrapping all functionality to do with scheduling */
 namespace Schedule {
 //XXX: figure out a way to simplify this whole namespace
@@ -59,12 +60,16 @@ struct Registry {
 }
 
 /// round robin, because we're not smart enough for anything else
+///
+/// safe to schedule from interrupts (e.g. Kernel::tick in SysTick)
+/// while running in the main loop
 struct Scheduler {
     // this is pointing to the actual callables in the registries
     // we do not own them
     Queue<Schedule::Schedulable*> q;
     /** schedule all registered schedulables of registry if necessary */
     bool schedule(uint32_t time, Schedule::Registry &reg) {
+        CriticalSection cs;
         for (auto &c: reg.list) {
             if (q.full()) return false;
             if (c->schedule(time)) q.push(c);
@@ -73,8 +78,13 @@ struct Scheduler {
     }
     /** run scheduled calls */
     void run() {
-        while (!q.empty()) {
-            auto s = q.pop();
+        while (true) {
+            Schedule::Schedulable *s;
+            {
+                CriticalSection cs;
+                if (q.empty()) return;
+                s = q.pop();
+            }
             s->call();
         }
     }

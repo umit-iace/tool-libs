@@ -32,7 +32,9 @@ struct TTY:
         process();
     }
     bool empty() override {
+        if (rx.full()) return false; // consumer has to catch up first
         int l = read(fd, wrk.buf, wrk.size);
+        if (l == 0) return rx.empty(); // nothing read, e.g. EOF
         if (l < 0) {
             if (errno != EAGAIN) {
                 perror("reading on fd error");
@@ -50,7 +52,7 @@ struct TTY:
     void process() {
         //transmit side
         while (!tx.empty()) {
-            auto msg = tx.front();
+            auto &msg = tx.front(); // partially sent data gets dropped in place
             int l = write(fd, msg.buf, msg.len);
             if (l < 0) {
                 if (errno != EAGAIN) {
@@ -115,8 +117,10 @@ struct UDP:
         process();
     }
     bool empty() override {
+        if (rx.full()) return false; // consumer has to catch up first
         int l = recvfrom(fd, wrk.buf, wrk.size, 0,
                 &peer.addr, &peer.len);
+        if (l == 0) return rx.empty(); // nothing read, e.g. EOF
         if (l < 0) {
             if (errno != EAGAIN) {
                 perror("reading on socket error");
@@ -134,7 +138,7 @@ struct UDP:
     void process() {
         //transmit side
         while (!tx.empty()) {
-            auto msg = tx.front();
+            auto &msg = tx.front(); // partially sent data gets dropped in place
             int l = sendto(fd, msg.buf, msg.len, 0,
                         &peer.addr, peer.len);
             if (l < 0) {

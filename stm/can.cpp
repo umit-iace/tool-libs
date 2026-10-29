@@ -35,44 +35,38 @@ void _rx_complete(CAN_HandleTypeDef *handle) {
         .ide = (bool)header.IDE,
         .dlc = (uint8_t)header.DLC,
     };
-    HW::reg.from(handle)->rx.push(std::move(msg));
+    auto &rx = HW::reg.from(handle)->rx;
+    if (!rx.full()) {
+        rx.push(std::move(msg));
+    } else {
+        // dropping Message, reader should call more often...
+    }
 }
 
 HW::HW(const Config &c) {
     HW::reg.reg(this, &handle);
 
-    /* Can speed configuration. */
-    /* Based on the values obtained from http://bittiming.can-wiki.info */
-    /* Assuming CAN clock is 108 MHz */
-
-    uint32_t Prescaler = 27;
-    uint32_t ts1 = CAN_BS1_13TQ;
-    uint32_t ts2 = CAN_BS2_2TQ;
-
-    switch (c.kbaud) {
-        case 1000:
-            Prescaler = 3;
-            ts1 = CAN_BS1_15TQ;
-            ts2 = CAN_BS2_2TQ;
-            break;
-        case 500:
-            Prescaler = 6;
-            ts1 = CAN_BS1_15TQ;
-            ts2 = CAN_BS2_2TQ;
-            break;
-        case 250:
-            Prescaler = 12;
-            ts1 = CAN_BS1_15TQ;
-            ts2 = CAN_BS2_2TQ;
-            break;
-        case 125:
-            Prescaler = 27;
-            ts1 = CAN_BS1_13TQ;
-            ts2 = CAN_BS2_2TQ;
-            break;
-        default :
-            assert(false); // don't know that baud
+    /* Can speed configuration, derived from the CAN (APB1) clock. */
+    /* use the first segment layout that divides the clock evenly. */
+    /* sample points between 80% & 89%, cf. http://bittiming.can-wiki.info */
+    /* e.g. 54MHz (F7 @ 216MHz) -> 18tq, 42MHz (F4 @ 168MHz) -> 14tq */
+    static constexpr struct { uint8_t bs1, bs2; } segments[] = {
+        {15, 2}, {13, 2}, {12, 2}, {11, 2}, {10, 2}, {9, 2}, {7, 2},
+    };
+    const uint32_t pclk = HAL_RCC_GetPCLK1Freq();
+    const uint32_t baud = c.kbaud * 1000;
+    uint32_t Prescaler = 0, ts1 = 0, ts2 = 0;
+    for (auto seg : segments) {
+        uint32_t tq = 1 + seg.bs1 + seg.bs2;
+        if (baud == 0 || pclk % (baud * tq)) continue;
+        Prescaler = pclk / (baud * tq);
+        if (Prescaler > 1024) continue;
+        ts1 = (uint32_t)(seg.bs1 - 1) << CAN_BTR_TS1_Pos;
+        ts2 = (uint32_t)(seg.bs2 - 1) << CAN_BTR_TS2_Pos;
+        break;
     }
+    assert(ts1); // don't know how to generate that baud from the CAN clock
+
     /* Configure CAN module registers */
     /* Configuration is handled by CubeMX HAL*/
     handle = {
@@ -127,6 +121,8 @@ bool HW::full() {
     return tx.q.full();
 }
 void HW::push(Message &&msg) {
+    // otherwise a tx complete interrupt in between could leave msg stuck in q
+    CriticalSection cs;
     if (HAL_CAN_GetTxMailboxesFreeLevel(&handle)) {
         _start(&handle, std::move(msg));
     } else {

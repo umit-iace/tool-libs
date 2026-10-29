@@ -5,6 +5,7 @@
 #pragma once
 #include <utils/queue.h>
 #include <utils/deadline.h>
+#include <core/critical.h>
 
 #include "gpio.h"
 #include "registry.h"

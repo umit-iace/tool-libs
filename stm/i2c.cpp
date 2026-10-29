@@ -74,7 +74,8 @@ void _error(I2C_HandleTypeDef *handle) {
     } else if (i2c->active == i2c->Q) {
         auto& rq = i2c->q.front();
         HAL_I2C_Master_Abort_IT(handle, rq.dev->address << 1);
-        i2c->q.pop();
+        // drop instead of pop: don't free memory in here
+        i2c->q.drop();
     }
     i2c->active = i2c->NONE;
     i2c->deadline = Deadline{};
@@ -115,6 +116,8 @@ bool HW::full() {
 }
 
 void HW::push(Request &&rq) {
+    // state is shared with the interrupt handlers
+    CriticalSection cs;
     switch (rq.opts.type) {
         case Request::Type::SLAVE_WRITE:
             out = std::move(rq);

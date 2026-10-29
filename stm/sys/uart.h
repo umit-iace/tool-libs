@@ -6,6 +6,7 @@
 #include <utils/deadline.h>
 #include <utils/queue.h>
 #include <core/kern.h>
+#include <core/critical.h>
 
 #include "gpio.h"
 #include "registry.h"

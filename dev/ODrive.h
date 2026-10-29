@@ -59,7 +59,7 @@ struct ODrive {
                 return;
             }
             Buffer<uint8_t> cmd = 32;
-            cmd.len = snprintf((char*)cmd.buf, cmd.size, cmds.velocity, side, speed, 0);
+            cmd.len = snprintf((char*)cmd.buf, cmd.size, cmds.velocity, side, speed, 0.);
             drive->q.trypush({
                     .cmd = VELO,
                     .m = this,
@@ -85,34 +85,50 @@ struct ODrive {
         void callback(REQ req, const Buffer<uint8_t> &resp) {
             assert(req.m == this);
             if (req.cmd != GET) return; // ignore responses we didn't request
+            char str[64];
+            terminate(resp, str);
             char *next = nullptr;
-            pos = strtod((char*)resp.buf, &next);
+            pos = strtod(str, &next);
             next++; // white space
             vel = strtod(next, nullptr);
         }
     };
+    /** copy response into a '\0' terminated string for parsing */
+    template<size_t N>
+    static void terminate(const Buffer<uint8_t> &b, char (&str)[N]) {
+        size_t n = b.len < N - 1 ? b.len : N - 1;
+        memcpy(str, b.buf, n);
+        str[n] = 0;
+    }
     /** call this regularly to check for updates */
     void poll() {
         if (!_alive) {
             if (!in.empty()) {
                 auto resp = in.pop();
-                double volt = strtod((char*)resp.buf, nullptr);
+                char str[64];
+                terminate(resp, str);
+                double volt = strtod(str, nullptr);
                 if (23. < volt && volt < 25.) {
                     _alive = true;
                 }
             } else if (k.time % 500 == 0) {
-                out.trypush({(const uint8_t*)"r vbus_voltage\n", 16});
+                const char rq[] = "r vbus_voltage\n";
+                out.trypush({(const uint8_t*)rq, sizeof rq - 1}); // without '\0'
             }
             return;
         }
         while (!in.empty()) {
-            assert(!q.empty()); // can't receive things without requesting them first
             auto resp = in.pop();
+            // can't receive things without requesting them first
+            if (q.empty()) continue;
             auto req = q.pop();
             req.m->callback(req, resp);
         }
         while (!q.empty() && q.front().out.buf) { // command has not been sent
-            out.trypush(std::move(q.front().out));
+            if (out.full()) break; // try again on next poll
+            // marks the command as sent, no matter what the Sink does with it
+            Buffer<uint8_t> cmd = std::move(q.front().out);
+            out.push(std::move(cmd));
             if (q.front().cmd != GET) { // only expect response from GET
                 q.pop();
             }
