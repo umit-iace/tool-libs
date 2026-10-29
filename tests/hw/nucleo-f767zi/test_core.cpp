@@ -223,3 +223,41 @@ void test_malloc_isr_stress() {
     CHECK_EQ(mallinfo().uordblks, baseline);
     hwt::info("%lu main loop & %lu interrupt heap operations", ops, isrn);
 }
+
+/* more recurring calls due in the same ms than the kernel queue holds:
+ * SysTick can't allocate, the main loop grows the queue, nobody dies
+ */
+namespace overrun {
+constexpr int N = 100;
+uint32_t calls[N];
+struct Task {
+    int i;
+    void call(uint32_t, uint32_t) { calls[i] = calls[i] + 1; }
+} tasks[N];
+}
+void test_kernel_overrun() {
+    using namespace overrun;
+    size_t capacity = k.q.capacity();
+    uint32_t overruns = k.overruns;
+    Schedule::Schedulable *handles[N];
+    for (int i = 0; i < N; ++i) {
+        tasks[i].i = i;
+        calls[i] = 0;
+        handles[i] = k.every(2, tasks[i], &Task::call);
+    }
+    hwt::sleep(100);
+    for (auto h : handles) k.remove(h);
+    hwt::barrier();
+
+    uint32_t lo = ~0u, hi = 0;
+    for (auto c : calls) {
+        lo = c < lo ? c : lo;
+        hi = c > hi ? c : hi;
+    }
+    // every 2ms for 100ms, one or two calls late when the queue was full
+    CHECK(lo >= 47 && hi <= 51);
+    CHECK(k.overruns > overruns);
+    CHECK(k.q.capacity() > capacity);
+    hwt::info("calls %lu..%lu, %lu overruns, queue %u -> %u", lo, hi,
+            k.overruns - overruns, (unsigned)capacity, (unsigned)k.q.capacity());
+}

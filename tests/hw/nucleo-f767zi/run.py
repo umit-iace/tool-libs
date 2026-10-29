@@ -54,6 +54,10 @@ class Log:
         print(line, flush=True)
 
 
+# --- UART overrun test ---------------------------------------------------
+OVERRUN_BYTES = 6000
+OVERRUN_BLOCK = 0.003  # s the firmware blocks interrupts
+
 # --- Min framing, mirrors comm/min.h -------------------------------------
 HEADER, STUFF = 0xAA, 0x55
 
@@ -184,6 +188,7 @@ def find_port():
 class Session:
     def __init__(self, port, baud, timeout, log):
         self.ser = serial.Serial(port, baud, timeout=0.05)
+        self.baud = baud
         self.timeout = timeout
         self.log = log
         self.buf = b""
@@ -324,20 +329,48 @@ class Session:
         self.log(f"{res:4} uart_min_echo", res)
         return res
 
-    def finish(self):
-        """firmware side of the echo test, False if the UART had to abort"""
+    def finish(self, results):
+        """firmware side of the echo test, then the overrun test"""
         ok = True
         while True:
             line = self.readline()
             # after a failed echo, text may follow binary garbage
             line = line[line.find("HWT "):] if "HWT " in line else line
             if line.startswith("HWT DONE"):
-                return ok
+                if not ok:
+                    results["uart_min_echo"] = "FAIL"
+                return
             if line.startswith("HWT ECHO"):
                 aborts = re.search(r"errors=(\d+).*tx_timeouts=(\d+)", line)
                 bad = aborts and aborts.groups() != ("0", "0")
                 ok = ok and not bad
                 self.log("     " + line[4:], "FAIL" if bad else None)
+            if line.startswith("HWT OVR START"):
+                self.ser.write(bytes(random.Random(5).randrange(256)
+                                     for _ in range(OVERRUN_BYTES)))
+            if line.startswith("HWT OVR END"):
+                results["uart_overrun"] = self.overrun(line)
+
+    def overrun(self, line):
+        """received everything but what arrived while interrupts were off"""
+        v = {k: int(x, 0) for k, x in re.findall(r"(\w+)=(\w+)", line)}
+        lost = OVERRUN_BYTES - v["bytes"]
+        # bytes arriving while blocked (10 bits each), + some slack
+        per_error = int(OVERRUN_BLOCK * self.baud / 10) + 5
+        allowed = v["errors"] * per_error
+        self.log(f"     sent {OVERRUN_BYTES}, received {v['bytes']}, lost {lost} "
+                 f"in {v['errors']} receive errors (code 0x{v['code']:x}), "
+                 f"{v['blocks']} interrupt blocks")
+        res = "PASS"
+        if v["errors"] == 0:
+            self.log("     no overrun happened, nothing tested", "FAIL")
+            res = "FAIL"
+        elif lost > allowed:
+            self.log(f"     lost more than the {per_error} bytes per error "
+                     f"arriving while interrupts were blocked", "FAIL")
+            res = "FAIL"
+        self.log(f"{res:4} uart_overrun", res)
+        return res
 
 
 def once(args, elf, log):
@@ -347,8 +380,7 @@ def once(args, elf, log):
         s.start()
         results = s.tests()
         results["uart_min_echo"] = s.echo(args.frames, args.burst)
-        if not s.finish():
-            results["uart_min_echo"] = "FAIL"
+        s.finish(results)
         return results
     finally:
         s.ser.close()

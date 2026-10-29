@@ -74,6 +74,8 @@ set(STM32_TOOLCHAIN_PATH ON)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../.. tool-libs EXCLUDE_FROM_ALL)
 
 add_executable(hwtest
+    # before main.cpp (Kernel k): its globals are constructed first
+    test_early.cpp
     main.cpp
     board.cpp
     syscalls.c

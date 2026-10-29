@@ -63,3 +63,46 @@ void test_printf_float() {
     }
     CHECK(strcmp(buf, "1.50") == 0);
 }
+
+/* logging into a full sink: give up right away where waiting can't help
+ * (interrupt, interrupts disabled), wait a bounded time otherwise
+ */
+namespace blocking {
+struct Full : Sink<Buffer<uint8_t>> {
+    bool full() override { return true; }
+    void push(Buffer<uint8_t> &&) override { }
+};
+Full full;
+Logger lg{full};
+uint32_t isrcycles;
+void isr() {
+    uint32_t start = board::cycles();
+    lg.warn("from the interrupt\n");
+    isrcycles = board::cycles() - start;
+    board::stress6_stop();
+}
+}
+void test_logger_blocking() {
+    using namespace blocking;
+    uint32_t us = SystemCoreClock / 1000000;
+
+    board::stress6(1000, isr);
+    REQUIRE(hwt::waitFor(10, [&]{ hwt::barrier(); return isrcycles != 0; }));
+    CHECK(isrcycles / us < 100);
+
+    uint32_t start = board::cycles();
+    {
+        CriticalSection cs;
+        lg.info("with interrupts disabled\n");
+    }
+    uint32_t cscycles = board::cycles() - start;
+    CHECK(cscycles / us < 100);
+
+    start = uwTick;
+    lg.info("from the main loop\n");
+    uint32_t ms = uwTick - start;
+    CHECK(ms < 200);
+    CHECK_EQ(lg.dropped, 3);
+    hwt::info("interrupt %lu us, interrupts disabled %lu us, main loop waited %lu ms",
+            isrcycles / us, cscycles / us, ms);
+}

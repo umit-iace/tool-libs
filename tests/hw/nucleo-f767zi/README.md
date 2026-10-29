@@ -60,9 +60,12 @@ Optional:
 |---|---|
 | `critical_nesting`, `critical_blocks_irq` | `CriticalSection` nesting & PRIMASK restore, interrupts really blocked |
 | `kernel_recurring` | `Kernel` time vs. HAL tick, `every()` period from SysTick |
+| `kernel_early` | a global registering with the `Kernel` before it is constructed (`test_early.cpp` is linked before `main.cpp`) |
+| `kernel_overrun` | more calls due in one ms than the kernel queue holds: no exit, the queue grows in the main loop |
 | `scheduler_isr_stress` | `Scheduler` fed from a 20kHz interrupt while `Registry::add` grows the list |
 | `malloc_isr_stress` | heap used from the main loop and a 50kHz interrupt (`__malloc_lock`), no corruption, no leak |
 | `logger`, `printf_float` | `Logger`/`BufferedLogger` truncation with newlib-nano, float formatting linked in |
+| `logger_blocking` | logging into a full sink from an interrupt / with interrupts disabled returns right away, bounded wait otherwise |
 | `pwm_registers`, `pwm_output` | `TIMER::PWM` register values, period 0, measured duty cycle |
 | `spi_until` | `SPI::until` deadline calculation |
 | `spi_transfers` | MOSI/MISO/BOTH, chip selects, mode switching, long transfer vs. deadline |
@@ -77,6 +80,7 @@ Optional:
 | `can_rx_overflow` | full RX queue drops in the interrupt, recovers |
 | `adc_dcache` | `ADC::HW` with circular DMA into cached SRAM1: sequence length, cache maintenance, VREFINT vs. factory calibration |
 | `uart_min_echo` | host driven: `UART::HW` + `Min::In`/`Min::Out` echo incl. worst case byte stuffing, then a burst at full line rate; fails if `stm/uart.cpp` had to abort a transfer (counted by wrapping `HAL_UART_AbortReceive/Transmit`) |
+| `uart_overrun` | host driven: 6000 bytes while interrupts are blocked 3ms every 10ms, only what arrives while blocked may get lost |
 
 ## Adding tests
 
