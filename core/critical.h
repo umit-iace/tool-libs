@@ -37,8 +37,25 @@ public:
     static void leave(uint32_t primask) {
         asm volatile ("msr primask, %0" :: "r"(primask) : "memory");
     }
+    /** true if running in an interrupt handler, e.g. no heap allocations */
+    static bool inInterrupt() {
+        uint32_t ipsr;
+        asm volatile ("mrs %0, ipsr" : "=r"(ipsr));
+        return ipsr != 0;
+    }
+    /** true if running in an interrupt handler or with interrupts disabled,
+     * i.e. nothing else can make progress while waiting here */
+    static bool blocking() {
+        uint32_t ipsr, primask;
+        asm volatile ("mrs %0, ipsr" : "=r"(ipsr));
+        asm volatile ("mrs %0, primask" : "=r"(primask));
+        return ipsr != 0 || (primask & 1);
+    }
 #else
     static uint32_t enter() { return 0; }
     static void leave(uint32_t) { }
+    static bool inInterrupt() { return false; }
+    /** single threaded: waiting never lets anything else make progress */
+    static bool blocking() { return true; }
 #endif
 };

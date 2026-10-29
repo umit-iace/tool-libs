@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "buffer.h"
+#include <utility>
 
 #include <core/streams.h>
 
@@ -86,6 +87,16 @@ public:
     /** return number of elements in queue */
     size_t size() {
         return q.len;
+    }
+    /** number of elements the queue can hold */
+    size_t capacity() {
+        return q.size;
+    }
+    /** exchange contents with other, no allocations */
+    void swap(Queue &other) {
+        std::swap(q, other.q);
+        std::swap(head, other.head);
+        std::swap(tail, other.tail);
     }
     /** check if queue is empty */
     bool empty() override {

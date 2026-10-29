@@ -263,6 +263,10 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
  */
 struct Device : Sink<TPDO>, Sink<SDO> {
     /** Construct new CANOpen Device on network with given ID */
+    /** registers with the kernel, which works before the kernel itself is
+     * constructed. Dispatch has to be constructed first though, e.g. define
+     * both in the same file with the Dispatch first
+     */
     Device(Dispatch &canopen, uint8_t id) : id(id), out(canopen)
     {
         assert(id > 0 && id < 128);
@@ -366,12 +370,17 @@ struct Device : Sink<TPDO>, Sink<SDO> {
      * called in the CAN interrupt
      */
     void process() {
-        CriticalSection cs;
-        if (state.q.empty()) return;
-        if (state.next.when && !state.next(k.time)) return;
-        if (full()) return; // try again later
-        out.push(state.q.pop());
-        state.next = Deadline::after(k.time, 2);
+        SDO next;
+        {
+            // only take it out under the lock, sending may log (and wait)
+            CriticalSection cs;
+            if (state.q.empty()) return;
+            if (state.next.when && !state.next(k.time)) return;
+            if (full()) return; // try again later
+            next = state.q.pop();
+            state.next = Deadline::after(k.time, 2);
+        }
+        out.push(std::move(next));
     }
     void pushorqueue(SDO &&sdo) {
         // always go through the queue to keep requests in order

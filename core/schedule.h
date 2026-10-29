@@ -104,11 +104,28 @@ struct Scheduler {
     // this is pointing to the actual callables in the registries
     // we do not own them
     Queue<Schedule::Schedulable*> q;
-    /** schedule all registered schedulables of registry if necessary */
+    /** number of times schedule() found the queue full in an interrupt
+     *
+     * the remaining schedulables weren't asked, recurring ones run on the
+     * next schedule() call. the queue grows in the next run().
+     */
+    uint32_t overruns{};
+    /** schedule all registered schedulables of registry if necessary
+     *
+     * @return false if the queue was full, see overruns
+     */
     bool schedule(uint32_t time, Schedule::Registry &reg) {
+        // no heap in interrupts, the main loop may grow the queue
+        const bool mayGrow = !CriticalSection::inInterrupt();
         CriticalSection cs;
         for (auto &c: reg.list) {
-            if (q.full()) return false;
+            if (q.full()) {
+                if (!mayGrow) {
+                    ++overruns;
+                    return false;
+                }
+                grow();
+            }
             if (c->schedule(time)) q.push(c);
         }
         return true;
@@ -123,6 +140,10 @@ struct Scheduler {
     }
     /** run scheduled calls */
     void run() {
+        if (overruns != handled) {
+            handled = overruns;
+            grow();
+        }
         while (true) {
             Schedule::Schedulable *s;
             {
@@ -133,6 +154,18 @@ struct Scheduler {
             s->call();
         }
     }
+    /** double the queue capacity, call from the main loop */
+    void grow() {
+        Queue<Schedule::Schedulable*> bigger(2 * q.capacity() + 1);
+        {
+            CriticalSection cs;
+            while (!q.empty()) bigger.push(q.pop());
+            q.swap(bigger);
+        }
+        // the old storage is freed here, outside the CriticalSection
+    }
+private:
+    uint32_t handled{};
 };
 
 inline bool Schedule::Registry::remove(Schedulable *s, Scheduler &sched) {
