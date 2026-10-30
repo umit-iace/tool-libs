@@ -119,6 +119,22 @@ struct FrameRegistry {
         list[id] = nullptr;
     }
 
+    /** register a class method that sees every Frame before it is dispatched,
+     * e.g. to check which frames arrived, replaces an earlier one
+     *
+     * the observer must not unpack the Frame, its handler still has to
+     */
+    template<typename T>
+    void setObserver(T& base, typename MethodHandler<T>::Method method) {
+        delete observer;
+        observer = new MethodHandler(&base, method);
+    }
+    /** unregister the observer, e.g. before its object dies */
+    void removeObserver() {
+        delete observer;
+        observer = nullptr;
+    }
+
     /** handle given Frame and consume it
      *
      * you potentially have to call `.handle(std::move(frame))`
@@ -126,6 +142,7 @@ struct FrameRegistry {
      */
     void handle(Frame &&f) {
         if (f.id >= IDS) return;
+        if (observer) observer->handle(f);
         FrameHandler *c = list[f.id];
         if (c) c->handle(f);
     }
@@ -137,8 +154,10 @@ struct FrameRegistry {
         for (auto &entry: list) {
             delete entry;
         }
+        delete observer;
     }
 private:
+    FrameHandler *observer{};
     void set(uint8_t id, FrameHandler *h) {
         assert(id < IDS && list[id] == nullptr);
         if (id >= IDS) {
