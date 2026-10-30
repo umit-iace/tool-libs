@@ -93,7 +93,9 @@ struct UDP:
         struct sockaddr_storage addr {};
         socklen_t len {};
     } peer;
-    static constexpr size_t BLEN = 128;
+    /// receive buffer, a datagram is read at once and anything beyond is lost,
+    /// pywisp sends all frames of e.g. an experiment start in one datagram of up to 1400 bytes
+    static constexpr size_t BLEN = 2048;
     Queue<Buffer<uint8_t>> tx, rx;
     Buffer<uint8_t> wrk = Buffer<uint8_t>(BLEN);
     /** create UDP Server listening on ip/port, answering whoever sends data
