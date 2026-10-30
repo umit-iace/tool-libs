@@ -57,6 +57,42 @@ TEST_CASE("tool-libs: ODrive") {
         od.poll();
         CHECK(out.last == "f 0\n");
     }
+    SUBCASE("watchdog & recovery commands") {
+        m.feed();
+        CHECK(out.last == "u 0\n");
+        od.clearErrors();
+        CHECK(out.last == "sc\n");
+        ODrive::Motor m1{.drive = &od, .side = 1};
+        m1.request(ODrive::CLOSED_LOOP);
+        CHECK(out.last == "w axis1.requested_state 8\n");
+        CHECK(od.q.empty()); // none of them expects a response
+    }
+    SUBCASE("read axis state") {
+        m.readState();
+        CHECK(out.last == "r axis0.current_state\n");
+        in.push(response("8"));
+        od.poll();
+        CHECK(m.state == 8);
+        CHECK(od.q.empty());
+        m.readState();
+        in.push(response("invalid property")); // not an axis state
+        od.poll();
+        CHECK(m.state == 0);
+    }
+    SUBCASE("commands wait behind an unanswered request") {
+        // one 100ms cycle of the HeliRack: measure, read state, feed, rearm
+        ODrive::Motor m1{.drive = &od, .side = 1};
+        m.measure(); m1.measure();
+        m.readState(); m1.readState();
+        m.feed(); m1.feed();
+        od.clearErrors();
+        m.setSpeed(0); m1.setSpeed(0);
+        CHECK(od.alive());
+        CHECK(out.last == "f 0\n"); // the rest waits for the answer
+        in.push(response("1 2"));
+        od.poll();
+        CHECK(out.last == "f 1\n");
+    }
     SUBCASE("unsolicited response") {
         in.push(response("1 2"));
         od.poll();
