@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cassert>
 #include <initializer_list>
+#include <type_traits>
 
 /**
  * dynamically allocated, but fixed-size buffer template
@@ -34,15 +35,30 @@ struct Buffer {
         assert(ix < len);
         return buf[ix];
     }
-    /** access into known size of buffer */
-    T& operator[](size_t ix) {
-        assert(ix < size);
+    /** access into known size of buffer
+     *
+     * the index is a template: an exact match for every integer type, otherwise
+     * e.g. buf[1] (int) is ambiguous with the built-in index of the implicit
+     * cast to T* (ISO C++, warned by gcc where size_t is unsigned int)
+     */
+    template<typename I, typename = std::enable_if_t<std::is_integral_v<I>>>
+    T& operator[](I ix) {
+        assert(inSize(ix));
         return buf[ix];
     }
     /** access into known size of buffer */
-    const T& operator[](size_t ix) const {
-        assert(ix < size);
+    template<typename I, typename = std::enable_if_t<std::is_integral_v<I>>>
+    const T& operator[](I ix) const {
+        assert(inSize(ix));
         return buf[ix];
+    }
+    /** index within the allocated size, negative ones are not */
+    template<typename I>
+    bool inSize(I ix) const {
+        if constexpr (std::is_signed_v<I>) {
+            if (ix < 0) return false;
+        }
+        return static_cast<size_t>(ix) < size;
     }
     /** simple append single item
      *
