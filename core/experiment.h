@@ -126,6 +126,22 @@ public:
     }
     /// id of the status frame sent to pyWisp, see \ref enableStatus
     static constexpr uint8_t STATUS_ID = 63;
+    /// payload of the status frame [B]
+    static constexpr size_t STATUS_LEN = 21;
+    /** the status frame of \ref enableStatus in the bandwidth summary of the link
+     *
+     * it is sent by the Experiment itself, so it has a payload instead of fields:
+     * ```
+     * TELEMETRY_SUMMARY(telemetry::uart(921600), 20, Model::Telemetry{}, Experiment::StatusFrame{})
+     * ```
+     * see comm/telemetry.h
+     */
+    struct StatusFrame {
+        static constexpr uint8_t id = STATUS_ID; ///< frame id, \ref STATUS_ID
+        static constexpr char name[] = "status"; ///< name in the summary
+        static constexpr size_t payload = STATUS_LEN; ///< [B], \ref STATUS_LEN
+        static constexpr uint32_t period = 250; ///< [ms] default of \ref enableStatus
+    };
     /// bits of the project sent with the status, e.g. "motor driver ready"
     uint8_t statusFlags{};
     /** send a status frame every `ms` and at every start, also while IDLE
@@ -151,7 +167,7 @@ public:
      * | 15-16 | number of frames received before that sync       |
      * | 17-20 | their CRC32                                      |
      */
-    void enableStatus(Sink<Frame> &out, uint32_t ms=250) {
+    void enableStatus(Sink<Frame> &out, uint32_t ms=StatusFrame::period) {
         statusOut = &out;
         if (statusTicker) k.remove(statusTicker);
         statusTicker = k.every(ms, *this, &Experiment::statusTick);
@@ -202,6 +218,7 @@ private:
          .pack<uint8_t>(synced.seq)
          .pack<uint16_t>(synced.count)
          .pack<uint32_t>(synced.crc);
+        assert(f.b.len == STATUS_LEN);
         statusOut->trypush(std::move(f));
     }
     void statusTick(uint32_t time, uint32_t) {

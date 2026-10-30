@@ -13,6 +13,8 @@ target_include_directories(tool-libs INTERFACE .)
 # designated initializers, std::clamp/atomic etc.
 target_compile_features(tool-libs INTERFACE cxx_std_20)
 
+include(cmake/telemetry.cmake)
+
 if(STM32_TOOLCHAIN_PATH)
     add_subdirectory(stm)
 else()
