@@ -111,11 +111,47 @@ void startTransmit(HW *uart) {
     uint32_t need = (1000ull * b.len * (8+2) + baud - 1) / baud + 2;
     uart->tx.deadline = Deadline::after(uwTick, need);
 }
+/** the DMA writes the ring behind the CPU's back */
+void invalidate(HW::RXDMA *d) {
+#if defined(__DCACHE_PRESENT) && (__DCACHE_PRESENT == 1U)
+    SCB_InvalidateDCache_by_Addr((uint32_t *)d->ring.b, sizeof d->ring.b);
+#else
+    (void)d;
+#endif
+}
 void startReceive(HW *uart) {
-    uart->rx.running = HAL_UARTEx_ReceiveToIdle_IT(&uart->handle,
-            uart->rx.buf.buf, uart->rx.buf.size) == HAL_OK;
+    if (auto d = uart->rxDma) {
+        // circular: runs on its own, the main loop collects the bytes, see fetch
+        invalidate(d);
+        uart->rx.running = HAL_UART_Receive_DMA(&uart->handle,
+                d->ring.b, HW::RINGSIZE) == HAL_OK;
+        if (uart->rx.running) d->rd = 0;
+        // the HAL completes an abort after an error in the TC interrupt, keep that one
+        __HAL_DMA_DISABLE_IT(&d->dma.handle, DMA_IT_HT);
+    } else {
+        uart->rx.running = HAL_UARTEx_ReceiveToIdle_IT(&uart->handle,
+                uart->rx.buf.buf, uart->rx.buf.size) == HAL_OK;
+    }
     // HW::service tries again
     if (!uart->rx.running) ++uart->rx.errors;
+}
+/** queue what the DMA received since the last call, runs in the main loop
+ *
+ * shortcut: a ring overrun (main loop stalled for RINGSIZE bytes) is not detected,
+ * MIN drops the broken frames; count laps in the DMA interrupts if that matters */
+void fetch(HW *uart) {
+    auto d = uart->rxDma;
+    size_t wr = HW::RINGSIZE - __HAL_DMA_GET_COUNTER(&d->dma.handle);
+    if (wr == HW::RINGSIZE) wr = 0;
+    if (wr == d->rd || uart->rx.q.full()) return;
+    size_t n = (wr + HW::RINGSIZE - d->rd) % HW::RINGSIZE;
+    invalidate(d);
+    Buffer<uint8_t> b(n);
+    for (size_t i = 0; i < n; ++i) {
+        b.append(d->ring.b[(d->rd + i) % HW::RINGSIZE]);
+    }
+    d->rd = wr;
+    uart->rx.q.push(std::move(b));
 }
 
 /** HAL errors (overrun, framing, noise, parity) are all on the receiving side,
@@ -124,6 +160,12 @@ void deliver(HW *uart, uint16_t nbs);
 void _errcallback(UART_HandleTypeDef *handle) {
     auto uart = HW::reg.from(handle);
     if (!uart) return;
+    if (uart->rxDma) {
+        // framing & noise errors leave the DMA running, MIN drops the broken frame;
+        // after an overrun the HAL stops it, HW::service restarts it after fetching
+        if (handle->RxState != HAL_UART_STATE_BUSY_RX) uart->rx.running = false;
+        return;
+    }
     // hand on what arrived before the error, only the broken byte is lost
     uint16_t got = handle->RxXferSize - handle->RxXferCount;
     HAL_UART_AbortReceive(handle);
@@ -170,7 +212,8 @@ void _rxevent(UART_HandleTypeDef *handle, uint16_t nbs) {
 }
 void _rxcallback(UART_HandleTypeDef *handle) {
     auto uart = HW::reg.from(handle);
-    if (!uart) return;
+    // DMA: a lap of the ring, the bytes are collected by fetch
+    if (!uart || uart->rxDma) return;
     _rxevent(handle, uart->rx.buf.size);
 }
 void _txcallback(UART_HandleTypeDef *handle) {
@@ -182,11 +225,27 @@ void _txcallback(UART_HandleTypeDef *handle) {
     tx.deadline = Deadline{};
     poll(uart);
 }
-void init(HW *uart, UART_HandleTypeDef *handle) {
+void init(HW *uart, UART_HandleTypeDef *handle, DMA_Stream_TypeDef *rxDmaStream,
+          uint32_t rxDmaChannel) {
     halInit();
     k.every(1, *uart, &HW::service);
     HW::reg.reg(uart, handle);
     while (HAL_UART_Init(handle) != HAL_OK);
+    if (rxDmaStream) {
+        uart->rxDma = new HW::RXDMA{{{
+            .stream = rxDmaStream,
+            .init = {
+                .Channel = rxDmaChannel,
+                .Direction = DMA_PERIPH_TO_MEMORY,
+                .MemInc = DMA_MINC_ENABLE,
+                .PeriphDataAlignment = DMA_PDATAALIGN_BYTE,
+                .MemDataAlignment = DMA_MDATAALIGN_BYTE,
+                .Mode = DMA_CIRCULAR,
+                .Priority = DMA_PRIORITY_HIGH,
+            },
+        }}};
+        __HAL_LINKDMA(handle, hdmarx, uart->rxDma->dma.handle);
+    }
     HAL_UART_RegisterRxEventCallback(handle, _rxevent);
     HAL_UART_RegisterCallback(handle, HAL_UART_RX_COMPLETE_CB_ID, _rxcallback);
     HAL_UART_RegisterCallback(handle, HAL_UART_TX_COMPLETE_CB_ID, _txcallback);
@@ -200,7 +259,7 @@ HW::HW(const Manual &conf) {
         .Instance = conf.uart,
         .Init = conf.init,
     };
-    init(this, &handle);
+    init(this, &handle, conf.rxDmaStream, conf.rxDmaChannel);
 }
 HW::HW(const Default &conf) {
     handle = {
@@ -215,7 +274,7 @@ HW::HW(const Default &conf) {
             .OverSampling = UART_OVERSAMPLING_16,
         },
     };
-    init(this, &handle);
+    init(this, &handle, conf.rxDmaStream, conf.rxDmaChannel);
 }
 
 void HW::irqHandler() {
@@ -223,7 +282,10 @@ void HW::irqHandler() {
     /* workaround for HAL BUG: they still change state _AFTER_ calling */
     /* user callbacks (where we had already set it to what we needed) */
     /* luckily we only ever use this one type of reception */
-    handle.ReceptionType = HAL_UART_RECEPTION_TOIDLE;
+    if (!rxDma) handle.ReceptionType = HAL_UART_RECEPTION_TOIDLE;
+}
+void HW::rxDmaIrqHandler() {
+    if (rxDma) HAL_DMA_IRQHandler(&rxDma->dma.handle);
 }
 bool HW::full() {
     return tx.q.full();
@@ -235,15 +297,18 @@ void HW::push(Buffer<uint8_t> &&b) {
     poll(this);
 }
 bool HW::empty() {
+    if (rxDma) fetch(this);
     return rx.q.empty();
 }
 void HW::service(uint32_t, uint32_t) {
     // allocate here, outside the interrupt and the CriticalSection
-    while (rx.spare.size() < rx.spare.capacity()) {
+    while (!rxDma && rx.spare.size() < rx.spare.capacity()) {
         Buffer<uint8_t> b(RXSIZE);
         CriticalSection cs;
         rx.spare.push(std::move(b));
     }
+    // the bytes up to an overrun are still in the ring
+    if (rxDma) fetch(this);
     CriticalSection cs;
     if (!rx.running) startReceive(this);
     poll(this);

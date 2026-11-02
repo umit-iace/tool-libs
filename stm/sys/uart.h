@@ -8,6 +8,7 @@
 #include <core/kern.h>
 #include <core/critical.h>
 
+#include "dma.h"
 #include "gpio.h"
 #include "registry.h"
 
@@ -36,12 +37,19 @@ struct HW : public Sink<Buffer<uint8_t>>, public Source<Buffer<uint8_t>> {
         USART_TypeDef *uart; ///< UART peripheral
         AFIO rx, tx; ///< alternate function initialized pins
         uint32_t baudrate; ///< baudrate
+        /** optional: receive by DMA instead of an interrupt per byte, needed for high
+         * baudrates (921600: a byte every 10.9 us). Enable the clock of the DMA before
+         * and call \ref rxDmaIrqHandler in the interrupt of the stream */
+        DMA_Stream_TypeDef *rxDmaStream{};
+        uint32_t rxDmaChannel{}; ///< DMA channel of the UART's RX request
     };
     /** init struct with full control over UART settings */
     struct Manual {
         USART_TypeDef *uart; ///< UART peripheral
         AFIO rx, tx; ///< alternate function initialized pins
         UART_InitTypeDef init; ///< HAL Init configuration
+        DMA_Stream_TypeDef *rxDmaStream{}; ///< see Default
+        uint32_t rxDmaChannel{}; ///< see Default
     };
     /** constructor with default config */
     HW(const Default &conf);
@@ -60,6 +68,8 @@ struct HW : public Sink<Buffer<uint8_t>>, public Source<Buffer<uint8_t>> {
      * call this directly in interrupt
      */
     void irqHandler();
+    /** DMA stream interrupt handler of the reception, call it directly in interrupt */
+    void rxDmaIrqHandler();
     /** stm glue registry for internal use */
     inline static Registry<HW, UART_HandleTypeDef, 8> reg;
     /** size of the receive buffers */
@@ -74,6 +84,18 @@ struct HW : public Sink<Buffer<uint8_t>>, public Source<Buffer<uint8_t>> {
         uint32_t errors; ///< reception the HAL refused to start
         uint32_t allocs; ///< buffers allocated in the interrupt (no spare)
     } rx{};
+    /** [B] ring the DMA receives into, whole cache lines (Cortex-M7: 32 bytes)
+     *
+     * emptied by the main loop, at 921600 baud it holds 11 ms */
+    static constexpr size_t RINGSIZE = 1024;
+    /** DMA reception, nullptr: interrupt per byte */
+    struct RXDMA {
+        DMA::HW dma;
+        struct alignas(32) {
+            uint8_t b[RINGSIZE];
+        } ring{};
+        size_t rd{}; ///< position up to which the ring was read
+    } *rxDma{};
     /** tx state */
     struct TX {
         Queue<Buffer<uint8_t>> q;
