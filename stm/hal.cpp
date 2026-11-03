@@ -40,25 +40,31 @@ void __malloc_unlock(struct _reent *) {
   */
 void NMI_Handler(void) { }
 
+/* The fault handlers below just halt. They are weak: an application driving
+ * hardware that must not keep running on a fault (e.g. motor PWM) defines
+ * its own to switch it off first. Also reached by a failed assert without a
+ * debugger (bkpt escalates to HardFault).
+ */
+
 /**
   * @brief This function handles Hard fault interrupt.
   */
-void HardFault_Handler(void) { while (1) ; }
+__attribute__((weak)) void HardFault_Handler(void) { while (1) ; }
 
 /**
   * @brief This function handles Memory management fault.
   */
-void MemManage_Handler(void) { while (1) ; }
+__attribute__((weak)) void MemManage_Handler(void) { while (1) ; }
 
 /**
   * @brief This function handles Pre-fetch fault, memory access fault.
   */
-void BusFault_Handler(void) { while (1) ; }
+__attribute__((weak)) void BusFault_Handler(void) { while (1) ; }
 
 /**
   * @brief This function handles Undefined instruction or illegal state.
   */
-void UsageFault_Handler(void) { while (1) ; }
+__attribute__((weak)) void UsageFault_Handler(void) { while (1) ; }
 
 /**
   * @brief This function handles System service call via SWI instruction.
