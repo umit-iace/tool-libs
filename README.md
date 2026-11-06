@@ -48,6 +48,8 @@ Providing a bunch of helpers for communication with pyWisp, but also for
 character streams.
  - Min - main implementation of packing & unpacking data for transfer to / from
  pyWisp
+ - FixedFrame - fixed size records (1 byte id + 80 bytes payload) as pyWisp's
+ TcpConnection sends them, for reliable byte streams such as TCP
  - FrameRegistry - the place where consumers of Frames can sign up for their
  respective IDs
  - SeriesUnpacker - unpack a series of data sent from pyWisp
@@ -94,6 +96,10 @@ following classes are implemented:
 
 # Linux
 An implementation for the Kernel backend for simulation purposes.
+The following communication backends are implemented in sys/comm.h:
+ - TTY - serial ports and other character devices
+ - UDP - datagram server, answers whoever sent data last (use with Min)
+ - TCP - stream server, one client at a time (use with FixedFrame)
 
 # Usage
 This package provides two CMake library targets:
