@@ -6,9 +6,11 @@
 #pragma once
 #include <utils/queue.h>
 #include <utils/deadline.h>
+#include <core/critical.h>
 
 #include "gpio.h"
 #include "registry.h"
+#include "deferred.h"
 namespace SPI {
 class Request; //< forward declaration
 enum class Mode { M0, M1, M2, M3 }; //< SPI Modes 0 - 3
@@ -43,8 +45,12 @@ struct Device {
         cs.set(!sel);
     }
 
-    /** is called as soon as requested data arrived over wire */
-    virtual void callback(const Request req)=0;
+    /** is called as soon as requested data arrived over wire
+     *
+     * runs in the main loop (Kernel scheduler), not in the interrupt
+     */
+    virtual void callback(const Request &req)=0;
+    virtual ~Device() = default;
 };
 
 /**
@@ -69,6 +75,8 @@ struct HW : public Sink<Request> {
     inline static Registry<HW, SPI_HandleTypeDef, 4> reg{};
 
     Queue<Request> q;
+    /** completed requests, their callbacks run in the main loop */
+    Deferred<Request> completed;
     Deadline deadline{};
     struct {
         bool xfer;

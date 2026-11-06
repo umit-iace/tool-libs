@@ -3,32 +3,11 @@
  * Copyright (c) 2023 IACE
  */
 #pragma once
+#include "crc32.h"
 #include "frameregistry.h"
 
 #include <stdint.h>
 #include <utils/queue.h>
-
-/** simple CRC32 implementation */
-struct CRC32 {
-    /** state */
-    uint32_t checksum{0xffffffff};
-    /** reinitialize state */
-    void init() {
-        *this = CRC32{};
-    }
-    /** calculate step with given byte */
-    void step(uint8_t byte) {
-        checksum ^= byte;
-        for (uint32_t j = 0; j < 8; j++) {
-            uint32_t mask = (uint32_t) -(checksum & 1U);
-            checksum = (checksum >> 1) ^ (0xedb88320U & mask);
-        }
-    }
-    /** get final CRC32 value */
-    uint32_t finalize() {
-        return ~checksum;
-    }
-};
 
 /** full min-based connection wrapper */
 struct Min {
@@ -65,6 +44,8 @@ struct Min {
         Frame frame{};
         Queue<Frame> queue{20};
         Source<Buffer<uint8_t>> &source;
+        Buffer<uint8_t> pending; // received, not parsed yet
+        size_t pos{};
         uint8_t header_seen{0}, frame_length{0};
         uint32_t frame_crc{0};
         // Receiving state machine
@@ -122,7 +103,10 @@ struct Min {
                 case RECEIVING_LENGTH:
                     frame_length = b;
                     crc.step(b);
-                    if (frame_length > 0) {
+                    if (frame_length > frame.b.size) {
+                        // doesn't fit into Frame, drop it
+                        state = SEARCHING_FOR_SOF;
+                    } else if (frame_length > 0) {
                         state = RECEIVING_PAYLOAD;
                     } else {
                         state = RECEIVING_CHECKSUM_3;
@@ -169,12 +153,20 @@ struct Min {
     public:
         /** unwrap given Buffer stream into Frame */
         In(Source<Buffer<uint8_t>> &from) : source{from} { }
-        /** check if Frame available */
+        /** check if Frame available
+         *
+         * stops reading when the Frame queue is full, the rest of the
+         * current Buffer is kept for the next call
+         */
         bool empty() override {
-            while (!queue.full() && !source.empty()) {
-                for (auto b: source.pop()) {
-                    byte(b);
+            while (!queue.full()) {
+                if (pos >= pending.len) {
+                    if (source.empty()) break;
+                    pending = source.pop();
+                    pos = 0;
+                    continue;
                 }
+                byte(pending.buf[pos++]);
             }
             return queue.empty();
         }
@@ -185,9 +177,6 @@ struct Min {
          */
         Frame pop() override {
             return queue.pop();
-        }
-        void *operator new(size_t sz, In *where) {
-            return where;
         }
     };
     /** outgoing Min stream
@@ -207,7 +196,7 @@ struct Min {
      **/
     class Out : public Sink<Frame> {
         CRC32 crc{};
-        Buffer<uint8_t> req = 128;
+        Buffer<uint8_t> req;
         Sink<Buffer<uint8_t>> &out;
         uint8_t header_countdown = 2;
         void stuff(uint8_t b) {
@@ -236,7 +225,10 @@ struct Min {
         }
         /** push Frame through to underlying Buffer stream */
         void push(Frame &&f) override {
-            req = 128;
+            // id, length, payload & crc may be stuffed: worst case every
+            // second byte is followed by a stuff byte
+            size_t stuffed = 2 + f.b.len + 4;
+            req = Buffer<uint8_t>(3 + stuffed + stuffed / 2 + 1);
             crc.init();
             nostuff(HEADER_BYTE);
             nostuff(HEADER_BYTE);
@@ -253,9 +245,6 @@ struct Min {
             stuff((uint8_t) ((sum >> 0) & 0xff));
             nostuff(EOF_BYTE);
             out.trypush(std::move(req));
-        }
-        void *operator new(size_t sz, Out *where) {
-            return where;
         }
     };
     /** incoming Frame stream */

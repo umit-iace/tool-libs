@@ -28,7 +28,7 @@ struct SplitPush : Sink<Buffer<uint8_t>> {
     }
     void push(Buffer<uint8_t> &&in) override {
         left.push(in);
-        right.push(in);
+        right.push(std::move(in));
     }
     /** set sinks for splitter */
     SplitPush(Sink<Buffer<uint8_t>> &left, Sink<Buffer<uint8_t>> &right) : left(left), right(right) {}
@@ -63,7 +63,8 @@ struct SplitPull {
         bool empty() override {
             while (!q.full() && !from.empty()) {
                 auto b = from.pop();
-                other->push(b);
+                // other side not keeping up, it misses out on this one
+                if (!other->full()) other->push(b);
                 q.push(std::move(b));
             }
             return q.empty();
@@ -135,18 +136,17 @@ struct Tee : Source<Buffer<uint8_t>> {
  */
 struct Hexify : Sink<Buffer<uint8_t>> {
     static constexpr uint8_t map[]="0123456789abcdef";
-    static constexpr size_t blen = 512*3;
     Sink<Buffer<uint8_t>> &down;
-    Buffer<uint8_t> work = blen;
     bool full() override {
         return down.full();
     }
     void push(Buffer<uint8_t> &&in) override {
+        // three characters per byte: \xy
+        Buffer<uint8_t> hex(3 * in.len);
         for (auto b: in) {
-            work.append({'\\', map[b >> 4], map[b & 0xf]});
+            hex.append({'\\', map[b >> 4], map[b & 0xf]});
         }
-        down.push(std::move(work));
-        work = blen;
+        down.push(std::move(hex));
     }
     Hexify(Sink<Buffer<uint8_t>> &down) : down(down) {}
 };

@@ -112,6 +112,11 @@ struct BNO085 : I2C::Device {
         }
     };
 
+    /** Acceleration in direction of axes, in m/s^2 */
+    struct Acceleration {
+        double x, y, z;
+    } acceleration;
+
     /** high-speed Gyro-Integrated Rotation Vector
      * includes estimation of rotation velocities
      */
@@ -126,8 +131,11 @@ struct BNO085 : I2C::Device {
     using Data = Buffer<uint8_t>;
     using View = Slice<uint8_t>;
     int8_t read8(View d) { return d[0]; }
-    int16_t read16(View d) { return d[0] | d[1] << 8; }
-    int32_t read32(View d) { return d[0] | d[1] << 8 | d[2] << 16 | d[3] << 24; }
+    int16_t read16(View d) { return (int16_t)(d[0] | d[1] << 8); }
+    int32_t read32(View d) {
+        return (int32_t)((uint32_t)d[0] | (uint32_t)d[1] << 8
+                | (uint32_t)d[2] << 16 | (uint32_t)d[3] << 24);
+    }
 
     constexpr double Q(uint8_t p) {
         return 1. / (1 << p);
@@ -159,7 +167,7 @@ struct BNO085 : I2C::Device {
      * returns the sequence of sent message
      */
     uint8_t sendMessage(const Message &msg) {
-        Data data = msg.cargo.len + 4;
+        Data data(msg.cargo.len + 4);
         uint8_t sq = seq[msg.chan]++;
         // build header
         data.append({
@@ -171,7 +179,7 @@ struct BNO085 : I2C::Device {
             .dev = this,
             .data = data,
         });
-        return sq-1;
+        return sq;
     }
 
     void sendTransaction(Queue<Transaction> &q, Transaction &&t) {
@@ -215,10 +223,14 @@ struct BNO085 : I2C::Device {
         lg->info("advertisement\n");
         uint8_t last_guid {};
         while (data.len) {
-            assert (data.len > 2);
+            if (data.len < 2) break; // truncated
             AdvTag tag {data[0]};
             size_t len {data[1]};
-            int val;
+            if (data.len < len + 2) { // truncated, don't read beyond
+                lg->warn("truncated advertisement\n");
+                break;
+            }
+            int val = 0;
             switch (len) {
                 case 1: val = read8({data,2}); break;
                 case 2: val = read16({data,2}); break;
@@ -304,8 +316,28 @@ struct BNO085 : I2C::Device {
         }
     }
 
+    /** length of the sensor reports we know, 0 for unknown ones */
+    static size_t reportLength(uint8_t id) {
+        switch (id) {
+        case 0x01: return 10;
+        case 0x05: return 14;
+        case 0xFA: return 5;
+        case 0xFB: return 5;
+        case 0xFC: return 17;
+        default: return 0;
+        }
+    }
+
     void handleWakeNormal(View cargo) {
-        while (cargo.len) switch (cargo[0]) {
+        while (cargo.len) {
+        // the device decides the lengths, don't read beyond what came in
+        size_t need = reportLength(cargo[0]);
+        if (need && cargo.len < need) {
+            if (lg) lg->warn("truncated Report: [0x%.2x]\n", cargo[0]);
+            return;
+        }
+        switch (cargo[0]) {
+        case 0x01: cargo = handleAccelerationReport(cargo); break;
         case 0x05: cargo = handleRotVecReport(cargo); break;
         case 0xFA: cargo = handleRebaseTimeStamp(cargo); break;
         case 0xFB: cargo = handleBaseTimeStamp(cargo); break;
@@ -315,6 +347,17 @@ struct BNO085 : I2C::Device {
                if (lg) logData({*cargo.buf,0});
                return;
         }
+        }
+    }
+
+    View handleAccelerationReport(View cargo) {
+        assert(cargo[0] == 0x01); // report ID
+        this->acceleration = {
+            .x = read16({cargo, 4}) * Q(8),
+            .y = read16({cargo, 6}) * Q(8),
+            .z = read16({cargo, 8}) * Q(8),
+        };
+        return {cargo, 10};
     }
 
     View handleRotVecReport(View cargo) {
@@ -331,6 +374,7 @@ struct BNO085 : I2C::Device {
 
     void handleGIRV(View cargo) {
         // note: does not contain report ID
+        if (cargo.len < 14) return; // truncated
         this->girv.pose = {
             .r = read16({cargo, 6}) * Q(14),
             .i = read16({cargo, 0}) * Q(14),
@@ -472,7 +516,10 @@ struct BNO085 : I2C::Device {
         case 0: // progress
             break;
         default: // complete or error
-            qs.read.pop(); sendQueued(qs.read); break;
+            if (qs.read.empty()) break; // nothing requested, stray response
+            qs.read.drop();
+            sendQueued(qs.read);
+            break;
         }
     }
 
@@ -608,31 +655,32 @@ struct BNO085 : I2C::Device {
 
     void callback(const I2C::Request &rq) override {
         if (!rq.opts.read) {
-            //delete
-            /* if (rq.data.len >4) { */
-            /*     lg->info("sent: "); */
-            /*     logData({rq.data,0}); */
-            /* } */
-            //delete
             return; // do nothing on successful writes
         }
 
         if (rq.data.len >= 4) {
-            /* bool continuation = rq.data[1] & 0x80; */
-            const unsigned int len = (uint16_t)(rq.data[1] & 0x7f) << 8 | rq.data[0];
-            if (len == 0xffff) return; // 'length of 65535 is an error.'
+            const unsigned int raw = (unsigned)rq.data[1] << 8 | rq.data[0];
+            if (raw == 0xffff) return; // 'length of 65535 is an error.'
+            unsigned int len = raw & 0x7fff;
             const Channel chan = (Channel)rq.data[2];
             const uint8_t seq = rq.data[3];
             if (len == 0) return; // length of 0 indicates 'no data'
+            if (chan >= C_LAST) { // garbled header
+                if (lg) lg->warn("unknown channel: %d\n", chan);
+                return;
+            }
             if (seq != this->seq[chan]) {
                 //error?
                 if (lg) lg->warn("expected seq: %d, got %d\n", this->seq[chan], seq);
             }
             this->seq[chan] = seq + 1;
+            // the length comes from the device: don't allocate whatever it
+            // says, longer messages are cut (the rest follows as continuation)
+            if (len > MAXREAD) len = MAXREAD;
             if (len > rq.data.len) { // need to get more data
                 bus.trypush({
                         .dev = this,
-                        .data = len,
+                        .data = Data(len),
                         .opts = {
                             .read = true,
                         },
@@ -643,7 +691,6 @@ struct BNO085 : I2C::Device {
             View data {rq.data, 4};
             switch (chan) {
             case C_SHTP: handleSHTP(data); return;
-            /* case C_DEV: handleDevice(data); return; */
             case C_CTRL: handleControl(data); return;
             case C_NORM ... C_WAKE: handleWakeNormal(data); return;
             case C_GIRV: handleGIRV(data); return;
@@ -671,8 +718,24 @@ struct BNO085 : I2C::Device {
     void poll(uint32_t, uint32_t) {
         bus.trypush({
             .dev = this,
-            .data = 4,
+            .data = Buffer<uint8_t>(4),
             .opts = { .read = true },
+        });
+    }
+
+    /** enable raw acceleration sensor at given frequency */
+    void enableAcceleration(uint32_t Hz = 100) {
+        setFeature({
+            .report_interval = 1'000'000 / Hz,
+            .reportID = 0x01,
+        });
+    }
+
+    /** disable raw acceleration sensor */
+    void disableAcceleration() {
+        setFeature({
+            .report_interval = 0,
+            .reportID = 0x01,
         });
     }
 
@@ -732,4 +795,6 @@ struct BNO085 : I2C::Device {
     }
 
     BufferedLogger *lg = nullptr;
+    /** biggest read we do, bigger messages are cut */
+    static constexpr unsigned int MAXREAD = 1024;
 };

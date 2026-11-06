@@ -6,8 +6,16 @@
 
 using namespace SPI;
 namespace SPI {
-Deadline until(size_t datasize) {
-    return {};
+/** generous deadline for transferring datasize bytes */
+Deadline until(SPI_HandleTypeDef *handle, size_t datasize, uint32_t now) {
+    // SPI peripherals sit on either APB, assume the slower one
+    uint32_t pclk = HAL_RCC_GetPCLK1Freq();
+    if (HAL_RCC_GetPCLK2Freq() < pclk) pclk = HAL_RCC_GetPCLK2Freq();
+    uint32_t div = 2U << ((handle->Init.BaudRatePrescaler & SPI_CR1_BR) >> SPI_CR1_BR_Pos);
+    uint32_t bits_per_ms = pclk / div / 1000;
+    if (!bits_per_ms) bits_per_ms = 1;
+    // + 2ms margin, so short transfers don't time out on tick granularity
+    return Deadline::after(now, (uint32_t)(datasize * 8 / bits_per_ms) + 2);
 }
 }
 
@@ -46,7 +54,7 @@ void _startMaster(HW *spi) {
     if (spi->active.conf != rq.dev->conf) switchmode(spi, rq.dev->conf);
     // activate the chip
     rq.dev->select(true);
-    spi->deadline = until(sz);
+    spi->deadline = until(&spi->handle, sz, uwTick);
 
     // transfer the data
     switch (rq.dir) {
@@ -71,24 +79,47 @@ void poll(HW *spi) {
     if (!spi->active.xfer && !spi->q.empty()) return _startMaster(spi);
 }
 
+/** stop the transfer on register level
+ *
+ * HAL_SPI_Abort(_IT) busy wait for the SPI interrupt to acknowledge, which
+ * never comes inside the CriticalSection of push() (~30ms at 216MHz)
+ */
+void _abort(SPI_HandleTypeDef *handle) {
+    CLEAR_BIT(handle->Instance->CR2, SPI_CR2_TXEIE | SPI_CR2_RXNEIE | SPI_CR2_ERRIE);
+    __HAL_SPI_DISABLE(handle);
+    while (__HAL_SPI_GET_FLAG(handle, SPI_FLAG_RXNE)) (void)handle->Instance->DR;
+    __HAL_SPI_CLEAR_OVRFLAG(handle);
+    handle->TxXferCount = 0;
+    handle->RxXferCount = 0;
+    handle->State = HAL_SPI_STATE_READY;
+    __HAL_UNLOCK(handle);
+}
+
 void _error(SPI_HandleTypeDef *handle) {
     auto spi = HW::reg.from(handle);
-    auto &rq= spi->q.front();
+    if (!spi) return;
     if (spi->active.xfer) {
+        auto &rq = spi->q.front();
         rq.dev->select(false);
-        HAL_SPI_Abort_IT(handle);
+        _abort(handle);
+        // give up on this request, a broken device would block the bus
+        // forever otherwise. drop instead of pop: don't free memory in here
+        spi->q.drop();
         spi->deadline = {};
         spi->active.xfer = false;
     }
     __HAL_SPI_DISABLE(handle);
     __HAL_SPI_ENABLE(handle);
+    // called from the HAL error interrupt as well, nobody else restarts the queue
+    if (!spi->q.empty()) _startMaster(spi);
 }
 
 void _complete(SPI_HandleTypeDef *handle) {
     auto spi = HW::reg.from(handle);
+    if (!spi) return;
     auto& rq = spi->q.front();
     rq.dev->select(false);
-    rq.dev->callback(rq);
+    spi->completed.complete(std::move(rq));
     spi->q.drop();
     spi->deadline = {};
     spi->active.xfer = false;
@@ -100,11 +131,14 @@ bool HW::full() {
 }
 
 void HW::push(Request &&rq) {
+    // state is shared with the interrupt handlers
+    CriticalSection cs;
     q.push(std::move(rq));
     poll(this);
 }
 
 HW::HW(const HW::Conf &conf) {
+    halInit();
     HW::reg.reg(this, &handle);
     handle = {
         .Instance = conf.spi,

@@ -13,6 +13,7 @@
  */
 template<typename T>
 struct Sink {
+    virtual ~Sink() = default;
     /// check if sink is full
     virtual bool full()=0;
     /// copy semantics
@@ -38,6 +39,7 @@ struct Sink {
  */
 template<typename T>
 struct Source {
+    virtual ~Source() = default;
     /// check if source is empty
     virtual bool empty()=0;
     /// pull object from source

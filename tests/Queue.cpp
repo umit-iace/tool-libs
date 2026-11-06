@@ -119,6 +119,26 @@ TEST_CASE("tool-libs: queue: Buffer move constructor") {
     }
     CHECK(q.empty());
 }
+TEST_CASE("tool-libs: queue: partially filled Buffer") {
+    Buffer<int> b(4);
+    b.append({1, 2});
+    SUBCASE("copy") {
+        Queue<int> q(b);
+        q.push(3);
+        CHECK(q.size() == 3);
+        for (int i = 0; i < 3; ++i) {
+            CHECK(i+1 == q.pop());
+        }
+    }
+    SUBCASE("move") {
+        Queue<int> q(std::move(b));
+        q.push(3);
+        CHECK(q.size() == 3);
+        for (int i = 0; i < 3; ++i) {
+            CHECK(i+1 == q.pop());
+        }
+    }
+}
 TEST_CASE("tool-libs: queue: copy operator") {
     Queue<int> q{10}, q2;
     for (int i = 0; i < 7; ++i) {
@@ -212,4 +232,13 @@ TEST_CASE("tool-libs: queue: buffer of buffers cstr") {
     CHECK(b[0] == 1);
     CHECK(b[1] == 2);
     CHECK(b[2] == 3);
+}
+
+TEST_CASE("tool-libs: queue: getAt gives access in place") {
+    Queue<int> q(3);
+    q.push(1);
+    q.push(2);
+    q.getAt(1) = 5;
+    q.pop();
+    CHECK(q.pop() == 5);
 }

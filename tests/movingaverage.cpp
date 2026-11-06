@@ -22,3 +22,10 @@ TEST_CASE("tool-libs: movingaverage: MovAvValueTest") {
         CHECK(myMovingAverage() == i/2.);
     }
 }
+
+TEST_CASE("tool-libs: moving average: no samples yet") {
+    MovingAverage<int, 3> m;
+    CHECK(m() == 0);
+    m(3);
+    CHECK(m() == 3);
+}

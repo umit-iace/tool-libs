@@ -54,3 +54,10 @@ TEST_CASE("tool-libs: bistream: long") {
         }
     }
 }
+
+TEST_CASE("tool-libs: bitstream: ranges wider than int") {
+    uint8_t data[8] = {0x80, 0, 0, 0, 0, 0, 0, 0x01};
+    BitStream bs{data};
+    CHECK(bs.range<uint64_t>(0, 64) == 0x8000000000000001ull);
+    CHECK(bs.range<uint64_t>(0, 40) == 0x8000000000ull);
+}

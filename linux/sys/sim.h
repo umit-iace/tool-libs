@@ -16,11 +16,13 @@ static uint16_t getSimTimeStep(int argc, char *argv[]) {
         default:
             k.log.warn("usage: %s [time_factor]\n", argv[0]);
             k.exit(EXIT_FAILURE);
+            return 1000;
     }
-    uint16_t factor = strtol(argv[1],nullptr,10);
+    long factor = strtol(argv[1],nullptr,10);
     if (factor < 1 || factor > 1000) {
         k.log.warn("factor _must_ be in range [1, 1000]\n");
         k.exit(EXIT_FAILURE);
+        return 1000;
     }
     uint16_t ret = 1000/factor;
     k.log.info("using simulation time step = %dus\n", ret);

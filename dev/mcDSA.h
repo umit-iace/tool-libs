@@ -54,8 +54,6 @@ struct mcDSA : CAN::Open::Device {
      */
     void speed(double speed) {
         speed = fmin(1, fmax(-1, speed));
-        /* int iSpeed = (int) (6000 / M_PI / CAR_WHEEL_DIAMETER * dSpeed); // calculates from m/s to (U/100) / min */
-        /* int iSpeed; */
         speedPDO.map[0].data = 6000 / M_PI * speed;
         wPDO(speedPDO);
     }
@@ -70,11 +68,11 @@ struct mcDSA : CAN::Open::Device {
      * motor position (angle), motor error.
      */
     void readData() {
-        read(0x3a04, 1);//, &this->tData.tSpeed);
-        read(0x3361, 0);//, &this->tData.tSpeedDes);
-        read(0x3262, 1);//, &this->tData.tCurrent);
-        read(0x394a, 0);//, &this->tData.tPosition);
-        read(0x3001, 0);//, &this->tData.tError);
+        read(0x3a04, 1); // speed
+        read(0x3361, 0); // desired speed
+        read(0x3262, 1); // current
+        read(0x394a, 0); // position
+        read(0x3001, 0); // error
     }
 
     /**
@@ -84,15 +82,17 @@ struct mcDSA : CAN::Open::Device {
         return msrPDO.map[1].data;
     }
 
-    void callback(CAN::Open::SDO rq) {
+    void callback(CAN::Open::SDO rq) override {
+        // measurements are signed 32 bit values
+        int32_t val = (int32_t)rq.data;
         switch(rq.ix) {
-        case 0x3a04: assert(rq.sub == 1); meas.speed = rq.data; break;
-        case 0x3361: assert(rq.sub == 0); meas.speedDes = rq.data; break;
-        case 0x3262: assert(rq.sub == 1); meas.current = rq.data; break;
-        case 0x394a: assert(rq.sub == 0); meas.position = rq.data; break;
+        case 0x3a04: assert(rq.sub == 1); meas.speed = val; break;
+        case 0x3361: assert(rq.sub == 0); meas.speedDes = val; break;
+        case 0x3262: assert(rq.sub == 1); meas.current = val; break;
+        case 0x394a: assert(rq.sub == 0); meas.position = val; break;
         case 0x3001: assert(rq.sub == 0); meas.error = rq.data; break;
         }
     }
-    void callback(CAN::Open::TPDO rq) {
+    void callback(CAN::Open::TPDO) override {
     }
 };

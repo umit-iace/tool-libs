@@ -6,6 +6,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 
 #include "sys/spi.h"
 
@@ -45,14 +46,18 @@ struct MAX31855 : SPI::Device {
     void sense() {
         bus.trypush({
             .dev = this,
-            .data = 4,
+            .data = Buffer<uint8_t>(4),
             .dir = SPI::Request::MISO,
             });
     }
 
-    void callback(const SPI::Request rq) override {
-        int32_t raw = rq.data.buf[0]<<24 | rq.data.buf[1]<<16 | rq.data.buf[2]<<8 | rq.data.buf[3];
-        data = *(sensor *)&raw;
+    void callback(const SPI::Request &rq) override {
+        if (rq.data.len < 4) return;
+        uint32_t raw = (uint32_t)rq.data.buf[0] << 24 | (uint32_t)rq.data.buf[1] << 16
+                     | (uint32_t)rq.data.buf[2] << 8 | rq.data.buf[3];
+        // bitfield layout as documented below (lsb first, GCC on little endian)
+        static_assert(sizeof(sensor) == sizeof(raw));
+        memcpy(&data, &raw, sizeof(raw));
     }
 
     struct sensor {

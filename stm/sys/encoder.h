@@ -41,7 +41,7 @@ namespace TIMER {
 
         Encoder(Conf conf) :
                 tim(TIMER::HW(conf.tim, 0, 0xffff)),
-                dFactor(conf.factor) {
+                factor(conf.factor) {
 
             TIM_HandleTypeDef *htim = &tim.handle;
             TIM_Encoder_InitTypeDef sConfig = {
@@ -65,10 +65,10 @@ namespace TIMER {
          * do this periodically to update encoder state
          */
         void measure() {
-            int16_t iCurrEnc = __HAL_TIM_GET_COUNTER(&tim.handle);
-            double dDiff = (int16_t) (iCurrEnc - iLastVal) * dFactor;
-            dPosition += dDiff;
-            iLastVal = iCurrEnc;
+            int16_t count = __HAL_TIM_GET_COUNTER(&tim.handle);
+            double diff = (int16_t) (count - last) * factor;
+            position += diff;
+            last = count;
         }
 
         /**
@@ -76,7 +76,7 @@ namespace TIMER {
          * @return 16bit counter value
          */
         int16_t getValue() {
-            return iLastVal;
+            return last;
         }
 
         /**
@@ -85,7 +85,7 @@ namespace TIMER {
         * @return position, based on initialized factor
         */
         double getPosition() {
-            return dPosition;
+            return position;
         }
 
         /**
@@ -93,15 +93,15 @@ namespace TIMER {
          */
         void zero() {
             __HAL_TIM_SET_COUNTER(&tim.handle, 0);
-            iLastVal = 0;
-            dPosition = 0;
+            last = 0;
+            position = 0;
         }
 
     private:
         TIMER::HW tim;
-        double dFactor;
-        int16_t iLastVal = 0;
+        double factor;
+        int16_t last = 0;
 
-        double dPosition = 0;
+        double position = 0;
     };
 }

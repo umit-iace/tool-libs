@@ -1,7 +1,12 @@
+/** @file canopen.h
+ *
+ * Copyright (c) 2023 IACE
+ */
 #pragma once
 #include "can.h"
 #include <utils/deadline.h>
 #include <core/kern.h>
+#include <core/critical.h>
 
 
 namespace CAN {
@@ -35,7 +40,7 @@ struct SDO {
 
     Message toMessage() {
         return {
-            .data = cmd | ix << 8 | sub << 24 | (uint64_t)data << 32,
+            .data = cmd | (uint64_t)ix << 8 | (uint64_t)sub << 24 | (uint64_t)data << 32,
             .id = (uint32_t)0x600 + nodeID,
             .opts = { .rtr = 0, .ide = 0, .dlc = 8},
         };
@@ -73,10 +78,14 @@ struct RPDO {
         uint64_t data = 0;
         uint8_t shift = 0;
         for (auto &i : map) {
-            data |= (i.data & (((uint64_t)1 << i.len)-1)) << shift;
+            if (shift + i.len > 64) break;
+            data |= ((uint64_t)(uint32_t)i.data & mask(i.len)) << shift;
             shift += i.len;
         }
         return {.data=data, .id = COB, .opts = {.dlc=(uint8_t)(shift / 8)}};
+    }
+    static uint64_t mask(uint8_t bits) {
+        return bits >= 64 ? ~0ull : (1ull << bits) - 1;
     }
 };
 /** CANOpen Transmit Process Data Object Type */
@@ -89,7 +98,8 @@ struct TPDO {
     void receive(uint64_t d) {
         uint8_t shift = 0;
         for (auto &i : map) {
-            i.data = d >> shift & (((uint64_t)1 << i.len) - 1);
+            if (shift + i.len > 64) break;
+            i.data = d >> shift & RPDO::mask(i.len);
             shift += i.len;
         }
     }
@@ -99,7 +109,8 @@ struct TPDO {
  *
  * use this as a middle layer between the CAN bus and the Device devices to
  * handle translation between the protocols.
- * call this class' `process` directly after the CAN irqHandler
+ * received messages are processed every ms from the main loop (Kernel),
+ * so the device callbacks don't run in the CAN interrupt
  *
  * cf. https://www.microcontrol.net/wp-content/uploads/2021/10/td-03011e.pdf
  *
@@ -107,7 +118,12 @@ struct TPDO {
  */
 struct Dispatch : Sink<SDO>, Sink<Message> {
     enum LOGLEVEL { NONE, WARN, INFO} log;
-    Dispatch(CAN &can, LOGLEVEL=NONE) : can(can) { }
+    Dispatch(CAN &can, LOGLEVEL log=NONE) : log(log), can(can) {
+        ticker = k.every(1, *this, &Dispatch::poll);
+    }
+    ~Dispatch() { k.remove(ticker); }
+    Dispatch(const Dispatch &) = delete;
+    Dispatch& operator=(const Dispatch &) = delete;
     CAN &can;
     Sink<SDO> *ids[128] {};
     struct PDO {
@@ -133,7 +149,7 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
     void guard(uint8_t id) {
         can.trypush({.id = (uint32_t)0x700 + id, .opts = {.rtr = true}});
     }
-    /** call directly after CAN interrupt handler processed */
+    /** handle received messages, runs every ms from the Kernel */
     void process() {
         // TODO: what to do to CAN messages that _aren't_ CanOpen
         while (!can.empty()) {
@@ -141,7 +157,7 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
             if (handlePDO(msg)) continue;
             if (handleSDO(msg)) continue;
             // don't know what to do with received message!
-            if (log > NONE) k.log.warn("unhandled: [id: %x] [%02x %02x %02x %02x %02x %02x %02x %02x]\n",
+            if (log > NONE) k.log.warn("unhandled: [id: %" PRIx32 "] [%02x %02x %02x %02x %02x %02x %02x %02x]\n",
                     msg.id,
                     (uint8_t)(msg.data),
                     (uint8_t)(msg.data>>8),
@@ -162,7 +178,7 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
     void push(SDO &&rq) override {
         //assert(ids[rq.nodeID] != nullptr); //must register first!
         if (ids[rq.nodeID] == nullptr) {
-            if (log > NONE) k.log.warn("ID [0x%x] NOT registered!\n", rq.nodeID);
+            if (log > NONE) k.log.warn("ID [0x%x] NOT registered!\n", (unsigned)rq.nodeID);
             return;
         }
         can.push(rq.toMessage());
@@ -171,9 +187,15 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
     void push(Message &&rq) override { can.push(rq); }
 
     void registerSDO(uint16_t nodeID, Sink<SDO> *dev) {
-        assert(nodeID != 0);
+        assert(nodeID != 0 && nodeID < 128);
         assert(ids[nodeID] == nullptr);
+        if (nodeID == 0 || nodeID >= 128) return;
         ids[nodeID] = dev;
+    }
+    /** forget device, e.g. before it dies */
+    void unregisterSDO(uint16_t nodeID) {
+        CriticalSection cs; // process() may run from the CAN interrupt
+        if (nodeID < 128) ids[nodeID] = nullptr;
     }
     void registerPDO(TPDO *tpdo, Sink<TPDO> *dev) {
         for (uint8_t i = 0; i < pdo.n; i++) {
@@ -183,10 +205,27 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
             }
         }
         assert ( pdo.n < 8 );
+        if (pdo.n >= 8) return;
+        CriticalSection cs; // process() may run from the CAN interrupt
         pdo.dev[pdo.n] = dev;
         pdo.pdo[pdo.n] = tpdo;
         pdo.n += 1;
     }
+    /** forget all PDOs of device, e.g. before it dies */
+    void unregisterPDOs(Sink<TPDO> *dev) {
+        CriticalSection cs;
+        uint8_t n = 0;
+        for (uint8_t i = 0; i < pdo.n; ++i) {
+            if (pdo.dev[i] == dev) continue;
+            pdo.dev[n] = pdo.dev[i];
+            pdo.pdo[n] = pdo.pdo[i];
+            ++n;
+        }
+        pdo.n = n;
+    }
+
+    void poll(uint32_t, uint32_t) { process(); }
+    Schedule::Schedulable *ticker{};
 
     bool handlePDO(Message msg) {
         for (int i = 0; i < pdo.n; ++i) {
@@ -196,10 +235,12 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
                 tpdo->receive(msg.data);
                 pdo.dev[i]->push(*tpdo);
                 if (log > WARN) {
-                    k.log.info("handled PDO id: %x\n", msg.id);
-                    k.log.info("          data: %x\n", msg.data);
-                    k.log.info("    TPDO data0: %x\n",tpdo->map[0].data);
-                    k.log.info("    TPDO data1: %x\n",tpdo->map[1].data);
+                    k.log.info("handled PDO id: %" PRIx32 "\n", msg.id);
+                    k.log.info("          data: %" PRIx64 "\n", msg.data);
+                    for (size_t m = 0; m < tpdo->map.len; ++m) {
+                        k.log.info("    TPDO data%u: %" PRIx32 "\n",
+                                (unsigned)m, (uint32_t)tpdo->map[m].data);
+                    }
                 }
                 return true;
             }
@@ -218,7 +259,7 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
             if (ids[id]) {
                 ids[id]->push(SDO::fromMessage(msg));
             }
-            if (log > WARN) k.log.info("handled SDO id: %x\n", msg.id);
+            if (log > WARN) k.log.info("handled SDO id: %" PRIx32 "\n", msg.id);
             return true;
         }
         return false;
@@ -231,11 +272,24 @@ struct Dispatch : Sink<SDO>, Sink<Message> {
  */
 struct Device : Sink<TPDO>, Sink<SDO> {
     /** Construct new CANOpen Device on network with given ID */
+    /** registers with the kernel, which works before the kernel itself is
+     * constructed. Dispatch has to be constructed first though, e.g. define
+     * both in the same file with the Dispatch first
+     */
     Device(Dispatch &canopen, uint8_t id) : id(id), out(canopen)
     {
         assert(id > 0 && id < 128);
         canopen.registerSDO(id, this);
+        // keeps the SDO queue going if a response gets lost
+        ticker = k.every(1, *this, &Device::tick);
     }
+    virtual ~Device() {
+        k.remove(ticker);
+        out.unregisterSDO(id);
+        out.unregisterPDOs(this);
+    }
+    Device(const Device &) = delete;
+    Device& operator=(const Device &) = delete;
     uint8_t const id {};    ///< CANOpen node ID [1 - 127]
     Dispatch &out;
 
@@ -265,7 +319,7 @@ struct Device : Sink<TPDO>, Sink<SDO> {
     }
     /** send PDO */
     void wPDO(const RPDO &rpdo) {
-        (*(Sink<Message>*)&out).trypush(rpdo.toMessage());
+        static_cast<Sink<Message>&>(out).trypush(rpdo.toMessage());
     }
     /** enable receiving PDO on device */
     void enablePDO(RPDO &pdo) {
@@ -275,14 +329,14 @@ struct Device : Sink<TPDO>, Sink<SDO> {
         w8(0x1600+pdo.N-1, 0x0, 0); // clear number of mapped objects
         for (size_t i = 0; i < pdo.map.len; ++i) {
             auto &d = pdo.map[i];
-            w32(0x1600+pdo.N-1, i+1, d.ix << 16 | d.sub << 8 | d.len);
+            w32(0x1600+pdo.N-1, i+1, (uint32_t)d.ix << 16 | (uint32_t)d.sub << 8 | d.len);
         }
         w8(0x1600+pdo.N-1, 0x0, pdo.map.len); // set number of mapped objects
-        w32(0x1400+pdo.N-1, 0x1, 1<<30 | pdo.COB);
+        w32(0x1400+pdo.N-1, 0x1, 1u<<30 | pdo.COB);
     }
     /** disable receiving PDO on device */
     void disablePDO(RPDO &pdo) {
-        w32(0x1400+pdo.N-1, 0x1, 1<<31); // clear
+        w32(0x1400+pdo.N-1, 0x1, 1u<<31); // clear
     }
     /** enable sending PDO on device */
     void enablePDO(TPDO &pdo) {
@@ -294,22 +348,22 @@ struct Device : Sink<TPDO>, Sink<SDO> {
         w8(0x1a00+pdo.N-1, 0x0, 0); // clear number of mapped objects
         for (size_t i = 0; i < pdo.map.len; ++i) {
             auto &d = pdo.map[i];
-            w32(0x1a00+pdo.N-1, i+1, d.ix << 16 | d.sub << 8 | d.len);
+            w32(0x1a00+pdo.N-1, i+1, (uint32_t)d.ix << 16 | (uint32_t)d.sub << 8 | d.len);
         }
         w8(0x1a00+pdo.N-1, 0x0, pdo.map.len); // set number of mapped objects
-        w32(0x1800+pdo.N-1, 0x1, 1<<30 | pdo.COB); // enable PDO
+        w32(0x1800+pdo.N-1, 0x1, 1u<<30 | pdo.COB); // enable PDO
         out.registerPDO(&pdo, this);
     };
     /** disable sending PDO on device */
     void disablePDO(TPDO &pdo) {
-        w32(0x1800+pdo.N-1, 0x1, 1<<31); // clear
+        w32(0x1800+pdo.N-1, 0x1, 1u<<31); // clear
     };
     bool full() override {
-        return (*(Sink<Message>*)&out).full();
+        return static_cast<Sink<Message>&>(out).full();
     }
     using Sink<SDO>::push;
     void push(SDO &&sdo) override {
-        state.next = {0};
+        state.next = {};
         callback(std::move(sdo));
         process();
     }
@@ -318,20 +372,36 @@ struct Device : Sink<TPDO>, Sink<SDO> {
         callback(std::move(pdo));
         process();
     }
+    /** send the next queued SDO once the last one got its response or
+     * timed out
+     *
+     * runs from the main loop and from Dispatch::process, which may be
+     * called in the CAN interrupt
+     */
     void process() {
-        if (state.q.empty()) return;
-        if (state.next.when && !state.next(k.time)) return;
-        out.push(state.q.pop());
-        state.next = {k.time + 2};
+        SDO next;
+        {
+            // only take it out under the lock, sending may log (and wait)
+            CriticalSection cs;
+            if (state.q.empty()) return;
+            if (state.next.when && !state.next(k.time)) return;
+            if (full()) return; // try again later
+            next = state.q.pop();
+            state.next = Deadline::after(k.time, 2);
+        }
+        out.push(std::move(next));
     }
     void pushorqueue(SDO &&sdo) {
-        if (state.next.when && !state.next(k.time)) {
+        // always go through the queue to keep requests in order
+        {
+            CriticalSection cs;
             state.q.trypush(std::move(sdo));
-        } else {
-            (*(Sink<SDO>*)&out).trypush(std::move(sdo));
-            state.next = {k.time + 2};
         }
+        process();
     }
+private:
+    Schedule::Schedulable *ticker{};
+    void tick(uint32_t, uint32_t) { process(); }
 };
 }
 }

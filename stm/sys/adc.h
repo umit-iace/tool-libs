@@ -17,15 +17,38 @@
 #endif
 
 namespace ADC {
+    /** number of channels a HW can convert */
+    constexpr uint32_t MAXCHANNELS = 16;
+    /** DMA target, a whole number of cache lines (Cortex-M7: 32 bytes) */
+    struct alignas(32) Samples {
+        int16_t raw[MAXCHANNELS];
+        /** the DMA writes behind the CPU's back, drop stale cache lines */
+        void invalidate() {
+#if defined(__DCACHE_PRESENT) && (__DCACHE_PRESENT == 1U)
+            SCB_InvalidateDCache_by_Addr((uint32_t *)raw, sizeof raw);
+#endif
+        }
+        /** before handing the buffer to the DMA: write back what the CPU
+         * wrote, so no dirty line overwrites the samples later on */
+        void flush() {
+#if defined(__DCACHE_PRESENT) && (__DCACHE_PRESENT == 1U)
+            SCB_CleanInvalidateDCache_by_Addr((uint32_t *)raw, sizeof raw);
+#endif
+        }
+    };
+    static_assert(sizeof(Samples) % 32 == 0);
+
     /** Class representing one measured pin/value. */
     struct Channel {
         /** return measured value */
         double get() {
-            return raw * lsb;
+            if (!samples) return 0;
+            samples->invalidate();
+            return samples->raw[ix] * lsb;
         }
-        /** raw value from adc */
-        int16_t &raw;
-        const double lsb;
+        Samples *samples; ///< nullptr if the ADC had no channel left
+        uint32_t ix;
+        double lsb;
     };
 
     /** Analog to Digital Converter Peripheral Driver */
@@ -69,7 +92,8 @@ namespace ADC {
 
         /** start measuring all registered channels/pins */
         void measure() {
-            while (HAL_ADC_Start_DMA(&handle, (uint32_t*)iBuffer, channelCnt) != HAL_OK);
+            samples.flush();
+            while (HAL_ADC_Start_DMA(&handle, (uint32_t*)samples.raw, channelCnt) != HAL_OK);
         }
 
         /** initialize driver.
@@ -82,7 +106,9 @@ namespace ADC {
 
         /** register/create pin/channel for analog measurement */
         Channel get(ChannelConf conf){
-            auto ret = Channel{iBuffer[channelCnt], conf.lsb};
+            assert(channelCnt < MAXCHANNELS);
+            if (channelCnt >= MAXCHANNELS) return {nullptr, 0, 0};
+            auto ret = Channel{&samples, channelCnt, conf.lsb};
 
             ADC_ChannelConfTypeDef sConfig {
                 .Channel = conf.channel,
@@ -92,12 +118,16 @@ namespace ADC {
             while (HAL_ADC_ConfigChannel(&handle, &sConfig) != HAL_OK);
 
             channelCnt++;
+            // HAL_ADC_Init wrote the sequence length when there were no
+            // channels yet, which the hardware takes as 16 conversions
+            MODIFY_REG(handle.Instance->SQR1, ADC_SQR1_L,
+                    (channelCnt - 1) << ADC_SQR1_L_Pos);
 
             return ret;
         }
 
         ADC_HandleTypeDef handle{};
-        int16_t iBuffer[16];
+        Samples samples{};
         uint32_t &channelCnt = handle.Init.NbrOfConversion;
         DMA::HW dma;
     };

@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "buffer.h"
+#include <utility>
 
 #include <core/streams.h>
 
@@ -30,11 +31,15 @@ class Queue : public Sink<T>, public Source<T> {
             return tmp;
         }
     } head, tail;
+    /** continue pushing behind elements already in the Buffer */
+    void initTail() {
+        if (q.size) tail.val = q.len % q.size;
+    }
 
 public:
     /** create Queue directly from filled Buffer */
-    Queue(const Buffer<T> &buf) : q(buf), head{q.size}, tail{q.size} {}
-    Queue(Buffer<T> &&buf) : q(std::move(buf)), head{q.size}, tail{q.size} {}
+    Queue(const Buffer<T> &buf) : q(buf), head{q.size}, tail{q.size} { initTail(); }
+    Queue(Buffer<T> &&buf) : q(std::move(buf)), head{q.size}, tail{q.size} { initTail(); }
     /** create Queue with constant size */
     Queue(size_t size=30)
         : q(size)
@@ -48,6 +53,8 @@ public:
      **/
     void push(T &&val) override {
         assert(q.len < q.size);
+        // dropped when full, also in release builds (NDEBUG)
+        if (q.len >= q.size) return;
         q[tail++] = std::move(val);
         q.len++;
     }
@@ -59,11 +66,12 @@ public:
     /**
      * remove front of queue and return it
      *
-     * does not check that there's something in the queue
-     * guard with `if (size()) ...` or `if (! empty()) ...`
+     * guard with `if (size()) ...` or `if (! empty()) ...`,
+     * returns a default constructed T if empty
      */
     T pop() override {
         assert(q.len != 0);
+        if (q.len == 0) return T{};
         q.len--;
         return std::move(q[head++]);
     }
@@ -72,12 +80,23 @@ public:
      */
     void drop() {
         assert(q.len != 0);
+        if (q.len == 0) return;
         q.len--;
         head++;
     }
     /** return number of elements in queue */
     size_t size() {
         return q.len;
+    }
+    /** number of elements the queue can hold */
+    size_t capacity() {
+        return q.size;
+    }
+    /** exchange contents with other, no allocations */
+    void swap(Queue &other) {
+        std::swap(q, other.q);
+        std::swap(head, other.head);
+        std::swap(tail, other.tail);
     }
     /** check if queue is empty */
     bool empty() override {
@@ -87,8 +106,9 @@ public:
     bool full() override {
         return q.len == q.size;
     }
-    /** return element at idx */
-    T getAt(size_t idx) {
+    /** return element at idx, counted from the front */
+    T& getAt(size_t idx) {
+        assert(idx < q.len);
         return q[(head + idx) % head.sz];
     }
 };
