@@ -2,6 +2,7 @@
 #include <core/kern.h>
 #include <sys/comm.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <cstdlib>
 #include <string>
 #include <type_traits>
