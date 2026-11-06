@@ -125,7 +125,8 @@ public:
         notifier = timeout.call(new TMP{notify});
     }
     /// id of the status frame sent to pyWisp, see \ref enableStatus
-    static constexpr uint8_t STATUS_ID = 63;
+    /// (ids 1..5 are reserved for the system: 1 control, 2 status, 3..5 future use, not for modules)
+    static constexpr uint8_t STATUS_ID = 2;
     /// payload of the status frame [B]
     static constexpr size_t STATUS_LEN = 21;
     /** the status frame of \ref enableStatus in the bandwidth summary of the link

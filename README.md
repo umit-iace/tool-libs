@@ -28,6 +28,8 @@ for [pyWisp](https://github.com/umit-iace/tool-pywisp) frame based experiment
 control.
 On top of the scheduling provided by the Kernel, the Experiment provides
 scheduling for tasks during its states, and on the events of state-changes.
+Frame ids 1..5 are reserved for the system: 1 experiment control, 2 rig status
+(`Experiment::STATUS_ID`), 3..5 for future use. Application frames must not use them.
 
 ## Minimal example
 A minimal example for this framework can be found
