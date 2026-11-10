@@ -6,7 +6,7 @@ struct Data {
     uint8_t cnf:6;
     int16_t pos:12;
     uint8_t ign:1;
-    bool operator ==(Data &o) {
+    bool operator ==(const Data &o) const {
         return cnf == o.cnf && pos == o.pos && ign == o.ign;
     }
 };

@@ -2,7 +2,7 @@ include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
 FetchContent_Declare( doctest
     GIT_REPOSITORY https://github.com/doctest/doctest
-    GIT_TAG v2.4.10
+    GIT_TAG v2.4.12
     GIT_PROGRESS TRUE
     FIND_PACKAGE_ARGS # fallback to git only if not found locally
 )

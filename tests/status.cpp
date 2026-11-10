@@ -137,3 +137,47 @@ TEST_CASE("tool-libs: experiment: sync command during the run") {
     CHECK(s.syncSeq == 8);
     CHECK(s.syncCount == 1);
 }
+
+TEST_CASE("tool-libs: experiment: sync before the start") {
+    FrameRegistry reg;
+    Experiment e{&reg};
+    Queue<Frame> out{50};
+    e.enableStatus(out, 100);
+    step(1);
+    last(out);
+
+    // parameters, then a sync while IDLE: confirmed at once, still IDLE
+    reg.handle(param(20, {1, 2, 3}));
+    reg.handle(param(21, {}));
+    reg.handle(std::move(Frame{1}.pack<uint8_t>(0b110).pack<uint8_t>(3)));
+    REQUIRE(!out.empty());
+    auto s = unpack(last(out));
+    CHECK(s.state == 0);
+    CHECK(s.seq == 0);
+    CHECK(s.syncSeq == 3);
+    CHECK(s.syncCount == 2);
+    CHECK(s.syncCrc == 0x2af3ac7bu); // zlib.crc32(bytes([20, 3, 1, 2, 3, 21, 0]))
+    step(1);
+    CHECK(e.state == e.IDLE);
+
+    // a second sync only confirms the frames after the first one
+    reg.handle(param(10, {9, 9}));
+    reg.handle(std::move(Frame{1}.pack<uint8_t>(0b110).pack<uint8_t>(4)));
+    s = unpack(last(out));
+    CHECK(s.state == 0);
+    CHECK(s.syncSeq == 4);
+    CHECK(s.syncCount == 1);
+    CHECK(s.syncCrc == 0xe563e8fbu); // zlib.crc32(bytes([10, 2, 9, 9]))
+
+    // the start after the sync: nothing received since, so count and CRC are 0
+    reg.handle(std::move(Frame{1}.pack<uint8_t>(0b01)));
+    step(1);
+    REQUIRE(!out.empty());
+    s = unpack(last(out));
+    CHECK(s.state == 1);
+    CHECK(s.seq == 1);
+    CHECK(s.count == 0);
+    CHECK(s.crc == 0);
+    CHECK(s.syncSeq == 4); // sync result kept
+    CHECK(e.state == e.RUN);
+}

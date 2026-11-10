@@ -153,7 +153,10 @@ public:
      * pyWisp compares it with what it sent. Parameters changed during the run
      * are followed by a sync command (control frame bits 0b110 and a sync id),
      * the rig answers it at once with the CRC32 of the frames since the last
-     * control frame. Payload (little endian):
+     * control frame. Before a start pyWisp sends the parameters, then a sync,
+     * waits for the status confirming their count and CRC32 and only then sends
+     * the start. The sync resets the received frames, so the status of that
+     * start reports count 0 and CRC32 0. Payload (little endian):
      *
      * | bytes | content                                          |
      * |-------|--------------------------------------------------|
