@@ -85,3 +85,54 @@ TEST_CASE("tool-libs: logger: point it to another sink") {
     CHECK(b.last.len == 3);
     CHECK(memcmp(b.last.buf, "two", 3) == 0);
 }
+
+struct Prefixed : Logger {
+    using Logger::Logger;
+    Buffer<uint8_t> pre() override {
+        Buffer<uint8_t> b(256);
+        b.len = snprintf((char*)b.buf, b.size, "(@1ms): ");
+        return b;
+    }
+};
+
+TEST_CASE("tool-libs: logger: tap gets the raw text of the levels in the mask") {
+    Collect local, tap;
+    Prefixed l{local};
+    l.tap(&tap, Logger::bit(Logger::WARN) | Logger::bit(Logger::ERROR));
+
+    l.info("not tapped");
+    CHECK(tap.last.len == 0);
+    CHECK(local.last.len > 0); // the local sink gets everything
+
+    l.warn("w %d", 1);
+    REQUIRE(tap.last.len == 4);
+    CHECK(tap.last[0] == Logger::WARN);
+    CHECK(memcmp(tap.last.buf + 1, "w 1", 3) == 0); // no prefix, no color
+
+    l.error("bad");
+    REQUIRE(tap.last.len == 4);
+    CHECK(tap.last[0] == Logger::ERROR);
+    CHECK(memcmp(tap.last.buf + 1, "bad", 3) == 0);
+    std::string got((char*)local.last.buf, local.last.len);
+    CHECK(got == "(@1ms): \u001b[1;31mbad\u001b[0m");
+
+    l.tap(&tap, Logger::bit(Logger::NONE));
+    l.print("p");
+    REQUIRE(tap.last.len == 2);
+    CHECK(tap.last[0] == Logger::NONE);
+    CHECK(tap.last[1] == 'p');
+
+    // a full tap doesn't block and doesn't touch the local sink
+    Full f;
+    l.tap(&f, Logger::bit(Logger::NONE));
+    l.print("q");
+    CHECK(l.tapDropped == 1);
+    CHECK(l.dropped == 0);
+    CHECK(local.last[local.last.len - 1] == 'q');
+
+    // pushed Buffers are not tapped
+    l.tap(&tap, 0xff);
+    tap.last = Buffer<uint8_t>{};
+    l.push(Buffer<uint8_t>{'x'});
+    CHECK(tap.last.len == 0);
+}

@@ -22,8 +22,21 @@ inline DevNull<T> devnull;
 
 /** simple printf-style logging infrastructure */
 struct Logger : Sink<Buffer<uint8_t>> {
-    enum Lvl {NONE, INFO, WARN};
-    static constexpr const char *color[3] = {"\u001b[0m","\u001b[32m", "\u001b[31m"};
+    enum Lvl {NONE, INFO, WARN, ERROR};
+    static constexpr const char *color[4] = {"\u001b[0m","\u001b[32m", "\u001b[31m", "\u001b[1;31m"};
+    /** bit of `l` in the mask of \ref tap */
+    static constexpr uint8_t bit(Lvl l) { return 1u << l; }
+    /** additionally hand the raw messages of the levels in `mask` to `snk`
+     *
+     * as [lvl][text]: without prefix and color, nullptr removes the tap.
+     * Only messages formatted by this Logger are tapped, not Buffers pushed
+     * through it, so the messages of a Logger logging into another one aren't
+     * tapped twice.
+     */
+    void tap(Sink<Buffer<uint8_t>> *snk, uint8_t mask) {
+        tapSink = snk;
+        tapMask = mask;
+    }
     /** the sink everything is logged into */
     Sink<Buffer<uint8_t>> &out() { return *sink; }
     /** point the logger to another sink */
@@ -53,8 +66,17 @@ struct Logger : Sink<Buffer<uint8_t>> {
             r = room(b, reserve);
             b.len += written(snprintf((char*)b.buf+b.len, r, "%s", color[lvl]), r);
         }
+        size_t text = b.len;
         r = room(b, reserve);
         b.len += written(vsnprintf((char*)b.buf+b.len, r, fmt, args), r);
+        if (tapSink && (tapMask & bit(lvl))) {
+            Buffer<uint8_t> t(1 + b.len - text);
+            t.append(lvl);
+            for (size_t i = text; i < b.len; ++i) t.append(b.buf[i]);
+            // never waits, the tap is an extra, the local sink is what counts
+            if (tapSink->full()) ++tapDropped;
+            else tapSink->push(std::move(t));
+        }
         if (lvl != NONE) {
             r = room(b);
             b.len += written(snprintf((char*)b.buf+b.len, r, "%s", color[NONE]), r);
@@ -93,6 +115,13 @@ public:
         mklog(WARN, fmt, args);
         va_end(args);
     }
+    /** Error log level */
+    void error(const char *fmt, ...) {
+        va_list args;
+        va_start(args, fmt);
+        mklog(ERROR, fmt, args);
+        va_end(args);
+    }
     /** None log level */
     void print(const char *fmt, ...) {
         va_list args;
@@ -113,15 +142,23 @@ public:
     }
     /** messages lost because the sink was full */
     uint32_t dropped{};
+    /** messages lost because the tap was full, kept apart from \ref dropped */
+    uint32_t tapDropped{};
     /** create Logger wrapping a Buffer Sink */
     Logger(Sink<Buffer<uint8_t>> &snk) : sink{&snk} { }
     Logger() : sink{&devnull<Buffer<uint8_t>>} {}
     virtual ~Logger() = default;
 private:
     Sink<Buffer<uint8_t>> *sink;
+    Sink<Buffer<uint8_t>> *tapSink{};
+    uint8_t tapMask{};
 };
 
-/** buffered logging facility */
+/** buffered logging facility
+ *
+ * not tapped (\ref Logger::tap): it collects several messages into one Buffer
+ * and only sends them on flush, so they have no level of their own anymore
+ */
 struct BufferedLogger: public Logger {
     static constexpr int MAXLEN = 256;
     char buf[MAXLEN];

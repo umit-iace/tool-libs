@@ -77,6 +77,8 @@ public:
     ~Experiment() {
         k.remove(ticker);
         if (statusTicker) k.remove(statusTicker);
+        // k.log outlives us
+        if (logFrames.out) k.log.tap(nullptr, 0);
         if (frames) {
             frames->removeHandler(1);
             frames->removeObserver();
@@ -125,8 +127,50 @@ public:
         notifier = timeout.call(new TMP{notify});
     }
     /// id of the status frame sent to pyWisp, see \ref enableStatus
-    /// (ids 1..5 are reserved for the system: 1 control, 2 status, 3..5 future use, not for modules)
+    /// (ids 1..5 are reserved for the system: 1 control, 2 status, 3 log, 4..5 future use, not for modules)
     static constexpr uint8_t STATUS_ID = 2;
+    /// id of the log frame sent to pyWisp, see \ref enableLog
+    static constexpr uint8_t LOG_ID = 3;
+    /// bit 7 of the log frame header: another part of the message follows
+    static constexpr uint8_t LOG_MORE = 0x80;
+    /// text per log frame [B], the header byte fills the frame up to 128 B
+    static constexpr size_t LOG_TEXT = 127;
+    /** splits the [lvl][text] Buffers of a Logger tap into log frames
+     *
+     * payload: [hdr][text], hdr bits 0..6 level (Logger::Lvl), bit 7 \ref LOG_MORE
+     * on all parts of a message but the last one
+     */
+    struct LogFrames : Sink<Buffer<uint8_t>> {
+        Sink<Frame> *out{};
+        bool full() override { return out->full(); }
+        void push(Buffer<uint8_t> &&b) override {
+            if (!b.len) return;
+            size_t i = 1;
+            do {
+                size_t n = b.len - i < LOG_TEXT ? b.len - i : LOG_TEXT;
+                Frame f{LOG_ID};
+                f.pack<uint8_t>(b.buf[0] | (i + n < b.len ? LOG_MORE : 0));
+                for (size_t j = i; j < i + n; ++j) f.pack<uint8_t>(b.buf[j]);
+                // shortcut: a part dropped by a full out cuts the message, pyWisp sees it joined with the next one
+                out->trypush(std::move(f));
+                i += n;
+            } while (i < b.len);
+        }
+    };
+    /** send the messages of `k.log` and \ref log with a level in `mask` to pyWisp
+     *
+     * only when they are logged, never cyclically. The local sink keeps getting
+     * them as before. E.g. warnings and errors:
+     * ```
+     * e.enableLog(out, Logger::bit(Logger::WARN) | Logger::bit(Logger::ERROR));
+     * ```
+     */
+    void enableLog(Sink<Frame> &out, uint8_t mask) {
+        logFrames.out = &out;
+        k.log.tap(&logFrames, mask);
+        // log writes into k.log by push, which isn't tapped, so no duplicates
+        log.tap(&logFrames, mask);
+    }
     /// payload of the status frame [B]
     static constexpr size_t STATUS_LEN = 21;
     /** the status frame of \ref enableStatus in the bandwidth summary of the link
@@ -189,6 +233,7 @@ private:
     Schedule::Schedulable *notifier{}, *ticker{}, *statusTicker{};
     FrameRegistry *frames{};
     Sink<Frame> *statusOut{};
+    LogFrames logFrames{};
     bool statusOnInit{};
     /// frames received since the last start or stop command
     struct {

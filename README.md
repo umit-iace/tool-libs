@@ -29,7 +29,17 @@ control.
 On top of the scheduling provided by the Kernel, the Experiment provides
 scheduling for tasks during its states, and on the events of state-changes.
 Frame ids 1..5 are reserved for the system: 1 experiment control, 2 rig status
-(`Experiment::STATUS_ID`), 3..5 for future use. Application frames must not use them.
+(`Experiment::STATUS_ID`), 3 rig log (`Experiment::LOG_ID`), 4..5 for future use.
+Application frames must not use them.
+
+The log messages of `k.log` and `e.log` can also be sent to pyWisp, filtered by
+level. They keep going to the local sink as well:
+```
+e.enableLog(out, Logger::bit(Logger::WARN) | Logger::bit(Logger::ERROR));
+```
+Each message is sent once when it is logged, as frames `[hdr][text]` with at
+most 127 B raw text (no prefix, no color). `hdr` bits 0..6 hold the level
+(0 print, 1 info, 2 warn, 3 error), bit 7 is set if another part follows.
 
 ## Minimal example
 A minimal example for this framework can be found
