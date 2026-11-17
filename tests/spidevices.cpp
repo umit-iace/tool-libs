@@ -12,9 +12,29 @@ struct Bus : Sink<SPI::Request> {
 TEST_CASE("tool-libs: AS5145: full range position") {
     Bus bus;
     AS5145<1> a{bus, DIO{}};
-    // dummy bit, 12 bit position = 4095, no errors
-    a.callback(SPI::Request{.dev = &a, .data = {0x7f, 0xf8, 0x00}, .dir = SPI::Request::MISO});
+    // dummy bit, 12 bit position = 4095, OCF, no errors, parity
+    a.callback(SPI::Request{.dev = &a, .data = {0x7f, 0xfc, 0x20}, .dir = SPI::Request::MISO});
     CHECK(a.getVal() == 4095);
+    CHECK(a.valid(0));
+    CHECK(a.reads == 1);
+}
+
+TEST_CASE("tool-libs: AS5145: chain with parity error") {
+    Bus bus;
+    AS5145<2> a{bus, DIO{}};
+    // 0x123 OK, 0xabc with wrong parity bit
+    a.callback(SPI::Request{.dev = &a, .data = {0x09, 0x1c, 0x2a, 0xbc, 0x84}, .dir = SPI::Request::MISO});
+    CHECK(a.getVal(0) == 0x123);
+    CHECK(a.flags(0) == (a.OCF | a.PARITY_OK));
+    CHECK(a.valid(0));
+    CHECK(a.getVal(1) == 0);
+    CHECK(a.flags(1) == a.OCF);
+    CHECK_FALSE(a.valid(1));
+    // same with correct parity bit
+    a.callback(SPI::Request{.dev = &a, .data = {0x09, 0x1c, 0x2a, 0xbc, 0x80}, .dir = SPI::Request::MISO});
+    CHECK(a.getVal(1) == 0xabc);
+    CHECK(a.valid(1));
+    CHECK(a.reads == 2);
 }
 
 TEST_CASE("tool-libs: MAX31865: high resistance") {
