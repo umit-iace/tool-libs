@@ -3,6 +3,7 @@
  * Copyright (c) 2023 IACE
  */
 #pragma once
+#include <comm/crc32.h>
 #include <comm/frameregistry.h>
 #include <utils/deadline.h>
 
@@ -34,7 +35,7 @@ extern class Experiment {
     struct ELog : Logger {
         const uint32_t &time;
         virtual Buffer<uint8_t> pre() override {
-            Buffer<uint8_t> ret = 256;
+            Buffer<uint8_t> ret(256);
             ret.len = snprintf((char*)ret.buf, ret.size,
                     "Experiment Logger (@%" PRIu32 "ms): ", time);
             return ret;
@@ -66,15 +67,30 @@ public:
     /// construct. if FrameRegistry is not available at this point,
     /// call `registerWith` at the earliest convenience
     Experiment(FrameRegistry *fr=nullptr) {
-        k.every(1, *this, &Experiment::tick);
+        ticker = k.every(1, *this, &Experiment::tick);
         if (fr) registerWith(*fr);
         onEvent(INIT).call(log, &ELog::start);
         onEvent(STOP).call(log, &ELog::stop);
         onEvent(TIMEOUT).call(log, &ELog::timeout);
     }
+    /// unregisters from the Kernel and the FrameRegistry
+    ~Experiment() {
+        k.remove(ticker);
+        if (statusTicker) k.remove(statusTicker);
+        // k.log outlives us
+        if (logFrames.out) k.log.tap(nullptr, 0);
+        if (frames) {
+            frames->removeHandler(1);
+            frames->removeObserver();
+        }
+    }
+    Experiment(const Experiment &) = delete;
+    Experiment& operator=(const Experiment &) = delete;
     /// set frame registry from which Experiment will receive frames
     void registerWith(FrameRegistry &reg) {
         reg.setHandler(1, *this, &Experiment::handleFrame);
+        reg.setObserver(*this, &Experiment::observe);
+        frames = &reg;
     }
     /// register callbacks for Experiment state change events
     Schedule::Evented::Registry& onEvent(Event e) {
@@ -95,7 +111,7 @@ public:
     const State& state{state_};
     /// const access to Experiment time
     const uint32_t& time{time_};
-    /// set Heartbeat timeout in ms
+    /// set Heartbeat timeout in ms, replaces an earlier notify Sink
     void setHeartbeatTimeout(uint32_t ms, Sink<Frame> &notify) {
         heartbeat.timeout = ms;
         heartbeat.reset(time);
@@ -107,7 +123,106 @@ public:
                     auto f = Frame{1}.pack(false);
                     s.trypush(std::move(f));
                 }};
-        timeout.call(new TMP{notify});
+        if (notifier) timeout.remove(notifier, k);
+        notifier = timeout.call(new TMP{notify});
+    }
+    /// id of the status frame sent to pyWisp, see \ref enableStatus
+    /// (ids 1..5 are reserved for the system: 1 control, 2 status, 3 log, 4..5 future use, not for modules)
+    static constexpr uint8_t STATUS_ID = 2;
+    /// id of the log frame sent to pyWisp, see \ref enableLog
+    static constexpr uint8_t LOG_ID = 3;
+    /// bit 7 of the log frame header: another part of the message follows
+    static constexpr uint8_t LOG_MORE = 0x80;
+    /// text per log frame [B], the header byte fills the frame up to 128 B
+    static constexpr size_t LOG_TEXT = 127;
+    /** splits the [lvl][text] Buffers of a Logger tap into log frames
+     *
+     * payload: [hdr][text], hdr bits 0..6 level (Logger::Lvl), bit 7 \ref LOG_MORE
+     * on all parts of a message but the last one
+     */
+    struct LogFrames : Sink<Buffer<uint8_t>> {
+        Sink<Frame> *out{};
+        bool full() override { return out->full(); }
+        void push(Buffer<uint8_t> &&b) override {
+            if (!b.len) return;
+            size_t i = 1;
+            do {
+                size_t n = b.len - i < LOG_TEXT ? b.len - i : LOG_TEXT;
+                Frame f{LOG_ID};
+                f.pack<uint8_t>(b.buf[0] | (i + n < b.len ? LOG_MORE : 0));
+                for (size_t j = i; j < i + n; ++j) f.pack<uint8_t>(b.buf[j]);
+                // shortcut: a part dropped by a full out cuts the message, pyWisp sees it joined with the next one
+                out->trypush(std::move(f));
+                i += n;
+            } while (i < b.len);
+        }
+    };
+    /** send the messages of `k.log` and \ref log with a level in `mask` to pyWisp
+     *
+     * only when they are logged, never cyclically. The local sink keeps getting
+     * them as before. E.g. warnings and errors:
+     * ```
+     * e.enableLog(out, Logger::bit(Logger::WARN) | Logger::bit(Logger::ERROR));
+     * ```
+     */
+    void enableLog(Sink<Frame> &out, uint8_t mask) {
+        logFrames.out = &out;
+        k.log.tap(&logFrames, mask);
+        // log writes into k.log by push, which isn't tapped, so no duplicates
+        log.tap(&logFrames, mask);
+    }
+    /// payload of the status frame [B]
+    static constexpr size_t STATUS_LEN = 21;
+    /** the status frame of \ref enableStatus in the bandwidth summary of the link
+     *
+     * it is sent by the Experiment itself, so it has a payload instead of fields:
+     * ```
+     * TELEMETRY_SUMMARY(telemetry::uart(921600), 20, Model::Telemetry{}, Experiment::StatusFrame{})
+     * ```
+     * see comm/telemetry.h
+     */
+    struct StatusFrame {
+        static constexpr uint8_t id = STATUS_ID; ///< frame id, \ref STATUS_ID
+        static constexpr char name[] = "status"; ///< name in the summary
+        static constexpr size_t payload = STATUS_LEN; ///< [B], \ref STATUS_LEN
+        static constexpr uint32_t period = 250; ///< [ms] default of \ref enableStatus
+    };
+    /// bits of the project sent with the status, e.g. "motor driver ready"
+    uint8_t statusFlags{};
+    /** send a status frame every `ms` and at every start, also while IDLE
+     *
+     * pyWisp shows from it whether the rig responds and checks the start: the
+     * frame carries a CRC32 over all frames received before the last start
+     * command (id, length and payload of each, control frames excluded),
+     * pyWisp compares it with what it sent. Parameters changed during the run
+     * are followed by a sync command (control frame bits 0b110 and a sync id),
+     * the rig answers it at once with the CRC32 of the frames since the last
+     * control frame. Before a start pyWisp sends the parameters, then a sync,
+     * waits for the status confirming their count and CRC32 and only then sends
+     * the start. The sync resets the received frames, so the status of that
+     * start reports count 0 and CRC32 0. Payload (little endian):
+     *
+     * | bytes | content                                          |
+     * |-------|--------------------------------------------------|
+     * | 0     | version, 1                                       |
+     * | 1     | state, 0 IDLE, 1 RUN                             |
+     * | 2     | \ref statusFlags                                 |
+     * | 3     | start counter, incremented by every start command |
+     * | 4-5   | number of frames received before that start      |
+     * | 6-9   | their CRC32                                      |
+     * | 10-13 | uptime of the rig [ms]                           |
+     * | 14    | id of the last sync command                      |
+     * | 15-16 | number of frames received before that sync       |
+     * | 17-20 | their CRC32                                      |
+     */
+    void enableStatus(Sink<Frame> &out, uint32_t ms=StatusFrame::period) {
+        statusOut = &out;
+        if (statusTicker) k.remove(statusTicker);
+        statusTicker = k.every(ms, *this, &Experiment::statusTick);
+        if (!statusOnInit) {
+            onEvent(INIT).call(*this, &Experiment::sendStatus);
+            statusOnInit = true;
+        }
     }
     /// Logging facility
     ELog log{time, k.log};
@@ -115,6 +230,49 @@ public:
 private:
     State state_{};
     bool alive{};
+    Schedule::Schedulable *notifier{}, *ticker{}, *statusTicker{};
+    FrameRegistry *frames{};
+    Sink<Frame> *statusOut{};
+    LogFrames logFrames{};
+    bool statusOnInit{};
+    /// frames received since the last start or stop command
+    struct {
+        CRC32 crc{};
+        uint16_t count{};
+    } received{};
+    /// what had been received before the last start command (seq: counter)
+    /// and before the last sync command (seq: id sent by pyWisp)
+    struct Received {
+        uint8_t seq{};
+        uint16_t count{};
+        uint32_t crc{};
+    } started{}, synced{};
+    void observe(Frame &f) {
+        if (f.id == 1) return;
+        received.crc.step(f.id);
+        received.crc.step(f.b.len);
+        for (size_t i = 0; i < f.b.len; ++i) received.crc.step(f.b.buf[i]);
+        ++received.count;
+    }
+    void sendStatus(uint32_t) {
+        if (!statusOut) return;
+        auto f = Frame{STATUS_ID};
+        f.pack<uint8_t>(1)
+         .pack<uint8_t>(state == RUN ? 1 : 0)
+         .pack<uint8_t>(statusFlags)
+         .pack<uint8_t>(started.seq)
+         .pack<uint16_t>(started.count)
+         .pack<uint32_t>(started.crc)
+         .pack<uint32_t>(k.time)
+         .pack<uint8_t>(synced.seq)
+         .pack<uint16_t>(synced.count)
+         .pack<uint32_t>(synced.crc);
+        assert(f.b.len == STATUS_LEN);
+        statusOut->trypush(std::move(f));
+    }
+    void statusTick(uint32_t time, uint32_t) {
+        sendStatus(time);
+    }
     void statemachine() {
         State old = state;
         // very simple state machine
@@ -122,6 +280,8 @@ private:
         if (state != old) switch(old) { // handle state transitions == events
         case IDLE:
             time_ = 0;
+            // deadline may still be set relative to the old time
+            if (heartbeat) heartbeat.reset(time);
             k.schedule(time, init);
             idle.reset(); running.reset();
             break;
@@ -152,7 +312,7 @@ private:
             return timeout;
         }
         bool reset(uint32_t now) {
-            when = now + timeout;
+            when = Deadline::after(now, timeout).when;
             return true;
         }
     } heartbeat{};
@@ -167,11 +327,26 @@ private:
         struct {
             uint8_t alive:1;
             uint8_t heartbeat:1;
-            uint8_t _:6;
+            // with heartbeat set: older rigs take a sync command for a heartbeat
+            uint8_t sync:1;
+            uint8_t _:5;
         } b = f.unpack<decltype(b)>();
-        if (b.heartbeat) {
+        if (b.sync) {
+            synced.seq = f.remaining() ? f.unpack<uint8_t>() : 0;
+            synced.count = received.count;
+            synced.crc = received.crc.finalize();
+            received = {};
+            (bool)heartbeat && heartbeat.reset(time);
+            sendStatus(time);
+        } else if (b.heartbeat) {
             (bool)heartbeat && heartbeat.reset(time);
         } else {
+            if (b.alive) {
+                started.seq++;
+                started.count = received.count;
+                started.crc = received.crc.finalize();
+            }
+            received = {};
             alive = b.alive;
         }
     }

@@ -1,6 +1,7 @@
 #pragma once
 #include <utils/queue.h>
 #include <comm/can.h>
+#include <core/critical.h>
 
 #include "gpio.h"
 #include "registry.h"
@@ -19,7 +20,7 @@ struct HW : public CAN {
     bool full() override;
     void push(Message &&) override;
     using Sink::push;
-    Message pop() override { return rx.pop(); };
+    Message pop() override { CriticalSection cs; return rx.pop(); };
     bool empty() override { return rx.empty(); };
 
     Queue<Message> rx;

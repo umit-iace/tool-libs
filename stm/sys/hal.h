@@ -2,8 +2,7 @@
  *
  * Copyright (c) 2020 IACE
  */
-#ifndef STM_HAL_H
-#define STM_HAL_H
+#pragma once
 
 #ifdef STM32F4
 	#include "stm32f4xx_hal.h"
@@ -13,4 +12,9 @@
 	#include "stm32f7xx_hal.h"
 #endif
 
-#endif //STM_HAL_H
+/** HAL_Init, exactly once
+ *
+ * the peripheral drivers call this in their constructors: global driver
+ * objects may be constructed before the global initialization in hal.cpp
+ */
+void halInit();

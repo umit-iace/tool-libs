@@ -6,7 +6,7 @@ struct Data {
     uint8_t cnf:6;
     int16_t pos:12;
     uint8_t ign:1;
-    bool operator ==(Data &o) {
+    bool operator ==(const Data &o) const {
         return cnf == o.cnf && pos == o.pos && ign == o.ign;
     }
 };
@@ -53,4 +53,11 @@ TEST_CASE("tool-libs: bistream: long") {
             CHECK(data == out[c][i]);
         }
     }
+}
+
+TEST_CASE("tool-libs: bitstream: ranges wider than int") {
+    uint8_t data[8] = {0x80, 0, 0, 0, 0, 0, 0, 0x01};
+    BitStream bs{data};
+    CHECK(bs.range<uint64_t>(0, 64) == 0x8000000000000001ull);
+    CHECK(bs.range<uint64_t>(0, 40) == 0x8000000000ull);
 }

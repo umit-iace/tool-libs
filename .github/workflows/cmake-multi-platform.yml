@@ -10,7 +10,8 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # shortcut: pinned, the sudo of ubuntu 26.04 ignores -E and setup-alpine loses its inputs; unpin once setup-alpine copes with it
+    runs-on: ubuntu-24.04
 
     strategy:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.

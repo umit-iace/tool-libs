@@ -18,7 +18,8 @@ struct BitStream {
         int len = end-start;
         int i = 1;
         while (start < end) {
-            dest |= (base[start/8] & 0x80>>start%8) >> (7 - start%8) << (len - i);
+            T bit = (base[start/8] >> (7 - start%8)) & 1;
+            dest |= bit << (len - i);
             ++start;
             ++i;
         }

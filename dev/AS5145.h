@@ -6,25 +6,31 @@
 
 #include "sys/spi.h"
 #include "utils/bitstream.h"
+#include <bit>
 
 /** Class describing a chain of AS5145 Hall sensors */
 template<int chainlength>
 struct AS5145 : SPI::Device {
-    static constexpr uint8_t BITS = 19; // number of bits in sensor data struct
-    static constexpr uint8_t TOTALBITS = BITS*chainlength; // number of bits in sensor data struct
+    static_assert(chainlength > 0);
+    static constexpr size_t BITS = 19; // number of bits in sensor data struct
+    static constexpr size_t TOTALBITS = BITS*chainlength; // number of bits in sensor data struct
     // total bytes required for chain
-    static constexpr uint8_t BYTES = (TOTALBITS+7) / 8;
-    // sensor data struct. lsb to msb order.
+    static constexpr size_t BYTES = (TOTALBITS+7) / 8;
+    /** status bits as returned by flags() */
+    enum : uint8_t {
+        OCF = 1 << 0, ///< offset compensation finished
+        COF = 1 << 1, ///< cordic overflow
+        LIN = 1 << 2, ///< linearity alarm
+        INC = 1 << 3, ///< magnitude increase
+        DEC = 1 << 4, ///< magnitude decrease
+        PARITY_OK = 1 << 5, ///< even parity check passed
+    };
+    /** last read of one sensor */
     struct sensor {
-        uint8_t EVEN:1;
-        uint8_t DEC:1;
-        uint8_t INC:1;
-        uint8_t LIN:1;
-        uint8_t COF:1;
-        uint8_t OCF:1;
-        int16_t POS:12;
-        uint8_t :1;
-    } chain[chainlength];
+        uint16_t POS; ///< last valid position
+        uint8_t flags; ///< status bits of last read
+    } chain[chainlength]{};
+    uint32_t reads = 0; ///< number of completed chain reads
 
     /**
      * Constructor
@@ -38,8 +44,25 @@ struct AS5145 : SPI::Device {
      * @param i index of sensor in chain
      * @return measured sensor angle
      */
-    int16_t getVal(int i = 0) {
+    uint16_t getVal(int i = 0) {
         return chain[i].POS;
+    }
+
+    /**
+     * @param i index of sensor in chain
+     * @return true if last read of sensor i was error free
+     */
+    bool valid(size_t i) const {
+        uint8_t f = chain[i].flags;
+        return (f & OCF) && !(f & (COF | LIN)) && (f & (INC | DEC)) != (INC | DEC) && (f & PARITY_OK);
+    }
+
+    /**
+     * @param i index of sensor in chain
+     * @return raw status bits of last read, see OCF..PARITY_OK
+     */
+    uint8_t flags(size_t i) const {
+        return chain[i].flags;
     }
 
     /**
@@ -48,7 +71,7 @@ struct AS5145 : SPI::Device {
     void sense() {
         bus.trypush({
             .dev = this,
-            .data = BYTES,
+            .data = Buffer<uint8_t>(BYTES),
             .dir = SPI::Request::MISO,
             });
     }
@@ -56,16 +79,22 @@ struct AS5145 : SPI::Device {
     /*
      * callback when data is successfully measured
      *
-     * copy data from buffer into struct.
+     * copy status from buffer into struct, position only if valid.
      */
-    void callback(const SPI::Request rq) override {
+    void callback(const SPI::Request &rq) override {
         BitStream bs{rq.data.buf};
-        for (int i = 0, n=0; i < chainlength; ++i, n+=BITS) {
-            chain[i].COF = bs.range<decltype(sensor::COF)>(n + 14, n + 15);
-            if (chain[i].COF) { // out of range error
-                continue;
+        ++reads;
+        // per sensor: dummy bit, POS:12, OCF, COF, LIN, INC, DEC, even parity
+        for (size_t i = 0, n = 0; i < chainlength; ++i, n += BITS) {
+            // parity bit makes the number of ones over the 18 bits POS..parity even
+            uint8_t f = std::popcount(bs.range<uint32_t>(n + 1, n + 19)) % 2 ? 0 : PARITY_OK;
+            for (size_t b = 0; b < 5; ++b) { // OCF..DEC -> bit0..4
+                f |= bs.range<uint8_t>(n + 13 + b, n + 14 + b) << b;
             }
-            chain[i].POS = bs.range<decltype(sensor::POS)>(n + 1, n + 13);
+            chain[i].flags = f;
+            if (valid(i)) {
+                chain[i].POS = bs.range<uint16_t>(n + 1, n + 13);
+            }
         }
     }
 };

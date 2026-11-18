@@ -12,11 +12,14 @@ void _start(CAN_HandleTypeDef *handle, const Message &msg) {
         .DLC = msg.opts.dlc,
     };
     HAL_CAN_AddTxMessage(handle, &header, (uint8_t*)&msg.data, &mbox);
-    HW::reg.from(handle)->tx.active |= mbox;
+    auto can = HW::reg.from(handle);
+    if (!can) return;
+    can->tx.active |= mbox;
 }
 template<int N>
 void _tx_complete(CAN_HandleTypeDef *handle) {
     auto can = HW::reg.from(handle);
+    if (!can) return;
     assert(can->tx.active & 1<<N);
     can->tx.active &= ~(1<<N);
     while (can->tx.q.size() && HAL_CAN_GetTxMailboxesFreeLevel(handle)) {
@@ -29,50 +32,50 @@ void _rx_complete(CAN_HandleTypeDef *handle) {
     CAN_RxHeaderTypeDef header{};
     Message msg{};
     HAL_CAN_GetRxMessage(handle, N?CAN_RX_FIFO1:CAN_RX_FIFO0, &header, (uint8_t*)&msg.data);
+    // the HAL copies all 8 bytes, the ones beyond dlc are stale register content
+    if (header.RTR) msg.data = 0;
+    else if (header.DLC < 8) msg.data &= (1ull << (8 * header.DLC)) - 1;
     msg.id = header.IDE ? header.ExtId : header.StdId;
     msg.opts = {
         .rtr = (bool)header.RTR,
         .ide = (bool)header.IDE,
         .dlc = (uint8_t)header.DLC,
     };
-    HW::reg.from(handle)->rx.push(std::move(msg));
+    auto can = HW::reg.from(handle);
+    if (!can) return;
+    auto &rx = can->rx;
+    if (!rx.full()) {
+        rx.push(std::move(msg));
+    } else {
+        // dropping Message, reader should call more often...
+    }
 }
 
 HW::HW(const Config &c) {
+    halInit();
     HW::reg.reg(this, &handle);
 
-    /* Can speed configuration. */
-    /* Based on the values obtained from http://bittiming.can-wiki.info */
-    /* Assuming CAN clock is 108 MHz */
-
-    uint32_t Prescaler = 27;
-    uint32_t ts1 = CAN_BS1_13TQ;
-    uint32_t ts2 = CAN_BS2_2TQ;
-
-    switch (c.kbaud) {
-        case 1000:
-            Prescaler = 3;
-            ts1 = CAN_BS1_15TQ;
-            ts2 = CAN_BS2_2TQ;
-            break;
-        case 500:
-            Prescaler = 6;
-            ts1 = CAN_BS1_15TQ;
-            ts2 = CAN_BS2_2TQ;
-            break;
-        case 250:
-            Prescaler = 12;
-            ts1 = CAN_BS1_15TQ;
-            ts2 = CAN_BS2_2TQ;
-            break;
-        case 125:
-            Prescaler = 27;
-            ts1 = CAN_BS1_13TQ;
-            ts2 = CAN_BS2_2TQ;
-            break;
-        default :
-            assert(false); // don't know that baud
+    /* Can speed configuration, derived from the CAN (APB1) clock. */
+    /* use the first segment layout that divides the clock evenly. */
+    /* sample points between 80% & 89%, cf. http://bittiming.can-wiki.info */
+    /* e.g. 54MHz (F7 @ 216MHz) -> 18tq, 42MHz (F4 @ 168MHz) -> 14tq */
+    static constexpr struct { uint8_t bs1, bs2; } segments[] = {
+        {15, 2}, {13, 2}, {12, 2}, {11, 2}, {10, 2}, {9, 2}, {7, 2},
+    };
+    const uint32_t pclk = HAL_RCC_GetPCLK1Freq();
+    const uint32_t baud = c.kbaud * 1000;
+    uint32_t Prescaler = 0, ts1 = 0, ts2 = 0;
+    for (auto seg : segments) {
+        uint32_t tq = 1 + seg.bs1 + seg.bs2;
+        if (baud == 0 || pclk % (baud * tq)) continue;
+        Prescaler = pclk / (baud * tq);
+        if (Prescaler > 1024) continue;
+        ts1 = (uint32_t)(seg.bs1 - 1) << CAN_BTR_TS1_Pos;
+        ts2 = (uint32_t)(seg.bs2 - 1) << CAN_BTR_TS2_Pos;
+        break;
     }
+    assert(ts1); // don't know how to generate that baud from the CAN clock
+
     /* Configure CAN module registers */
     /* Configuration is handled by CubeMX HAL*/
     handle = {
@@ -122,11 +125,14 @@ HW::~HW() {
                                    CAN_IT_RX_FIFO1_MSG_PENDING |
                                    CAN_IT_TX_MAILBOX_EMPTY);
     HAL_CAN_Stop(&handle);
+    HW::reg.unreg(this);
 }
 bool HW::full() {
     return tx.q.full();
 }
 void HW::push(Message &&msg) {
+    // otherwise a tx complete interrupt in between could leave msg stuck in q
+    CriticalSection cs;
     if (HAL_CAN_GetTxMailboxesFreeLevel(&handle)) {
         _start(&handle, std::move(msg));
     } else {

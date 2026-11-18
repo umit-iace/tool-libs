@@ -12,44 +12,49 @@ Deadline until(size_t datasize, uint32_t now) {
     constexpr uint32_t cpms = 100000 / 1000; // fixed at 100kHz, noone is going slower
     uint32_t delta = (datasize+1)*9/cpms;
     delta = delta > 2 ? delta : 2; // allow minimum of 2ms
-    return {now + delta};
+    return Deadline::after(now, delta);
 }
 }
 
+void _error(I2C_HandleTypeDef *handle);
 void _startMaster(HW *i2c) {
     if (i2c->handle.Init.OwnAddress1) HAL_I2C_DisableListen_IT(&i2c->handle);
     auto& rq = i2c->q.front();
     size_t sz = rq.opts.read ? rq.data.size : rq.data.len;
     i2c->active = i2c->Q;
     i2c->deadline = until(sz, uwTick);
-    switch(rq.opts.type) {
+    HAL_StatusTypeDef ret = HAL_ERROR;
+    switch(rq.opts.type()) {
     case Request::Type::MASTER_WRITE:
-        HAL_I2C_Master_Transmit_IT(&i2c->handle, rq.dev->address << 1,
+        ret = HAL_I2C_Master_Transmit_IT(&i2c->handle, rq.dev->address << 1,
                                    rq.data.buf, rq.data.len);
         break;
     case Request::Type::MASTER_READ:
-        HAL_I2C_Master_Receive_IT(&i2c->handle, rq.dev->address << 1,
+        ret = HAL_I2C_Master_Receive_IT(&i2c->handle, rq.dev->address << 1,
                                   rq.data.buf, rq.data.size);
         rq.data.len = rq.data.size;
         break;
     case Request::Type::MEM_WRITE:
-        HAL_I2C_Mem_Write_IT(&i2c->handle, rq.dev->address << 1,
+        ret = HAL_I2C_Mem_Write_IT(&i2c->handle, rq.dev->address << 1,
                              rq.mem, I2C_MEMADD_SIZE_8BIT,
                              rq.data.buf, rq.data.len);
         break;
     case Request::Type::MEM_READ:
-        HAL_I2C_Mem_Read_IT(&i2c->handle, rq.dev->address << 1,
+        ret = HAL_I2C_Mem_Read_IT(&i2c->handle, rq.dev->address << 1,
                             rq.mem, I2C_MEMADD_SIZE_8BIT,
                             rq.data.buf, rq.data.size);
         rq.data.len = rq.data.size;
         break;
     default:
-        return;
+        break;
     }
+    // the HAL refused (busy, not ready): don't wait for the deadline
+    if (ret != HAL_OK) _error(&i2c->handle);
 }
 
 void _startSlave(I2C_HandleTypeDef *handle, uint8_t recv, uint16_t addr) {
     auto i2c = HW::reg.from(handle);
+    if (!i2c) return;
     assert(addr == handle->Init.OwnAddress1);
     assert(i2c->active == i2c->NONE);
     HAL_I2C_DisableListen_IT(handle);
@@ -66,21 +71,42 @@ void _startSlave(I2C_HandleTypeDef *handle, uint8_t recv, uint16_t addr) {
     }
 }
 
+/** stop whatever the peripheral is doing and make the HAL usable again
+ *
+ * HAL_I2C_Master_Abort_IT would need the interrupt to finish the abort,
+ * until then the HAL refuses new transfers (BUSY)
+ */
+void _reset(I2C_HandleTypeDef *handle) {
+#if defined(STM32F7)
+    __HAL_I2C_DISABLE_IT(handle, I2C_IT_ERRI | I2C_IT_TCI | I2C_IT_STOPI
+            | I2C_IT_NACKI | I2C_IT_ADDRI | I2C_IT_RXI | I2C_IT_TXI);
+#else
+    __HAL_I2C_DISABLE_IT(handle, I2C_IT_BUF | I2C_IT_EVT | I2C_IT_ERR);
+#endif
+    // software reset: PE low releases the lines and clears the state machine
+    __HAL_I2C_DISABLE(handle);
+    __HAL_I2C_ENABLE(handle);
+    handle->State = HAL_I2C_STATE_READY;
+    handle->Mode = HAL_I2C_MODE_NONE;
+    handle->PreviousState = 0;
+    handle->XferCount = 0;
+    __HAL_UNLOCK(handle);
+}
+
 void poll(HW *i2c);
 void _error(I2C_HandleTypeDef *handle) {
     auto i2c = HW::reg.from(handle);
-    if (!i2c->active) {
-        assert(false);
-    } else if (i2c->active == i2c->Q) {
-        auto& rq = i2c->q.front();
-        HAL_I2C_Master_Abort_IT(handle, rq.dev->address << 1);
-        i2c->q.pop();
+    if (!i2c) return;
+    if (i2c->active == i2c->Q) {
+        // drop instead of pop: don't free memory in here
+        i2c->q.drop();
     }
     i2c->active = i2c->NONE;
     i2c->deadline = Deadline{};
-    __HAL_I2C_DISABLE(handle);
-    __HAL_I2C_ENABLE(handle);
+    _reset(handle);
     if (i2c->handle.Init.OwnAddress1) HAL_I2C_EnableListen_IT(handle);
+    // called from the HAL error interrupt as well, nobody else restarts the queue
+    if (!i2c->q.empty()) _startMaster(i2c);
 }
 void poll(HW *i2c) {
     if (i2c->active && i2c->deadline(uwTick)) _error(&i2c->handle);
@@ -89,16 +115,18 @@ void poll(HW *i2c) {
 
 void _complete(I2C_HandleTypeDef *handle) {
     auto i2c = HW::reg.from(handle);
+    if (!i2c) return;
     switch (i2c->active) {
     case i2c->Q:
-        i2c->q.front().dev->callback(i2c->q.front());
+        i2c->completed.complete(std::move(i2c->q.front()));
         i2c->q.drop();
         break;
+    // slave requests stay in place for the next transfer: hand on a copy
     case i2c->IN:
-        i2c->in.dev->callback(std::move(i2c->in));
+        i2c->completed.complete(Request{i2c->in});
         break;
     case i2c->OUT:
-        i2c->out.dev->callback(std::move(i2c->out));
+        i2c->completed.complete(Request{i2c->out});
         break;
     case i2c->NONE:
         // potentially called after a finished abort?
@@ -115,7 +143,9 @@ bool HW::full() {
 }
 
 void HW::push(Request &&rq) {
-    switch (rq.opts.type) {
+    // state is shared with the interrupt handlers
+    CriticalSection cs;
+    switch (rq.opts.type()) {
         case Request::Type::SLAVE_WRITE:
             out = std::move(rq);
             break;
@@ -130,6 +160,7 @@ void HW::push(Request &&rq) {
 }
 
 HW::HW(const HW::Conf &conf) {
+    halInit();
     HW::reg.reg(this, &handle);
     handle.Instance = conf.i2c;
     handle.Init = {

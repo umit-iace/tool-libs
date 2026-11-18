@@ -2,8 +2,7 @@
  *
  * Copyright (c) 2020 IACE
  */
-#ifndef STM_GPIO_H
-#define STM_GPIO_H
+#pragma once
 
 #include "hal.h"
 
@@ -13,17 +12,17 @@
 class DIO {
 private:
     ///\cond false
-    uint32_t iPin;
+    uint32_t pin;
     GPIO_TypeDef *port;
     ///\endcond
 public:
     DIO(uint32_t pin, GPIO_TypeDef *port,
             uint32_t mode = GPIO_MODE_OUTPUT_PP,
             uint32_t pull = GPIO_NOPULL) {
-        this->iPin = pin;
+        this->pin = pin;
         this->port = port;
         GPIO_InitTypeDef GPIO_InitStruct = {};
-        GPIO_InitStruct.Pin = iPin;
+        GPIO_InitStruct.Pin = pin;
         GPIO_InitStruct.Mode = mode;
         GPIO_InitStruct.Pull = pull;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -35,7 +34,7 @@ public:
      * @param high true/false
      */
     void set(bool high) {
-        HAL_GPIO_WritePin(port, iPin, (GPIO_PinState) high);
+        HAL_GPIO_WritePin(port, pin, (GPIO_PinState) high);
     }
 
     /**
@@ -43,14 +42,14 @@ public:
      * @return high/low
      */
     bool get() {
-        return HAL_GPIO_ReadPin(port, iPin);
+        return HAL_GPIO_ReadPin(port, pin);
     }
 
     /**
      * toggle digital output level
      */
     void toggle() {
-        HAL_GPIO_TogglePin(port, iPin);
+        HAL_GPIO_TogglePin(port, pin);
     }
 };
 
@@ -72,5 +71,3 @@ public:
         HAL_GPIO_Init(port, &GPIO_InitStruct);
     }
 };
-
-#endif //STM_GPIO_H

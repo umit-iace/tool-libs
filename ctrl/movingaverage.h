@@ -12,6 +12,7 @@
  */
 template<typename T, int N>
 class MovingAverage {
+    static_assert(N > 0, "needs room for at least one sample");
     Queue<T> samples{N};
     T total{};
 public:
@@ -20,6 +21,7 @@ public:
      * @return the average value as double
      */
     double operator()() {
+        if (samples.empty()) return 0; // nothing to average yet
         return (double)total / samples.size();
     }
 

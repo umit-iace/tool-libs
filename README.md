@@ -28,6 +28,18 @@ for [pyWisp](https://github.com/umit-iace/tool-pywisp) frame based experiment
 control.
 On top of the scheduling provided by the Kernel, the Experiment provides
 scheduling for tasks during its states, and on the events of state-changes.
+Frame ids 1..5 are reserved for the system: 1 experiment control, 2 rig status
+(`Experiment::STATUS_ID`), 3 rig log (`Experiment::LOG_ID`), 4..5 for future use.
+Application frames must not use them.
+
+The log messages of `k.log` and `e.log` can also be sent to pyWisp, filtered by
+level. They keep going to the local sink as well:
+```
+e.enableLog(out, Logger::bit(Logger::WARN) | Logger::bit(Logger::ERROR));
+```
+Each message is sent once when it is logged, as frames `[hdr][text]` with at
+most 127 B raw text (no prefix, no color). `hdr` bits 0..6 hold the level
+(0 print, 1 info, 2 warn, 3 error), bit 7 is set if another part follows.
 
 ## Minimal example
 A minimal example for this framework can be found
@@ -42,12 +54,17 @@ Some other utilities are provided by this collection:
  - Deadline - simple solution for keeping track of timeouts
  - Later - a poor man's additions and subtractions upon access instead of upon
  definition
+ - AlgDiff - algebraic differentiator, a FIR filter with offline computed
+ weights (e.g. from the AlgDiff Python package) estimating a derivative of
+ equidistant samples, for scalars and vectors
 
 # Communication
 Providing a bunch of helpers for communication with pyWisp, but also for
 character streams.
  - Min - main implementation of packing & unpacking data for transfer to / from
  pyWisp
+ - FixedFrame - fixed size records (1 byte id + 80 bytes payload) as pyWisp's
+ TcpConnection sends them, for reliable byte streams such as TCP
  - FrameRegistry - the place where consumers of Frames can sign up for their
  respective IDs
  - SeriesUnpacker - unpack a series of data sent from pyWisp
@@ -94,6 +111,10 @@ following classes are implemented:
 
 # Linux
 An implementation for the Kernel backend for simulation purposes.
+The following communication backends are implemented in sys/comm.h:
+ - TTY - serial ports and other character devices
+ - UDP - datagram server, answers whoever sent data last (use with Min)
+ - TCP - stream server, one client at a time (use with FixedFrame)
 
 # Usage
 This package provides two CMake library targets:

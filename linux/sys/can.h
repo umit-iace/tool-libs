@@ -31,7 +31,7 @@ namespace CAN {
             }
             /* */
             struct ifreq ifr = {};
-            strncpy(ifr.ifr_name, ifname, IF_NAMESIZE);
+            strncpy(ifr.ifr_name, ifname, IF_NAMESIZE - 1);
             if (ioctl(sock, SIOCGIFINDEX, &ifr) == -1) {
                 perror("cannot find CAN interface index");
                 return;
@@ -82,6 +82,7 @@ namespace CAN {
             return rx.pop();
         }
         bool empty() override {
+            if (rx.full()) return false; // consumer has to catch up first
             struct can_frame frame;
             int l = read(sock, &frame, sizeof(frame));
             if (l < 0) {
@@ -93,31 +94,36 @@ namespace CAN {
                 fprintf(stderr, "read: incomplete CAN frame: %d\n", l);
                 return rx.empty();
             }
-            Message msg = messageFromFrame(frame);
-            rx.push(msg);
+            // error frames only show up if asked for, never pass them on
+            if (frame.can_id & CAN_ERR_FLAG) return rx.empty();
+            rx.push(messageFromFrame(frame));
             return false;
         }
-        struct can_frame frameFromMessage(Message &&msg) {
+        static struct can_frame frameFromMessage(Message &&msg) {
             struct can_frame f {};
-            f.can_id = msg.id;
-            if (msg.opts.rtr) f.can_id |= CAN_RTR_FLAG;
-            f.len = msg.opts.dlc;
-            for (int i = 0; i < f.len; ++i) {
-                f.data[i] = ((uint8_t*)&msg.data)[i];
+            if (msg.opts.ide) {
+                f.can_id = (msg.id & CAN_EFF_MASK) | CAN_EFF_FLAG;
+            } else {
+                f.can_id = msg.id & CAN_SFF_MASK;
             }
+            if (msg.opts.rtr) f.can_id |= CAN_RTR_FLAG;
+            f.len = msg.opts.dlc > CAN_MAX_DLEN ? CAN_MAX_DLEN : msg.opts.dlc;
+            if (!msg.opts.rtr) memcpy(f.data, &msg.data, f.len);
             return f;
         }
-        Message messageFromFrame(struct can_frame frame) {
+        static Message messageFromFrame(const struct can_frame &frame) {
+            bool ide = frame.can_id & CAN_EFF_FLAG;
+            bool rtr = frame.can_id & CAN_RTR_FLAG;
+            uint8_t len = frame.len > CAN_MAX_DLEN ? CAN_MAX_DLEN : frame.len;
             Message msg {
-                .id = frame.can_id & ((1<<30)-1),
+                .id = frame.can_id & (ide ? CAN_EFF_MASK : CAN_SFF_MASK),
                 .opts = {
-                    .rtr = !!(frame.can_id & CAN_RTR_FLAG),
-                    .dlc = frame.len,
+                    .rtr = rtr,
+                    .ide = ide,
+                    .dlc = len,
                 },
             };
-            for (int i = 0; i < frame.len; ++i) {
-                ((uint8_t*)&msg.data)[i] = frame.data[i];
-            }
+            if (!rtr) memcpy(&msg.data, frame.data, len);
             return msg;
         }
     };
