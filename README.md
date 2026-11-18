@@ -54,6 +54,9 @@ Some other utilities are provided by this collection:
  - Deadline - simple solution for keeping track of timeouts
  - Later - a poor man's additions and subtractions upon access instead of upon
  definition
+ - AlgDiff - algebraic differentiator, a FIR filter with offline computed
+ weights (e.g. from the AlgDiff Python package) estimating a derivative of
+ equidistant samples, for scalars and vectors
 
 # Communication
 Providing a bunch of helpers for communication with pyWisp, but also for
